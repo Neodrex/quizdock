@@ -5,6 +5,7 @@ import type {
   Hint,
   Lock,
   LockInput,
+  SequenceLock,
   SubmitResult,
   TeamState,
 } from './escape.types';
@@ -203,13 +204,38 @@ export function hostUnlock(
   return solveLock(tpl, { ...team, hostUnlocks: [...team.hostUnlocks, lockId] }, lockId, at);
 }
 
+/** FNV-1a, 32 bit: a small pure hash for a stable per-team order. */
+function fnv1a(text: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h;
+}
+
+/**
+ * Sequence items in an order that is stable per team (same on every reconnect)
+ * and never the answer, since authors often name items in answer order. The
+ * engine need not shuffle again.
+ */
+function shuffledItems(lock: SequenceLock, teamId: string): { id: string; label: string }[] {
+  const items = lock.items
+    .map(({ id, label }) => ({ id, label, h: fnv1a(`${teamId}:${id}`) }))
+    .sort((a, b) => a.h - b.h || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map(({ id, label }) => ({ id, label }));
+  const isAnswer =
+    items.length === lock.order.length && items.every((it, i) => it.id === lock.order[i]);
+  return items.length > 1 && isAnswer ? [...items.slice(1), items[0]] : items;
+}
+
 export interface PlayerLockView {
   id: string;
   label: string;
   kind: Lock['kind'];
   solved: boolean;
   options?: { id: string; label: string; image: string | null }[];
-  /** Sequence items, shuffled by the engine per team. */
+  /** Sequence items in a stable per-team order that is never the answer. */
   items?: { id: string; label: string }[];
   /** Combined: the role ids this player may enter, and which parts are already in. */
   myParts?: string[];
@@ -255,13 +281,7 @@ export function playerView(tpl: EscapeTemplate, team: TeamState, playerId: strin
             options: l.options.map(({ id, label, image }) => ({ id, label, image })),
           };
         case 'sequence':
-          // Sorted by id so the authored order (often the answer) never shows; the engine shuffles per team.
-          return {
-            ...base,
-            items: l.items
-              .map(({ id, label }) => ({ id, label }))
-              .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
-          };
+          return { ...base, items: shuffledItems(l, team.id) };
         case 'combined':
           return {
             ...base,

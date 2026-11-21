@@ -414,14 +414,52 @@ describe('playerView', () => {
       expect(json).toContain('Used hint');
     }
   });
-  it('choice options in authored order; sequence items by id, not the answer order', () => {
+  it('choice options in authored order', () => {
     const v = playerView(tplAll, team(), 'p1');
     expect(v.locks.find((l) => l.id === 'pick')?.options?.map((o) => o.id)).toEqual(['o1', 'o2']);
-    expect(v.locks.find((l) => l.id === 'seq')?.items?.map((i) => i.id)).toEqual([
-      'i1',
-      'i2',
-      'i3',
-    ]);
+  });
+  describe('sequence items', () => {
+    const withSeq = (ids: string[]): EscapeTemplate => ({
+      ...tpl,
+      stages: [
+        {
+          ...tpl.stages[0],
+          locks: [
+            {
+              id: 'seq',
+              label: 'Seq',
+              kind: 'sequence',
+              items: ids.map((id) => ({ id, label: id.toUpperCase() })),
+              order: ids,
+            },
+          ],
+        },
+      ],
+    });
+    const shown = (t: EscapeTemplate, teamId: string) =>
+      playerView(t, { ...newTeam(t, teamId, teamId, ['p1']) }, 'p1').locks[0].items?.map(
+        (i) => i.id,
+      );
+    const ids = ['a', 'b', 'c', 'd'];
+    const teamIds = Array.from({ length: 20 }, (_, i) => `team-${i}`);
+
+    it('never shows the answer order, even when ids are authored in it', () => {
+      for (const id of teamIds) {
+        const order = shown(withSeq(ids), id);
+        expect(order).toHaveLength(4);
+        expect(order).not.toEqual(ids);
+      }
+    });
+    it('is stable for a team', () => {
+      expect(shown(withSeq(ids), 'team-x')).toEqual(shown(withSeq(ids), 'team-x'));
+    });
+    it('differs between teams', () => {
+      const orders = new Set(teamIds.map((id) => JSON.stringify(shown(withSeq(ids), id))));
+      expect(orders.size).toBeGreaterThan(1);
+    });
+    it('two items are never shown in answer order', () => {
+      for (const id of teamIds) expect(shown(withSeq(['x', 'y']), id)).toEqual(['y', 'x']);
+    });
   });
   it('copies only known fields, so stray authored data cannot leak', () => {
     const leaky = structuredClone(tplAll);
