@@ -136,6 +136,17 @@ describe('EscapeStore (Redis)', () => {
     }
   });
 
+  it('touch gives every key of the run the game TTL again, in one MULTI', async () => {
+    await store.writeOpen(id, '123456', snapshot, run);
+    await store.save(id, { teams: [record('t1', ['p1'])], members: { set: { p1: 't1' } } });
+    await store.saveResults(id, finale);
+    for (const key of allKeys()) await redis.expire(key, 5);
+    const multi = jest.spyOn(redis, 'multi');
+    await store.touch(id);
+    expect(multi).toHaveBeenCalledTimes(1);
+    for (const key of allKeys()) expect(await redis.ttl(key)).toBeGreaterThan(GAME_TTL_S - 5);
+  });
+
   it('moves a player in one MULTI: both teams and the members index', async () => {
     await store.writeOpen(id, '123456', snapshot, run);
     await store.save(id, {

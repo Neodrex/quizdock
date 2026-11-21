@@ -233,6 +233,25 @@ export class EscapeStore {
     return (prev as GameState | null) ?? null;
   }
 
+  /**
+   * Every key of the run gets the game TTL again, in one MULTI: a long run (or a
+   * podium kept open) outlives the TTL its keys were last written with.
+   */
+  async touch(id: GameId): Promise<void> {
+    const pipe = this.redis.multi();
+    for (const key of [
+      escapeKeys.room(id),
+      escapeKeys.template(id),
+      escapeKeys.run(id),
+      escapeKeys.teams(id),
+      escapeKeys.members(id),
+      escapeKeys.results(id),
+    ]) {
+      pipe.expire(key, ESCAPE_TTL_S);
+    }
+    await pipe.exec();
+  }
+
   /** The final ranking and awards (null until the finale). */
   async results(id: GameId): Promise<EscapeFinale | null> {
     return parseJson(finaleSchema, await this.redis.get(escapeKeys.results(id)));

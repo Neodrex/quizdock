@@ -21,4 +21,6 @@ export class EscapeTimings {
   wrongWindowS = 60;
   /** The big-screen board, at most this often. */
   boardEveryMs = ANSWER_COUNT_EVERY_MS;
+  /** A running run's keys (and its room's) get their TTL again at most this often, from the ticker. */
+  touchEveryMs = 300_000;
 }

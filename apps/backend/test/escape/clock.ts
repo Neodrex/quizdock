@@ -1,6 +1,10 @@
 import type { EscapeHostTeam, EscapePlayerState, EscapeTeamUpdate } from '@quiz-dock/contracts';
 import { rankTeams } from '../../src/escape/escape-rules';
+import { EscapeTimings } from '../../src/escape/escape-timings';
+import { escapeKeys } from '../../src/escape/escape.keys';
 import { EscapeStore } from '../../src/escape/escape.store';
+import { GAME_TTL_S } from '../../src/game/game.keys';
+import { RedisService } from '../../src/redis/redis.service';
 import { GameService } from '../../src/game/game.service';
 import { nextEvent, settle } from '../game-harness';
 import {
@@ -193,5 +197,26 @@ export function clockTests(ctx: EscapeContext): void {
       ok: false,
       error: { code: 'session.escape_game' },
     });
+  });
+
+  it('the run keeps its keys alive: resume and the ticker give the template the TTL again', async () => {
+    const { pin, host } = await runningRoom(ctx, { players: 1, teams: 1 });
+    const id = (await ctx.h.app.get(GameService).getMeta(pin))!.id;
+    const redis = ctx.h.app.get(RedisService);
+    const ttl = () => redis.ttl(escapeKeys.template(id));
+    expect(await host.emitWithAck('escape:pause', { pin, paused: true })).toEqual({ ok: true });
+    await redis.expire(escapeKeys.template(id), 5);
+    expect(await host.emitWithAck('escape:pause', { pin, paused: false })).toEqual({ ok: true });
+    expect(await ttl()).toBeGreaterThan(GAME_TTL_S - 5);
+
+    const timings = ctx.h.app.get(EscapeTimings);
+    const every = timings.touchEveryMs;
+    await redis.expire(escapeKeys.template(id), 5);
+    timings.touchEveryMs = 100;
+    try {
+      await eventually(async () => expect(await ttl()).toBeGreaterThan(GAME_TTL_S - 5));
+    } finally {
+      timings.touchEveryMs = every;
+    }
   });
 }

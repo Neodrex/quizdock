@@ -135,6 +135,8 @@ export class EscapeEngine implements OnModuleDestroy {
    * socket count as gone since boot (R4).
    */
   private readonly gone = new Map<GameId, Map<string, number>>();
+  /** When the ticker last gave a run's keys their TTL again, by game id. */
+  private readonly touched = new Map<GameId, number>();
   private readonly bootAt = Date.now();
 
   constructor(
@@ -400,7 +402,7 @@ export class EscapeEngine implements OnModuleDestroy {
       });
       // Atomic: a host gone meanwhile comes back to the run (prevState).
       const was = await this.store.setGameState(ref.id, GameState.Escape);
-      await this.game.touchRoom(pin);
+      await this.keepAlive(pin, ref.id);
       // S3.
       if (this.wrote(was)) {
         this.server
@@ -516,6 +518,7 @@ export class EscapeEngine implements OnModuleDestroy {
       if (clock === ref.run.clock) return;
       const run: EscapeRun = { ...ref.run, clock };
       await this.store.saveRun(ref.id, run);
+      if (!paused) await this.keepAlive(pin, ref.id);
       const next = { ...ref, run };
       await this.broadcast(next, { ...(await this.viewOf(next)), now });
     });
@@ -595,6 +598,7 @@ export class EscapeEngine implements OnModuleDestroy {
   // ── Ticker (H3, T3, T4, K2) ──
 
   private startTicker(pin: string, id: GameId): void {
+    this.touched.set(id, Date.now());
     this.ticker.start(id, this.timings.tickMs, () => this.tick(pin, id));
   }
 
@@ -621,6 +625,10 @@ export class EscapeEngine implements OnModuleDestroy {
         return;
       }
       const ref: RunRef = { pin, id, meta, snap, run };
+      if (Date.now() - (this.touched.get(id) ?? 0) >= this.timings.touchEveryMs) {
+        this.touched.set(id, Date.now());
+        await this.keepAlive(pin, id);
+      }
       // R2: roles move off members gone past the grace, paused or not.
       if (snap.template.mode === 'roles' && this.gone.has(id)) {
         await this.reconcileRoles(ref, await this.viewOf(ref));
@@ -747,7 +755,7 @@ export class EscapeEngine implements OnModuleDestroy {
     if (!closed) {
       // Atomic: an ended room stays ended; without its host, PODIUM waits in prevState.
       const was = await this.store.setGameState(ref.id, GameState.Podium);
-      if (was !== GameState.Ended) await this.game.touchRoom(ref.pin);
+      if (was !== GameState.Ended) await this.keepAlive(ref.pin, ref.id);
       if (this.wrote(was)) {
         this.server
           .to(ref.pin)
@@ -759,6 +767,11 @@ export class EscapeEngine implements OnModuleDestroy {
     return finale;
   }
 
+  /** The room's keys and the run's get their TTL again. */
+  private async keepAlive(pin: string, id: GameId): Promise<void> {
+    await Promise.all([this.game.touchRoom(pin), this.store.touch(id)]);
+  }
+
   /** Whether setGameState wrote the state itself, from the state it found. */
   private wrote(was: GameState | null): boolean {
     return was !== null && was !== GameState.Ended && was !== GameState.HostDisconnected;
@@ -768,6 +781,7 @@ export class EscapeEngine implements OnModuleDestroy {
   private forget(id: GameId): void {
     this.ticker.stop(id);
     this.gone.delete(id);
+    this.touched.delete(id);
   }
 
   /**
