@@ -1,0 +1,359 @@
+/**
+ * Live escape runs over Socket.IO (M3). Inbound payloads are zod schemas the
+ * escape gateway parses; outbound payloads are plain interfaces. Phones only
+ * ever get EscapePlayerState, EscapeTeamUpdate and EscapeFinale: answers leave
+ * the server only in EscapeOutline, to the host console.
+ */
+import { z } from 'zod';
+import type { EscapeTemplateContent } from './escape';
+
+const pin = z.string().regex(/^\d{6}$/); // allocatePin: 6 digits
+const id = z.string().min(1).max(64);
+const lockInput = z.union([z.string().max(200), z.array(id).max(12)]);
+const durationMin = z.number().int().min(5).max(180);
+
+// ── Host → server ──
+export const escapeCreateSchema = z.object({
+  templateId: id,
+  durationMin: durationMin.optional(),
+  pickOwnName: z.boolean().optional(),
+  personalTracking: z.boolean().optional(),
+  participantAccess: z.enum(['account', 'open']).optional(),
+});
+export const escapeOpenSchema = z.object({
+  pin,
+  templateId: id,
+  durationMin: durationMin.optional(),
+});
+/** escape:sync, escape:start, escape:end, escape:finale. */
+export const escapePinSchema = z.object({ pin });
+export const escapeTeamsSchema = z.object({
+  pin,
+  mode: z.enum(['auto', 'self']),
+  count: z.number().int().min(1).max(100),
+  maxSize: z.number().int().min(1).max(50).optional(),
+  names: z.array(z.string().trim().min(1).max(40)).max(100).optional(),
+});
+/** `teamId: null` sends the player back to the unassigned list. */
+export const escapeMoveSchema = z.object({ pin, playerId: id, teamId: id.nullable() });
+export const escapePauseSchema = z.object({ pin, paused: z.boolean() });
+/** Absent `teamId`: every team. Extra time moves deadlines only, never scores. */
+export const escapeAdjustTimeSchema = z.object({
+  pin,
+  deltaS: z
+    .number()
+    .int()
+    .min(-3600)
+    .max(3600)
+    .refine((v) => v !== 0),
+  teamId: id.optional(),
+});
+/** Absent `teamId`: every team. */
+export const escapeHintSchema = z.object({ pin, teamId: id.optional() });
+export const escapeUnlockSchema = z.object({ pin, teamId: id, lockId: id });
+
+// ── Player → server ──
+export const escapeChooseTeamSchema = z.object({ pin, teamId: id });
+export const escapeSubmitSchema = z.object({
+  pin,
+  lockId: id,
+  roleId: id.optional(),
+  input: lockInput,
+});
+/** The hint the phone was offered (`nextHint.id`): a double tap releases one hint, not two. */
+export const escapeAskHintSchema = z.object({ pin, hintId: id });
+
+export type EscapeCreate = z.infer<typeof escapeCreateSchema>;
+export type EscapeOpen = z.infer<typeof escapeOpenSchema>;
+export type EscapePin = z.infer<typeof escapePinSchema>;
+export type EscapeTeams = z.infer<typeof escapeTeamsSchema>;
+export type EscapeMove = z.infer<typeof escapeMoveSchema>;
+export type EscapePause = z.infer<typeof escapePauseSchema>;
+export type EscapeAdjustTime = z.infer<typeof escapeAdjustTimeSchema>;
+export type EscapeHint = z.infer<typeof escapeHintSchema>;
+export type EscapeUnlock = z.infer<typeof escapeUnlockSchema>;
+export type EscapeChooseTeam = z.infer<typeof escapeChooseTeamSchema>;
+export type EscapeSubmit = z.infer<typeof escapeSubmitSchema>;
+export type EscapeAskHint = z.infer<typeof escapeAskHintSchema>;
+
+// ── Server → client ──
+
+/** Mirrors the backend's PlayerLockView (escape-rules.ts); a compile-time check proves it. */
+export interface EscapePlayerLockView {
+  id: string;
+  label: string;
+  kind: 'code' | 'phrase' | 'choice' | 'sequence' | 'combined';
+  solved: boolean;
+  options?: { id: string; label: string; image: string | null }[];
+  /** Sequence items in a stable per-team hash order. */
+  items?: { id: string; label: string }[];
+  /** Combined: the role ids this player may enter, and which parts are already in. */
+  myParts?: string[];
+  partsDone?: string[];
+}
+
+/** Mirrors the backend's PlayerView: everything one phone may know of its stage. */
+export interface EscapePlayerView {
+  stageIndex: number;
+  stageCount: number;
+  title: string;
+  intro: string;
+  roles: string[];
+  clues: {
+    id: string;
+    roleId: string | null;
+    kind: 'text' | 'image' | 'audio' | 'document';
+    body: string;
+  }[];
+  locks: EscapePlayerLockView[];
+  hints: { id: string; text: string }[];
+  escaped: boolean;
+}
+
+export type EscapePhase = 'forming' | 'running' | 'finished' | 'finale';
+
+export interface EscapeClock {
+  /** Server epoch ms when this was built. */
+  serverNow: number;
+  paused: boolean;
+  /** Run time so far, pauses excluded. */
+  elapsedMs: number;
+  limitMs: number;
+}
+
+export interface EscapeTeamClock {
+  remainingMs: number;
+  /** Server epoch ms of the team's deadline; null when paused, ended, escaped or timed out. */
+  deadlineAt: number | null;
+}
+
+export interface EscapeMember {
+  playerId: string;
+  nickname: string;
+  avatar: string | null;
+  connected: boolean;
+  roles: string[];
+}
+
+export interface EscapeFormation {
+  mode: 'auto' | 'self';
+  /** null: no cap. */
+  maxSize: number | null;
+  teams: { id: string; name: string; memberCount: number }[];
+}
+
+/** To one phone. */
+export interface EscapePlayerState {
+  phase: EscapePhase;
+  clock: EscapeClock;
+  title: string;
+  intro: string;
+  roles: { id: string; name: string; description: string }[];
+  formation: EscapeFormation;
+  team:
+    | (EscapeTeamClock & {
+        id: string;
+        name: string;
+        members: EscapeMember[];
+        stageIndex: number;
+        stageCount: number;
+        escaped: boolean;
+        timedOut: boolean;
+        hintPenaltyS: number;
+      })
+    | null;
+  /** playerView(tpl, team, me) while running/finished; null before the start or without a team. */
+  view: EscapePlayerView | null;
+  /** The next hint's id and cost, never its text. */
+  nextHint: { id: string; penaltyS: number } | null;
+}
+
+/** One team on the big screen: counts and titles, no secrets. */
+export interface EscapeTeamSummary {
+  id: string;
+  name: string;
+  memberCount: number;
+  connectedCount: number;
+  stageIndex: number;
+  stageCount: number;
+  stageTitle: string;
+  locksSolved: number;
+  locksTotal: number;
+  hintsUsed: number;
+  escaped: boolean;
+  timedOut: boolean;
+  remainingMs: number;
+  deadlineAt: number | null;
+}
+
+export interface EscapeBoard {
+  phase: EscapePhase;
+  clock: EscapeClock;
+  title: string;
+  teams: EscapeTeamSummary[];
+  /** Players in the room without a team. */
+  unassigned: number;
+}
+
+/** To the team's phones and the host. `by` is the player id, or null when the host did it. */
+export type EscapeTeamUpdate = { teamId: string } & (
+  | { kind: 'wrong'; by: string }
+  | { kind: 'part-accepted'; lockId: string; roleId: string; by: string }
+  | { kind: 'lock-solved'; lockId: string; by: string | null }
+  | { kind: 'stage-cleared'; stageIndex: number; unlockText: string; by: string | null }
+  | { kind: 'escaped'; unlockText: string; by: string | null }
+  | { kind: 'hint'; hintId: string; source: 'request' | 'timer' | 'host' }
+  | { kind: 'roles' }
+  | { kind: 'time'; deltaMs: number }
+  | { kind: 'time-up' }
+);
+
+/** Screen banners. */
+export interface EscapeAnnounce {
+  kind: 'stage-cleared' | 'escaped' | 'hint' | 'time-up';
+  teamId: string;
+  teamName: string;
+  stageIndex: number;
+}
+
+export interface EscapeHostTeam extends EscapeTeamSummary {
+  members: EscapeMember[];
+  /** Lock ids solved in the current stage. */
+  solved: string[];
+  /** Combined locks: role ids entered, per lock id. */
+  partsDone: Record<string, string[]>;
+  wrong: number;
+  hintIds: string[];
+  hintPenaltyS: number;
+  /** Extra time the host gave (deadline only). */
+  adjustMs: number;
+  hostUnlocks: string[];
+  solvesBy: Record<string, number>;
+  stageClearedAt: number[];
+  lastProgressAt: number;
+  stuck: boolean;
+  timeOnStageMs: number;
+}
+
+export interface EscapeHostState {
+  board: EscapeBoard;
+  formation: EscapeFormation;
+  teams: EscapeHostTeam[];
+  unassigned: { playerId: string; nickname: string; connected: boolean }[];
+  templateVersion: number;
+}
+
+/** The frozen template with its answers: host console only. */
+export interface EscapeOutline {
+  templateId: string;
+  version: number;
+  template: EscapeTemplateContent & { id: string };
+}
+
+export interface EscapeFinale {
+  title: string;
+  finale: string;
+  ranking: {
+    teamId: string;
+    name: string;
+    place: number;
+    /** Escape time plus paid hint penalties; null when the team did not escape. */
+    scoreMs: number | null;
+    escaped: boolean;
+    stagesCleared: number;
+    stageClearedAt: number[];
+    /** Every hint, free (timed) or paid. */
+    hintsUsed: number;
+    /** Hints the team paid for: the fewest-hints award. */
+    paidHints: number;
+    hintPenaltyS: number;
+    adjustMs: number;
+    hostUnlocks: number;
+    members: string[];
+  }[];
+  awards: {
+    fastest: string | null;
+    fewestHints: string | null;
+    teamwork: string | null;
+    photoFinish: [string, string] | null;
+  };
+}
+
+/** Rules refusals (M1) plus the live ones. */
+export type EscapeRefusal =
+  | 'escaped'
+  | 'not-a-member'
+  | 'unknown-lock'
+  | 'already-solved'
+  | 'not-your-part'
+  | 'bad-input'
+  | 'not-running'
+  | 'paused'
+  | 'no-team'
+  | 'time-up'
+  | 'rate-limited'
+  | 'not-joined'
+  | 'no-hint';
+
+export type EscapeSubmitAck =
+  | { ok: true; outcome: 'wrong' | 'part-accepted' | 'lock-solved' | 'stage-cleared' | 'escaped' }
+  | { ok: false; reason: EscapeRefusal; retryAfterMs?: number };
+
+export type EscapeAskHintAck = { ok: true } | { ok: false; reason: EscapeRefusal };
+
+/** Host and formation commands: ok, or the exception filter's error code. */
+export type EscapeAck<T extends object = object> =
+  | ({ ok: true } & T)
+  | { ok: false; error: { code: string } };
+
+export interface EscapeClientToServerEvents {
+  /** Host: creates an empty room and opens the run on it. */
+  'escape:create': (p: EscapeCreate, ack: (res: { pin: string }) => void) => void;
+  /** Host: opens a run in its room while it is in LOBBY. */
+  'escape:open': (p: EscapeOpen, ack: (res: EscapeAck) => void) => void;
+  /** Anyone in the room: joins its escape rooms and gets its view (host, phone or screen). */
+  'escape:sync': (p: EscapePin, ack: (res: EscapeAck) => void) => void;
+  /** Host, while forming: makes the teams. */
+  'escape:teams': (p: EscapeTeams, ack: (res: EscapeAck) => void) => void;
+  /** Host: moves a player to a team, or to unassigned. */
+  'escape:move': (p: EscapeMove, ack: (res: EscapeAck) => void) => void;
+  /** Host: starts the clock. */
+  'escape:start': (p: EscapePin, ack: (res: EscapeAck) => void) => void;
+  /** Host: pauses or resumes the run. */
+  'escape:pause': (p: EscapePause, ack: (res: EscapeAck) => void) => void;
+  /** Host: gives or takes time, for one team or all (deadline only). */
+  'escape:adjust-time': (p: EscapeAdjustTime, ack: (res: EscapeAck) => void) => void;
+  /** Host: releases the next hint to one team or all; `released` counts teams that got one. */
+  'escape:hint': (p: EscapeHint, ack: (res: EscapeAck<{ released: number }>) => void) => void;
+  /** Host: opens a lock for a team. */
+  'escape:unlock': (p: EscapeUnlock, ack: (res: EscapeAck) => void) => void;
+  /** Host: ends the run. */
+  'escape:end': (p: EscapePin, ack: (res: EscapeAck) => void) => void;
+  /** Host: shows the finale to the whole room. */
+  'escape:finale': (p: EscapePin, ack: (res: EscapeAck) => void) => void;
+  /** Player, in self formation: joins a team. */
+  'escape:choose-team': (p: EscapeChooseTeam, ack: (res: EscapeAck) => void) => void;
+  /** Player: tries a lock. */
+  'escape:submit': (p: EscapeSubmit, ack: (res: EscapeSubmitAck) => void) => void;
+  /** Player: asks for the hint it was offered. */
+  'escape:ask-hint': (p: EscapeAskHint, ack: (res: EscapeAskHintAck) => void) => void;
+}
+
+export interface EscapeServerToClientEvents {
+  /** To one phone. */
+  'escape:state': (p: EscapePlayerState) => void;
+  /** To the team room and the host room. */
+  'escape:team-update': (p: EscapeTeamUpdate) => void;
+  /** To the board room and the host room, throttled. */
+  'escape:board': (p: EscapeBoard) => void;
+  /** To the board room and the host room. */
+  'escape:announce': (p: EscapeAnnounce) => void;
+  /** To the host room, on sync and structural changes. */
+  'escape:host': (p: EscapeHostState) => void;
+  /** To the host room, when one team changed. */
+  'escape:host-team': (p: EscapeHostTeam) => void;
+  /** To the host room only, on sync: carries the answers. */
+  'escape:outline': (p: EscapeOutline) => void;
+  /** To the whole PIN room. */
+  'escape:finale': (p: EscapeFinale) => void;
+}

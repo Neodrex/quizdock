@@ -1,10 +1,11 @@
-import { normalizeAnswer } from '@quiz-dock/contracts';
+import { normalizeAnswer, type EscapePlayerView } from '@quiz-dock/contracts';
 import type {
   Clue,
   EscapeTemplate,
   Hint,
   Lock,
   LockInput,
+  Same,
   SequenceLock,
   SubmitResult,
   TeamState,
@@ -325,6 +326,9 @@ export interface PlayerView {
   hints: { id: string; text: string }[];
   escaped: boolean;
 }
+
+/** Compile-time check: the socket contract's EscapePlayerView is exactly PlayerView. */
+export const playerViewMatchesContract: Same<PlayerView, EscapePlayerView> = true;
 
 /**
  * Everything one phone may know. This is the security boundary: no answers

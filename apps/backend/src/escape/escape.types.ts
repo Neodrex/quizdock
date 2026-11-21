@@ -135,6 +135,6 @@ export type SubmitResult =
     };
 
 /** Compile-time check: stored content (plus an id) is a valid EscapeTemplate, and back. */
-type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+export type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 export const contentMatchesTemplate: Same<EscapeTemplateContent & { id: string }, EscapeTemplate> =
   true;

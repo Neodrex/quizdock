@@ -11,6 +11,7 @@
 
 export * from './background';
 export * from './escape';
+export * from './escape-live';
 export * from './image-choice';
 export * from './media-sniff';
 export * from './preferences';
@@ -25,6 +26,7 @@ export * from './admin/results';
 import type { ParticipantAccess } from './preferences';
 import type { ThemeValues } from './theme';
 import type { BackgroundStyle } from './background';
+import type { EscapeClientToServerEvents, EscapeServerToClientEvents } from './escape-live';
 import type { AudioTarget, LiveAudio, LiveQuestionMedia } from './question-media';
 
 export const CONTRACTS_VERSION = '0.3.0' as const;
@@ -47,6 +49,8 @@ export enum GameState {
   Podium = 'PODIUM',
   Ended = 'ENDED',
   HostDisconnected = 'HOST_DISCONNECTED',
+  /** An escape run (src/escape) owns the room: its own phases live in EscapePhase. */
+  Escape = 'ESCAPE',
 }
 
 /** Types de question (technique §4). */
@@ -575,7 +579,7 @@ export interface PodiumPayload {
 }
 
 /** Map des events client → serveur (avec accusés de réception typés). */
-export interface ClientToServerEvents {
+export interface ClientToServerEvents extends EscapeClientToServerEvents {
   'host:create': (
     p: {
       /** The quiz to open the room on; ignored when `selectionId` is given. */
@@ -802,7 +806,7 @@ export interface AnswerAck {
   reason?: AnswerRefusal;
 }
 
-export interface ServerToClientEvents {
+export interface ServerToClientEvents extends EscapeServerToClientEvents {
   /**
    * Avis de transparence (§2.10, RG-16) : ce que la session enregistre. Les deux
    * drapeaux décident du texte affiché aux participants.
