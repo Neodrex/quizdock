@@ -19,6 +19,7 @@ import {
   type RunningRoom,
   type SyncedPlayer,
   eventually,
+  firstStateWhere,
   record,
   runningRoom,
   seedTemplate,
@@ -185,8 +186,9 @@ export function vaultHeistRunTests(ctx: EscapeContext): void {
     lookout = holder(A, 'lookout');
     const rest = A.filter((p) => p !== lookout);
     const handover = update(rest[0], (u) => u.kind === 'roles');
-    const taken = Promise.race(
-      rest.map((p) => stateWhere(p.socket, (s) => roleOf(s, p.playerId).includes('lookout'))),
+    const taken = firstStateWhere(
+      rest.map((p) => p.socket),
+      (s, i) => roleOf(s, rest[i].playerId).includes('lookout'),
     );
     lookout.socket.disconnect();
     expect(await handover).toEqual({ teamId: 't1', kind: 'roles' });

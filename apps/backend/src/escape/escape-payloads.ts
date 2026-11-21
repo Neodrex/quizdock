@@ -101,7 +101,7 @@ const recOf = (v: RunView, playerId: string) =>
 export function playerStateOf(v: RunView, playerId: string): EscapePlayerState {
   const tpl = v.snap.template;
   const rec = recOf(v, playerId);
-  const live = v.run.phase === 'running' || v.run.phase === 'finished';
+  const live = v.run.phase === 'running';
   const playing =
     v.run.phase === 'running' && rec !== null && rec.team.escapedAt === null && !rec.timedOut;
   const hint = playing ? nextHint(tpl, rec.team) : null;

@@ -120,7 +120,7 @@ export interface EscapePlayerView {
   escaped: boolean;
 }
 
-export type EscapePhase = 'forming' | 'running' | 'finished' | 'finale';
+export type EscapePhase = 'forming' | 'running' | 'finale';
 
 export interface EscapeClock {
   /** Server epoch ms when this was built. */
@@ -172,7 +172,7 @@ export interface EscapePlayerState {
         hintPenaltyS: number;
       })
     | null;
-  /** playerView(tpl, team, me) while running/finished; null before the start or without a team. */
+  /** playerView(tpl, team, me) while running; null before the start or without a team. */
   view: EscapePlayerView | null;
   /** The next hint's id and cost, never its text. */
   nextHint: { id: string; penaltyS: number } | null;

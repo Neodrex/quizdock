@@ -119,4 +119,39 @@ export function raceTests(ctx: EscapeContext): void {
     expect(await host.emitWithAck('host:attach', { pin })).toMatchObject({ ok: true });
     expect((await metaOf(pin)).state).toBe(GameState.Podium);
   });
+
+  it('a run the room switched away from mid-command sends nothing more (back to the lobby)', async () => {
+    const { host, pin, players, screen } = await runningRoom(ctx, { players: 1, teams: 1 });
+    const meta = await metaOf(pin);
+    const phone = record(players[0].socket);
+    const board = record(screen);
+    const store = ctx.h.app.get(EscapeStore);
+    const save = store.save.bind(store);
+    // escape:hint saves the team, then the room goes back to its lobby before the emits.
+    jest.spyOn(store, 'save').mockImplementationOnce(async (...args) => {
+      await save(...args);
+      await ctx.h.app.get(GameEngine).backToLobby(pin, meta.hostUserId);
+    });
+    expect(await host.emitWithAck('escape:hint', { pin, teamId: 't1' })).toEqual({
+      ok: true,
+      released: 1,
+    });
+    await settle(150);
+    const escapeEvents = (seen: [string, unknown][]) =>
+      seen.map(([e]) => e).filter((e) => e.startsWith('escape:'));
+    expect(escapeEvents(phone)).toEqual([]);
+    expect(escapeEvents(board)).toEqual([]);
+  });
+
+  it('a board due for a room that is gone meanwhile is skipped quietly', async () => {
+    const { pin } = await runningRoom(ctx, { players: 1, teams: 1 });
+    const game = ctx.h.app.get(GameService);
+    const meta = await metaOf(pin);
+    // The room is there for the first read, gone for the next.
+    jest.spyOn(game, 'getMeta').mockResolvedValueOnce(meta).mockResolvedValue(null);
+    const engine = ctx.h.app.get(EscapeEngine) as unknown as {
+      boardNow(pin: string): Promise<void>;
+    };
+    await expect(engine.boardNow(pin)).resolves.toBeUndefined();
+  });
 }

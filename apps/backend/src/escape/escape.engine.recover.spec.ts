@@ -29,7 +29,7 @@ describe('EscapeEngine.recover (bindServer)', () => {
     const runs: Record<string, EscapeRun> = {
       g1: run('running'),
       g2: run('forming'),
-      g3: run('finished'),
+      g3: run('finale'),
       g4: run('running'),
     };
     const redis = {

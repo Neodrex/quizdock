@@ -112,6 +112,37 @@ export function stateWhere(
   return nextEvent<EscapePlayerState>(socket, 'escape:state', { where: pred, timeoutMs });
 }
 
+/**
+ * The first `escape:state` matching `pred` on any of `sockets`. One timer, and
+ * every listener goes once one matches: no waiter is left behind (a race of
+ * `stateWhere` would keep the losers' timers running past the test).
+ */
+export function firstStateWhere(
+  sockets: Socket[],
+  pred: (s: EscapePlayerState, i: number) => boolean,
+  timeoutMs = 5_000,
+): Promise<EscapePlayerState> {
+  return new Promise((resolve, reject) => {
+    const listeners = sockets.map((socket, i) => {
+      const l = (s: EscapePlayerState) => {
+        if (!pred(s, i)) return;
+        done();
+        resolve(s);
+      };
+      socket.on('escape:state', l);
+      return () => socket.off('escape:state', l);
+    });
+    const timer = setTimeout(() => {
+      done();
+      reject(new Error(`no matching 'escape:state' within ${timeoutMs} ms`));
+    }, timeoutMs);
+    const done = () => {
+      clearTimeout(timer);
+      for (const off of listeners) off();
+    };
+  });
+}
+
 /** Every event `socket` gets from now on, as `[event, payload]`. */
 export function record(socket: Socket): [string, unknown][] {
   const seen: [string, unknown][] = [];

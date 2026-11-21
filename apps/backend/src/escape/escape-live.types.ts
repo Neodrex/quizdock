@@ -23,7 +23,7 @@ export interface RunClock {
 }
 
 export interface EscapeRun {
-  phase: 'forming' | 'running' | 'finished' | 'finale';
+  phase: 'forming' | 'running' | 'finale';
   formation: 'auto' | 'self';
   /** 0 = no cap. */
   maxSize: number;

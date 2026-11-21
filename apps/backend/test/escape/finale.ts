@@ -97,6 +97,29 @@ export function finaleTests(ctx: EscapeContext): void {
     expect(receivedLeaks(screenSeen, ctx.vault)).toEqual([]);
   });
 
+  it('E2: a team past its deadline but not yet flagged gets its time-up before the finale', async () => {
+    const { pin, host, teams } = await runningRoom(ctx, { players: 2, teams: 2 });
+    // Paused: no tick flags the time-up; the finale has to.
+    expect(await host.emitWithAck('escape:pause', { pin, paused: true })).toEqual({ ok: true });
+    expect(
+      await host.emitWithAck('escape:adjust-time', { pin, deltaS: -3600, teamId: 't1' }),
+    ).toEqual({ ok: true });
+    const seen = record(teams.t1[0].socket);
+    const other = record(teams.t2[0].socket);
+    const finale = finaleOn(teams.t1[0].socket);
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    await finale;
+    const order = seen
+      .filter(
+        ([e, p]) =>
+          e === 'escape:finale' ||
+          (e === 'escape:team-update' && (p as { kind: string }).kind === 'time-up'),
+      )
+      .map(([e, p]) => (e === 'escape:finale' ? e : p));
+    expect(order).toEqual([{ teamId: 't1', kind: 'time-up' }, 'escape:finale']);
+    expect(other.filter(([e]) => e === 'escape:team-update')).toEqual([]);
+  });
+
   it('T4: the last team out starts the finale on its own', async () => {
     const room = await runningRoom(ctx, { players: 1, teams: 1 });
     const finale = finaleOn(room.screen);

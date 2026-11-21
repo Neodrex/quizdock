@@ -25,7 +25,7 @@ const snapshotSchema = z.object({
   takenAt: ms,
 });
 const runSchema = z.object({
-  phase: z.enum(['forming', 'running', 'finished', 'finale']),
+  phase: z.enum(['forming', 'running', 'finale']),
   formation: z.enum(['auto', 'self']),
   maxSize: z.number().int().min(0),
   teamIds: ids,
