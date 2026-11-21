@@ -1,5 +1,5 @@
 import { normalizeAnswer } from '@quiz-dock/contracts';
-import type { Lock, LockInput } from './escape.types';
+import type { EscapeTemplate, Lock, LockInput, SubmitResult, TeamState } from './escape.types';
 
 /** Codes compare on letters and digits only, upper case: "a-17 b" is "A17B". */
 export function normalizeCode(text: string): string {
@@ -51,4 +51,112 @@ export function assignRoles(memberIds: string[], roleIds: string[]): Record<stri
     if (role && !out[member].includes(role)) out[member].push(role);
   }
   return out;
+}
+
+export function newTeam(
+  tpl: EscapeTemplate,
+  id: string,
+  name: string,
+  members: string[],
+): TeamState {
+  return {
+    id,
+    name,
+    members,
+    roles:
+      tpl.mode === 'roles'
+        ? assignRoles(
+            members,
+            tpl.roles.map((r) => r.id),
+          )
+        : {},
+    stageIndex: 0,
+    solved: [],
+    parts: {},
+    wrong: 0,
+    hintsUsed: [],
+    hintPenaltyS: 0,
+    stageClearedAt: [],
+    escapedAt: null,
+    hostUnlocks: [],
+    solvesBy: {},
+  };
+}
+
+export interface Submission {
+  playerId: string;
+  lockId: string;
+  /** Combined locks: which of the player's roles this part is for. */
+  roleId?: string;
+  input: LockInput;
+}
+
+/** Marks `lockId` solved and moves the team on if that cleared the stage. */
+function solveLock(
+  tpl: EscapeTemplate,
+  team: TeamState,
+  lockId: string,
+  at: number,
+): { team: TeamState; result: SubmitResult } {
+  const stage = tpl.stages[team.stageIndex];
+  const solved = [...team.solved, lockId];
+  if (!stage.locks.every((l) => solved.includes(l.id))) {
+    return { team: { ...team, solved }, result: { outcome: 'lock-solved', lockId } };
+  }
+  const stageClearedAt = [...team.stageClearedAt, at];
+  if (team.stageIndex === tpl.stages.length - 1) {
+    return {
+      team: { ...team, solved, stageClearedAt, escapedAt: at },
+      result: { outcome: 'escaped' },
+    };
+  }
+  return {
+    team: { ...team, stageIndex: team.stageIndex + 1, solved: [], parts: {}, stageClearedAt },
+    result: { outcome: 'stage-cleared', stageIndex: team.stageIndex },
+  };
+}
+
+export function submit(
+  tpl: EscapeTemplate,
+  team: TeamState,
+  s: Submission,
+  at: number,
+): { team: TeamState; result: SubmitResult } {
+  const refuse = (reason: Extract<SubmitResult, { outcome: 'refused' }>['reason']) => ({
+    team,
+    result: { outcome: 'refused', reason } as SubmitResult,
+  });
+  if (team.escapedAt !== null) return refuse('escaped');
+  const lock = tpl.stages[team.stageIndex].locks.find((l) => l.id === s.lockId);
+  if (!lock) return refuse('unknown-lock');
+  if (team.solved.includes(lock.id)) return refuse('already-solved');
+  const credit = (t: TeamState) => ({
+    ...t,
+    solvesBy: { ...t.solvesBy, [s.playerId]: (t.solvesBy[s.playerId] ?? 0) + 1 },
+  });
+  const wrong = () => ({
+    team: { ...team, wrong: team.wrong + 1 },
+    result: { outcome: 'wrong' } as SubmitResult,
+  });
+
+  if (lock.kind === 'combined') {
+    if (typeof s.input !== 'string' || !s.roleId) return refuse('bad-input');
+    const part = lock.parts.find((p) => p.roleId === s.roleId);
+    if (!part || !(team.roles[s.playerId] ?? []).includes(s.roleId)) {
+      return refuse('not-your-part');
+    }
+    const entered = team.parts[lock.id] ?? [];
+    // A part already entered must not be credited (or counted wrong) again.
+    if (entered.includes(s.roleId)) return refuse('already-solved');
+    if (normalizeAnswer(part.answer) !== normalizeAnswer(s.input)) return wrong();
+    const done = [...entered, s.roleId];
+    const next = credit({ ...team, parts: { ...team.parts, [lock.id]: done } });
+    if (!lock.parts.every((p) => done.includes(p.roleId))) {
+      return { team: next, result: { outcome: 'part-accepted', lockId: lock.id } };
+    }
+    return solveLock(tpl, next, lock.id, at);
+  }
+
+  if (!checkAnswer(lock, s.input)) return wrong();
+  return solveLock(tpl, credit(team), lock.id, at);
 }
