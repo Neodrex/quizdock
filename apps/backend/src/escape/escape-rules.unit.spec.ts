@@ -5,7 +5,16 @@ import type {
   PhraseLock,
   SequenceLock,
 } from './escape.types';
-import { assignRoles, checkAnswer, newTeam, normalizeCode, submit } from './escape-rules';
+import {
+  assignRoles,
+  checkAnswer,
+  hostUnlock,
+  newTeam,
+  nextHint,
+  normalizeCode,
+  submit,
+  useHint,
+} from './escape-rules';
 
 const code: CodeLock = { id: 'l1', label: 'Safe', kind: 'code', answer: 'A-17 b' };
 const phrase: PhraseLock = {
@@ -239,5 +248,79 @@ describe('submit', () => {
       t = r.team;
     }
     expect(t.escapedAt).toBe(1);
+  });
+});
+
+describe('hints', () => {
+  const withHints: EscapeTemplate = {
+    ...tpl,
+    stages: [
+      {
+        ...tpl.stages[0],
+        hints: [
+          { id: 'h1', text: 'Look up', penaltyS: 60, releaseAfterS: 300 },
+          { id: 'h2', text: 'The clock', penaltyS: 120, releaseAfterS: null },
+        ],
+      },
+      { ...tpl.stages[1], hints: [{ id: 'h3', text: 'Later', penaltyS: 30, releaseAfterS: null }] },
+    ],
+  };
+  it('gives the stage hints in order and adds their penalty', () => {
+    let t = team();
+    expect(nextHint(withHints, t)?.id).toBe('h1');
+    t = useHint(withHints, t, 'h1');
+    expect(t).toMatchObject({ hintsUsed: ['h1'], hintPenaltyS: 60 });
+    expect(nextHint(withHints, t)?.id).toBe('h2');
+    t = useHint(withHints, t, 'h2');
+    expect(nextHint(withHints, t)).toBeNull();
+    expect(useHint(withHints, t, 'h2')).toBe(t); // used twice: no change
+  });
+  it('ignores hints of another stage or unknown ids', () => {
+    const t = team();
+    expect(useHint(withHints, t, 'h3')).toBe(t);
+    expect(useHint(withHints, t, 'nope')).toBe(t);
+  });
+});
+
+describe('hostUnlock', () => {
+  it('solves the lock and records that the host did it', () => {
+    const r = hostUnlock(tpl, team(), 'safe', 500);
+    expect(r.result).toEqual({ outcome: 'lock-solved', lockId: 'safe' });
+    expect(r.team.hostUnlocks).toEqual(['safe']);
+    expect(r.team.solvesBy).toEqual({});
+  });
+  it('opens a combined lock whatever parts are in, crediting nobody', () => {
+    const t = submit(
+      tpl,
+      team(),
+      { playerId: 'p1', lockId: 'duo', roleId: 'nav', input: 'north' },
+      1,
+    ).team;
+    const r = hostUnlock(tpl, t, 'duo', 2);
+    expect(r.result).toEqual({ outcome: 'lock-solved', lockId: 'duo' });
+    expect(r.team.solved).toEqual(['duo']);
+    expect(r.team.solvesBy).toEqual({ p1: 1 });
+    expect(hostUnlock(tpl, team(), 'duo', 3).team.solvesBy).toEqual({});
+  });
+  it('can clear the stage', () => {
+    const t = hostUnlock(tpl, team(), 'safe', 1).team;
+    const r = hostUnlock(tpl, t, 'duo', 2);
+    expect(r.result).toEqual({ outcome: 'stage-cleared', stageIndex: 0 });
+    expect(r.team).toMatchObject({ stageIndex: 1, hostUnlocks: ['safe', 'duo'] });
+  });
+  it('refuses unknown, solved and escaped', () => {
+    expect(hostUnlock(tpl, team(), 'word', 1).result).toEqual({
+      outcome: 'refused',
+      reason: 'unknown-lock',
+    });
+    const t = hostUnlock(tpl, team(), 'safe', 1).team;
+    expect(hostUnlock(tpl, t, 'safe', 2)).toEqual({
+      team: t,
+      result: { outcome: 'refused', reason: 'already-solved' },
+    });
+    expect(hostUnlock(tpl, { ...team(), escapedAt: 5 }, 'safe', 6).result).toEqual({
+      outcome: 'refused',
+      reason: 'escaped',
+    });
   });
 });

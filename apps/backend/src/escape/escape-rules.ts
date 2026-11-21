@@ -1,5 +1,12 @@
 import { normalizeAnswer } from '@quiz-dock/contracts';
-import type { EscapeTemplate, Lock, LockInput, SubmitResult, TeamState } from './escape.types';
+import type {
+  EscapeTemplate,
+  Hint,
+  Lock,
+  LockInput,
+  SubmitResult,
+  TeamState,
+} from './escape.types';
 
 /** Codes compare on letters and digits only, upper case: "a-17 b" is "A17B". */
 export function normalizeCode(text: string): string {
@@ -159,4 +166,38 @@ export function submit(
 
   if (!checkAnswer(lock, s.input)) return wrong();
   return solveLock(tpl, credit(team), lock.id, at);
+}
+
+/** The first unused hint of the team's current stage, or null. */
+export function nextHint(tpl: EscapeTemplate, team: TeamState): Hint | null {
+  return tpl.stages[team.stageIndex]?.hints.find((h) => !team.hintsUsed.includes(h.id)) ?? null;
+}
+
+/** Uses a hint of the current stage once; anything else leaves the team unchanged. */
+export function useHint(tpl: EscapeTemplate, team: TeamState, hintId: string): TeamState {
+  const hint = tpl.stages[team.stageIndex]?.hints.find((h) => h.id === hintId);
+  if (!hint || team.hintsUsed.includes(hintId)) return team;
+  return {
+    ...team,
+    hintsUsed: [...team.hintsUsed, hintId],
+    hintPenaltyS: team.hintPenaltyS + hint.penaltyS,
+  };
+}
+
+/** The host opens a lock for a stuck team; nobody is credited, the results show it. */
+export function hostUnlock(
+  tpl: EscapeTemplate,
+  team: TeamState,
+  lockId: string,
+  at: number,
+): { team: TeamState; result: SubmitResult } {
+  const refuse = (reason: Extract<SubmitResult, { outcome: 'refused' }>['reason']) => ({
+    team,
+    result: { outcome: 'refused', reason } as SubmitResult,
+  });
+  if (team.escapedAt !== null) return refuse('escaped');
+  const lock = tpl.stages[team.stageIndex]?.locks.find((l) => l.id === lockId);
+  if (!lock) return refuse('unknown-lock');
+  if (team.solved.includes(lockId)) return refuse('already-solved');
+  return solveLock(tpl, { ...team, hostUnlocks: [...team.hostUnlocks, lockId] }, lockId, at);
 }
