@@ -34,6 +34,13 @@ export class EscapeTemplatesController {
     return this.templates.create(user.id, body);
   }
 
+  /** Adds the sample templates as drafts; titles the user already has are skipped. */
+  @Post('samples')
+  @ApiCreatedResponse({ type: EscapeTemplateDetailDto, isArray: true })
+  createSamples(@CurrentUser() user: User) {
+    return this.templates.createSamples(user.id);
+  }
+
   @Get(':id')
   @ApiOkResponse({ type: EscapeTemplateDetailDto })
   get(@CurrentUser() user: User, @Param('id') id: string) {

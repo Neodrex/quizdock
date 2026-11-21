@@ -24,6 +24,7 @@ describe('EscapeTemplatesController', () => {
     remove: jest.fn().mockResolvedValue(undefined),
     publish: jest.fn().mockResolvedValue({ id: 'e1' }),
     unpublish: jest.fn().mockResolvedValue({ id: 'e1' }),
+    createSamples: jest.fn().mockResolvedValue([{ id: 'e2' }]),
   };
   const as = (role: string) => ({ 'X-Test-Role': role });
 
@@ -73,6 +74,9 @@ describe('EscapeTemplatesController', () => {
     expect(service.publish).toHaveBeenCalledWith('user-1', 'e1');
     await http().post('/escape-templates/e1/unpublish').set(as('host')).expect(200);
     expect(service.unpublish).toHaveBeenCalledWith('user-1', 'e1');
+    const samples = await http().post('/escape-templates/samples').set(as('host')).expect(201);
+    expect(service.createSamples).toHaveBeenCalledWith('user-1');
+    expect(samples.body).toEqual([{ id: 'e2' }]);
   });
 
   it.each([

@@ -251,6 +251,85 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getEscapeTemplatesControllerCreateMutationOptions(options), queryClient);
     }
+    export type escapeTemplatesControllerCreateSamplesResponse201 = {
+  data: EscapeTemplateDetailDto[]
+  status: 201
+}
+
+export type escapeTemplatesControllerCreateSamplesResponseSuccess = (escapeTemplatesControllerCreateSamplesResponse201) & {
+  headers: Headers;
+};
+;
+
+export type escapeTemplatesControllerCreateSamplesResponse = (escapeTemplatesControllerCreateSamplesResponseSuccess)
+
+export const getEscapeTemplatesControllerCreateSamplesUrl = () => {
+
+
+
+
+  return `/api/v1/escape-templates/samples`
+}
+
+export const escapeTemplatesControllerCreateSamples = async ( options?: Parameters<typeof customFetch>[1]): Promise<escapeTemplatesControllerCreateSamplesResponse> => {
+
+  return customFetch<escapeTemplatesControllerCreateSamplesResponse>(getEscapeTemplatesControllerCreateSamplesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getEscapeTemplatesControllerCreateSamplesMutationKey = () => ['escapeTemplatesControllerCreateSamples'] as const;
+
+export const getEscapeTemplatesControllerCreateSamplesMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>, TError,void, TContext> => {
+
+const mutationKey = getEscapeTemplatesControllerCreateSamplesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>, void> = () => {
+
+
+          return  escapeTemplatesControllerCreateSamples(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EscapeTemplatesControllerCreateSamplesMutationResult = NonNullable<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>>
+
+    export type EscapeTemplatesControllerCreateSamplesMutationError = unknown
+
+
+    export const useEscapeTemplatesControllerCreateSamples = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getEscapeTemplatesControllerCreateSamplesMutationOptions(options), queryClient);
+    }
     export type escapeTemplatesControllerGetResponse200 = {
   data: EscapeTemplateDetailDto
   status: 200

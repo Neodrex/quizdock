@@ -5,6 +5,7 @@ import { ZodValidationException } from 'nestjs-zod';
 import type { PrismaService } from '../prisma/prisma.service';
 import { EscapeTemplatesService } from './escape-templates.service';
 import { tpl } from './fixtures';
+import { SAMPLES } from './samples';
 
 const OWNER = 'owner-1';
 const valid: EscapeTemplateContent = escapeTemplateContentSchema.parse(tpl);
@@ -170,5 +171,38 @@ describe('EscapeTemplatesService', () => {
       data: { status: 'archived' },
     });
     expect(prisma.escapeTemplate.delete).toHaveBeenCalledTimes(1);
+  });
+  it('adds both samples as drafts for the owner', async () => {
+    prisma.escapeTemplate.findMany.mockResolvedValue([]);
+    const created = await service.createSamples(OWNER);
+    expect(prisma.escapeTemplate.findMany).toHaveBeenCalledWith({
+      where: {
+        ownerId: OWNER,
+        title: { in: SAMPLES.map((s) => s.title) },
+        status: { not: EscapeTemplateStatus.archived },
+      },
+      select: { title: true },
+    });
+    for (const sample of SAMPLES) {
+      expect(prisma.escapeTemplate.create).toHaveBeenCalledWith({
+        data: { ownerId: OWNER, title: sample.title, status: 'draft', content: sample },
+      });
+    }
+    expect(created.map((d) => d.title)).toEqual(SAMPLES.map((s) => s.title));
+  });
+
+  it('skips a sample whose title the owner already has', async () => {
+    prisma.escapeTemplate.findMany.mockResolvedValue([{ title: SAMPLES[0].title }]);
+    const created = await service.createSamples(OWNER);
+    expect(prisma.escapeTemplate.create).toHaveBeenCalledTimes(1);
+    expect(prisma.escapeTemplate.create).toHaveBeenCalledWith({
+      data: { ownerId: OWNER, title: SAMPLES[1].title, status: 'draft', content: SAMPLES[1] },
+    });
+    expect(created.map((d) => d.title)).toEqual([SAMPLES[1].title]);
+
+    prisma.escapeTemplate.create.mockClear();
+    prisma.escapeTemplate.findMany.mockResolvedValue(SAMPLES.map((s) => ({ title: s.title })));
+    await expect(service.createSamples(OWNER)).resolves.toEqual([]);
+    expect(prisma.escapeTemplate.create).not.toHaveBeenCalled();
   });
 });

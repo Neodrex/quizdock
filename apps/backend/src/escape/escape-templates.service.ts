@@ -4,6 +4,7 @@ import { type EscapeTemplateContent, escapeTemplateContentSchema } from '@quiz-d
 import { ZodValidationException } from 'nestjs-zod';
 import { PrismaService } from '../prisma/prisma.service';
 import { validateTemplate } from './escape-template';
+import { SAMPLES } from './samples';
 
 const NOT_ARCHIVED = { not: EscapeTemplateStatus.archived };
 
@@ -66,6 +67,20 @@ export class EscapeTemplatesService {
       data: { ownerId, title: content.title, status: EscapeTemplateStatus.draft, content },
     });
     return toDetail(row);
+  }
+
+  /** Adds the sample templates as drafts, skipping any title the owner already has. */
+  async createSamples(ownerId: string): Promise<EscapeTemplateDetail[]> {
+    const existing = await this.prisma.escapeTemplate.findMany({
+      where: { ownerId, title: { in: SAMPLES.map((s) => s.title) }, status: NOT_ARCHIVED },
+      select: { title: true },
+    });
+    const taken = new Set(existing.map((r) => r.title));
+    const created: EscapeTemplateDetail[] = [];
+    for (const sample of SAMPLES) {
+      if (!taken.has(sample.title)) created.push(await this.create(ownerId, sample));
+    }
+    return created;
   }
 
   async get(ownerId: string, id: string): Promise<EscapeTemplateDetail> {
