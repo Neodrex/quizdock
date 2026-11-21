@@ -9,12 +9,14 @@ import {
   WsException,
 } from '@nestjs/websockets';
 import {
+  escapeAdjustTimeSchema,
   escapeAskHintSchema,
   escapeChooseTeamSchema,
   escapeCreateSchema,
   escapeHintSchema,
   escapeMoveSchema,
   escapeOpenSchema,
+  escapePauseSchema,
   escapePinSchema,
   escapeSubmitSchema,
   escapeTeamsSchema,
@@ -157,6 +159,30 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     const hostId = this.requireHostId(socket);
     const dto = parse(escapeHintSchema, payload);
     return { ok: true, released: await this.engine.hostHint(dto.pin, hostId, dto.teamId) };
+  }
+
+  /** P1: one event with a flag pauses or resumes, as `host:pause`. */
+  @SubscribeMessage('escape:pause')
+  async pause(
+    @ConnectedSocket() socket: EscapeSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<Ok> {
+    const hostId = this.requireHostId(socket);
+    const dto = parse(escapePauseSchema, payload);
+    await this.engine.pause(dto.pin, hostId, dto.paused);
+    return OK;
+  }
+
+  /** T1: ±deltaS for one team or every team still in the run (deadline only). */
+  @SubscribeMessage('escape:adjust-time')
+  async adjustTime(
+    @ConnectedSocket() socket: EscapeSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<Ok> {
+    const hostId = this.requireHostId(socket);
+    const dto = parse(escapeAdjustTimeSchema, payload);
+    await this.engine.adjustTime(dto.pin, hostId, dto);
+    return OK;
   }
 
   /** A player gone: the host and the screens see it. Role moves come with presence (Task 3.14). */

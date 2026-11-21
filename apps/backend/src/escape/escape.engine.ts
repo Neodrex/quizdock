@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import {
   type ClientToServerEvents,
+  type EscapeAdjustTime,
   type EscapeAnnounce,
   type EscapeAskHint,
   type EscapeAskHintAck,
@@ -30,7 +31,7 @@ import { GameService } from '../game/game.service';
 import type { GameMeta } from '../game/game.types';
 import { RedisService } from '../redis/redis.service';
 import { EscapeAttempts } from './escape-attempts';
-import { endClock, isTimedOut, runElapsed } from './escape-clock';
+import { endClock, isTimedOut, pauseClock, resumeClock, runElapsed } from './escape-clock';
 import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
 import {
   announceOf,
@@ -44,7 +45,7 @@ import {
   submitUpdateOf,
   timeUpOf,
 } from './escape-payloads';
-import { newTeam, nextHint, submit, useHint } from './escape-rules';
+import { adjustTime, newTeam, nextHint, submit, useHint } from './escape-rules';
 import { allDone, tickTeam } from './escape-tick';
 import { EscapeTicker } from './escape-ticker';
 import { validateTemplate } from './escape-template';
@@ -436,6 +437,60 @@ export class EscapeEngine implements OnModuleDestroy {
         await this.teamChanged(ref, v, rec.team.id, [update], ['hint']);
       }
       return released.length;
+    });
+  }
+
+  // ── Pause and time (P1, P2, T1–T3) ──
+
+  /**
+   * P1: pauses or resumes every team's clock. Pausing a paused run (or resuming
+   * a running one) changes nothing and sends nothing.
+   */
+  async pause(pin: string, hostUserId: string, paused: boolean): Promise<void> {
+    await this.mutate(pin, hostUserId, async (ref) => {
+      if (ref.run.phase !== 'running') throw new BadRequestException('escape.wrong_phase');
+      const now = Date.now();
+      const clock = paused ? pauseClock(ref.run.clock, now) : resumeClock(ref.run.clock, now);
+      if (clock === ref.run.clock) return;
+      const run: EscapeRun = { ...ref.run, clock };
+      await this.store.saveRun(ref.id, run);
+      const next = { ...ref, run };
+      await this.broadcast(next, { ...(await this.viewOf(next)), now });
+    });
+  }
+
+  /**
+   * T1: moves the deadline of one team, or of every team that has not escaped
+   * (owner decision 2: never its score). Paused or not. Added time clears a
+   * time-up at once when the new deadline is ahead; taking time away leaves
+   * the time-up to the next tick, which announces it.
+   */
+  async adjustTime(pin: string, hostUserId: string, dto: EscapeAdjustTime): Promise<void> {
+    await this.mutate(pin, hostUserId, async (ref) => {
+      if (ref.run.phase !== 'running') throw new BadRequestException('escape.wrong_phase');
+      const stored = await this.store.teams(ref.id);
+      if (dto.teamId !== undefined) {
+        const rec = ref.run.teamIds.includes(dto.teamId) ? stored.get(dto.teamId) : undefined;
+        if (!rec) throw new NotFoundException('escape.team_not_found');
+        if (rec.team.escapedAt !== null) throw new BadRequestException('escape.team_escaped');
+      }
+      const deltaMs = dto.deltaS * 1000;
+      const elapsed = runElapsed(ref.run.clock, Date.now());
+      const changed: TeamRecord[] = [];
+      for (const id of dto.teamId === undefined ? ref.run.teamIds : [dto.teamId]) {
+        const rec = stored.get(id);
+        if (!rec || rec.team.escapedAt !== null) continue;
+        const team = adjustTime(rec.team, deltaMs);
+        const timedOut = rec.timedOut && isTimedOut(ref.run.clock, team, elapsed);
+        changed.push({ ...rec, team, timedOut });
+      }
+      if (!changed.length) return;
+      await this.store.save(ref.id, { teams: changed });
+      const v = await this.viewOf(ref);
+      for (const rec of changed) {
+        const update: EscapeTeamUpdate = { teamId: rec.team.id, kind: 'time', deltaMs };
+        await this.teamChanged(ref, v, rec.team.id, [update]);
+      }
     });
   }
 

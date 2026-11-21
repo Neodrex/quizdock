@@ -5,9 +5,7 @@ import type {
   EscapePlayerState,
   EscapeTeamUpdate,
 } from '@quiz-dock/contracts';
-import { EscapeStore } from '../../src/escape/escape.store';
 import { vaultHeist } from '../../src/escape/samples';
-import { GameService } from '../../src/game/game.service';
 import { nextEvent } from '../game-harness';
 import {
   type EscapeContext,
@@ -143,30 +141,19 @@ export function hintTests(ctx: EscapeContext): void {
   });
 
   it('T3/T4: a team past its deadline times out; when every team is done the run finishes', async () => {
-    const store = ctx.h.app.get(EscapeStore);
-    const game = ctx.h.app.get(GameService);
-    const timeUps: Promise<EscapeTeamUpdate>[] = [];
-    let announce!: Promise<EscapeAnnounce>;
-    const { pin, teams, host } = await runningRoom(ctx, {
-      players: 2,
-      teams: 2,
-      beforeStart: async (p, room) => {
-        // A short limit, and t1's deadline already behind it (adjust-time comes in 3.12).
-        const id = (await game.getMeta(p))!.id;
-        const run = (await store.run(id))!;
-        await store.saveRun(id, { ...run, clock: { ...run.clock, limitMs: 1_500 } });
-        const t1 = (await store.team(id, 't1'))!;
-        await store.save(id, { teams: [{ ...t1, team: { ...t1.team, adjustMs: -1_500 } }] });
-        timeUps.push(
-          nextEvent<EscapeTeamUpdate>(room.players[0].socket, 'escape:team-update', {
-            where: (u) => u.kind === 'time-up',
-          }),
-        );
-        announce = nextEvent<EscapeAnnounce>(room.screen, 'escape:announce', {
-          where: (a) => a.kind === 'time-up',
-        });
-      },
+    const { pin, teams, host, screen } = await runningRoom(ctx, { players: 2, teams: 2 });
+    const timeUps = [
+      nextEvent<EscapeTeamUpdate>(teams.t1[0].socket, 'escape:team-update', {
+        where: (u) => u.kind === 'time-up',
+      }),
+    ];
+    const announce = nextEvent<EscapeAnnounce>(screen, 'escape:announce', {
+      where: (a) => a.kind === 'time-up',
     });
+    // t1's deadline behind it (the limit is 40 min).
+    expect(
+      await host.emitWithAck('escape:adjust-time', { pin, deltaS: -3600, teamId: 't1' }),
+    ).toEqual({ ok: true });
     const [a] = teams.t1;
     const [b] = teams.t2;
     expect(await timeUps[0]).toEqual({ teamId: 't1', kind: 'time-up' });
@@ -180,8 +167,9 @@ export function hintTests(ctx: EscapeContext): void {
     await eventually(async () =>
       expect(a.last().team).toMatchObject({ timedOut: true, deadlineAt: null }),
     );
-    // t2 still plays until its own deadline, then the run finishes on its own.
+    // t2 still plays until its own deadline; then the run finishes on its own.
     expect(await submitAs(b, pin, 'lobby-door', '0417')).toMatchObject({ ok: true });
+    await host.emitWithAck('escape:adjust-time', { pin, deltaS: -3600, teamId: 't2' });
     const finished = await stateWhere(b.socket, (s: EscapePlayerState) => s.phase === 'finished');
     expect(finished.team?.timedOut).toBe(true);
     expect(await submitAs(b, pin, 'lobby-badge', ['blue'])).toEqual({
