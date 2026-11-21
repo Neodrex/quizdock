@@ -1,5 +1,5 @@
-import type { EscapeFinale } from '@quiz-dock/contracts';
-import { GAME_TTL_S, type GameId } from '../game/game.keys';
+import { type EscapeFinale, GameState } from '@quiz-dock/contracts';
+import { GAME_TTL_S, type GameId, gameKeys } from '../game/game.keys';
 import { RedisService } from '../redis/redis.service';
 import { onTestRedis } from '../../test/test-targets';
 import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
@@ -180,5 +180,34 @@ describe('EscapeStore (Redis)', () => {
     await fresh.snapshot(id);
     await fresh.snapshot(id);
     expect(get.mock.calls.filter(([key]) => key === escapeKeys.template(id))).toHaveLength(1);
+  });
+
+  describe('setGameState', () => {
+    const game = () => gameKeys.game(id);
+    afterEach(() => redis.del(game()));
+
+    it('writes the state over any live one and returns the one before', async () => {
+      await redis.hset(game(), { state: GameState.Lobby, prevState: '' });
+      expect(await store.setGameState(id, GameState.Escape)).toBe(GameState.Lobby);
+      expect(await redis.hgetall(game())).toEqual({ state: GameState.Escape, prevState: '' });
+    });
+
+    it('while the host is away, writes the state the host comes back to', async () => {
+      await redis.hset(game(), { state: GameState.HostDisconnected, prevState: GameState.Escape });
+      expect(await store.setGameState(id, GameState.Podium)).toBe(GameState.HostDisconnected);
+      expect(await redis.hgetall(game())).toEqual({
+        state: GameState.HostDisconnected,
+        prevState: GameState.Podium,
+      });
+    });
+
+    it('leaves an ended game ended, and writes nothing for a game that is gone', async () => {
+      await redis.hset(game(), { state: GameState.Ended, prevState: '' });
+      expect(await store.setGameState(id, GameState.Podium)).toBe(GameState.Ended);
+      expect(await redis.hgetall(game())).toEqual({ state: GameState.Ended, prevState: '' });
+      await redis.del(game());
+      expect(await store.setGameState(id, GameState.Podium)).toBeNull();
+      expect(await redis.exists(game())).toBe(0);
+    });
   });
 });

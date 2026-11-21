@@ -117,6 +117,18 @@ if redis.call('EXISTS', KEYS[2]) == 1 then return -1 end
 return redis.call('HSETNX', KEYS[1], ARGV[1], ARGV[2])
 `;
 
+/**
+ * The host is gone: the current state goes to prevState and the game to
+ * HOST_DISCONNECTED, in one step (a state written meanwhile is not lost). Nothing
+ * for a game ENDED, already HOST_DISCONNECTED, or gone; else the state before.
+ */
+const HOST_DISCONNECTED_SCRIPT = `
+local cur = redis.call('HGET', KEYS[1], 'state')
+if not cur or cur == ARGV[1] or cur == ARGV[2] then return false end
+redis.call('HSET', KEYS[1], 'state', ARGV[2], 'prevState', cur)
+return cur
+`;
+
 /** Auto-mode delay on a REVEAL when the question sets none (#6): env override, else constant. */
 const defaultAutoAdvanceMs = () => settings.get(SETTINGS.GAME_AUTO_ADVANCE_MS);
 /** How long the next quiz's lobby waits before it starts on its own (#198). */
@@ -1578,11 +1590,16 @@ export class GameEngine {
     this.timers.cancel('autoNext', pin);
     this.timers.cancel('mediaWait', pin);
     await this.freezeClock(pin, meta);
-    await this.redis.hset(
+    // Atomic: the state written meanwhile (an escape run started or over) is the one kept.
+    const prev = (await this.redis.eval(
+      HOST_DISCONNECTED_SCRIPT,
+      1,
       gameKeys.game(ref.id),
-      gameHash({ state: GameState.HostDisconnected, prevState: meta.state }),
-    );
-    this.log.debug(`HOST_DISCONNECTED ${pin} (depuis ${meta.state})`);
+      GameState.Ended,
+      GameState.HostDisconnected,
+    )) as string | null;
+    if (prev === null) return;
+    this.log.debug(`HOST_DISCONNECTED ${pin} (depuis ${prev})`);
 
     this.server.to(pin).emit('game:state', {
       state: GameState.HostDisconnected,

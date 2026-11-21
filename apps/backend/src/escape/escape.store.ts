@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { type EscapeFinale, escapeTemplateContentSchema } from '@quiz-dock/contracts';
+import { type EscapeFinale, GameState, escapeTemplateContentSchema } from '@quiz-dock/contracts';
 import { z } from 'zod';
-import type { GameId } from '../game/game.keys';
+import { gameKeys, type GameId } from '../game/game.keys';
 import { RedisService } from '../redis/redis.service';
 import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
 import { ESCAPE_TTL_S, escapeKeys } from './escape.keys';
@@ -100,6 +100,23 @@ export const storedShapesMatch: [
 const parseJson = <T>(schema: z.ZodType<T>, raw: string | null): T | null =>
   raw === null ? null : schema.parse(JSON.parse(raw));
 
+/**
+ * A game's state, set unless the room moved meanwhile: under HOST_DISCONNECTED it
+ * becomes the state the host comes back to (prevState); an ENDED game keeps
+ * ENDED; a game hash that is gone gets nothing. The state before, or nil.
+ * KEYS[1] the game hash; ARGV the state, ENDED, HOST_DISCONNECTED.
+ */
+const SET_GAME_STATE_SCRIPT = `
+local cur = redis.call('HGET', KEYS[1], 'state')
+if not cur or cur == ARGV[2] then return cur end
+if cur == ARGV[3] then
+  redis.call('HSET', KEYS[1], 'prevState', ARGV[1])
+else
+  redis.call('HSET', KEYS[1], 'state', ARGV[1])
+end
+return cur
+`;
+
 /** What one `save` writes, all in one MULTI. */
 export interface EscapeWrite {
   run?: EscapeRun;
@@ -185,6 +202,23 @@ export class EscapeStore {
       pipe.expire(key, ESCAPE_TTL_S);
     }
     await pipe.exec();
+  }
+
+  /**
+   * Sets the game's state in one step against the host's absence and the end of
+   * the room (SET_GAME_STATE_SCRIPT). The state it found; `state` itself was
+   * written only when that is neither ENDED nor HOST_DISCONNECTED (nor null).
+   */
+  async setGameState(id: GameId, state: GameState): Promise<GameState | null> {
+    const prev = (await this.redis.eval(
+      SET_GAME_STATE_SCRIPT,
+      1,
+      gameKeys.game(id),
+      state,
+      GameState.Ended,
+      GameState.HostDisconnected,
+    )) as string | null;
+    return (prev as GameState | null) ?? null;
   }
 
   /** The final ranking and awards (null until the finale). */

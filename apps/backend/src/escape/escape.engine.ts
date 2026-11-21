@@ -361,7 +361,9 @@ export class EscapeEngine implements OnModuleDestroy {
 
   async start(pin: string, hostUserId: string): Promise<void> {
     await this.mutate(pin, hostUserId, async (ref) => {
-      if (ref.run.phase !== 'forming') throw new BadRequestException('escape.wrong_phase');
+      if (ref.run.phase !== 'forming' || ref.meta.state !== GameState.Lobby) {
+        throw new BadRequestException('escape.wrong_phase');
+      }
       const v = await this.viewOf(ref);
       const tpl = ref.snap.template;
       // S1: empty teams go, then the connected unassigned join the smallest.
@@ -389,12 +391,15 @@ export class EscapeEngine implements OnModuleDestroy {
         teams: recs,
         members: { set: membersIndex(recs.map((r) => r.team)) },
       });
-      await this.redis.hset(gameKeys.game(ref.id), gameHash({ state: GameState.Escape }));
+      // Atomic: a host gone meanwhile comes back to the run (prevState).
+      const was = await this.store.setGameState(ref.id, GameState.Escape);
       await this.game.touchRoom(pin);
       // S3.
-      this.server
-        .to(pin)
-        .emit('game:state', { state: GameState.Escape, questionIndex: -1, totalQuestions: 0 });
+      if (this.wrote(was)) {
+        this.server
+          .to(pin)
+          .emit('game:state', { state: GameState.Escape, questionIndex: -1, totalQuestions: 0 });
+      }
       await this.broadcast({ ...ref, run }, { ...v, run, teams: recs, now });
       this.startTicker(pin, ref.id);
     });
@@ -706,15 +711,11 @@ export class EscapeEngine implements OnModuleDestroy {
     await this.store.save(ref.id, { run, teams: late });
     await this.store.saveResults(ref.id, finale);
     this.forget(ref.id);
-    // A room ended meanwhile stays ended (escape:end racing host:end).
-    if (!closed && ref.meta.state !== GameState.Ended) {
-      const away = ref.meta.state === GameState.HostDisconnected;
-      await this.redis.hset(
-        gameKeys.game(ref.id),
-        gameHash(away ? { prevState: GameState.Podium } : { state: GameState.Podium }),
-      );
-      await this.game.touchRoom(ref.pin);
-      if (!away) {
+    if (!closed) {
+      // Atomic: an ended room stays ended; without its host, PODIUM waits in prevState.
+      const was = await this.store.setGameState(ref.id, GameState.Podium);
+      if (was !== GameState.Ended) await this.game.touchRoom(ref.pin);
+      if (this.wrote(was)) {
         this.server
           .to(ref.pin)
           .emit('game:state', { state: GameState.Podium, questionIndex: -1, totalQuestions: 0 });
@@ -723,6 +724,11 @@ export class EscapeEngine implements OnModuleDestroy {
     await this.broadcast(next, final);
     this.server.to(ref.pin).emit('escape:finale', finale);
     return finale;
+  }
+
+  /** Whether setGameState wrote the state itself, from the state it found. */
+  private wrote(was: GameState | null): boolean {
+    return was !== null && was !== GameState.Ended && was !== GameState.HostDisconnected;
   }
 
   /** Drops what this process keeps for a run that no longer plays (ticker, presence). */
