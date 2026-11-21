@@ -11,6 +11,7 @@ import {
   assignRoles,
   awards,
   checkAnswer,
+  deadlineMs,
   hostUnlock,
   newTeam,
   nextHint,
@@ -329,6 +330,21 @@ describe('hints', () => {
   it('refuses once the team has escaped', () => {
     const t = { ...team(), escapedAt: 5 };
     expect(useHint(withHints, t, 'h1')).toBe(t);
+    expect(useHint(withHints, t, 'h1', { free: true })).toBe(t);
+  });
+  it('a free (timed) hint costs nothing but still shows', () => {
+    const t = useHint(withHints, team(), 'h1', { free: true });
+    expect(t).toMatchObject({ hintsUsed: ['h1'], paidHints: [], hintPenaltyS: 0 });
+    expect(playerView(withHints, t, 'p1').hints).toEqual([{ id: 'h1', text: 'Look up' }]);
+    expect(nextHint(withHints, t)?.id).toBe('h2');
+  });
+  it('a paid hint costs its penalty and is tracked as paid', () => {
+    const t = useHint(withHints, useHint(withHints, team(), 'h1', { free: true }), 'h2');
+    expect(t).toMatchObject({ hintsUsed: ['h1', 'h2'], paidHints: ['h2'], hintPenaltyS: 120 });
+  });
+  it('a free hint keeps the next-hint-only rule', () => {
+    const t = team();
+    expect(useHint(withHints, t, 'h2', { free: true })).toBe(t);
   });
 });
 
@@ -560,16 +576,19 @@ describe('rankTeams', () => {
     ]);
   });
 
-  it('time the host adds for a team improves its score', () => {
+  it('time the host adds moves the deadline, not the ranking', () => {
     const a = t({ id: 'a', escapedAt: 500_000 });
     const b = t({ id: 'b', escapedAt: 530_000 });
     expect(team().adjustMs).toBe(0);
     const helped = adjustTime(adjustTime(b, 20_000), 20_000);
     expect(helped.adjustMs).toBe(40_000);
     expect(b.adjustMs).toBe(0);
-    expect(rankTeams([a, helped]).map((r) => [r.team.id, r.scoreMs])).toEqual([
-      ['b', 490_000],
+    expect(deadlineMs(3_600_000, b)).toBe(3_600_000);
+    expect(deadlineMs(3_600_000, helped)).toBe(3_640_000);
+    expect(deadlineMs(3_600_000, adjustTime(b, -60_000))).toBe(3_540_000);
+    expect(rankTeams([helped, a]).map((r) => [r.team.id, r.scoreMs])).toEqual([
       ['a', 500_000],
+      ['b', 530_000],
     ]);
   });
 
@@ -590,7 +609,13 @@ describe('rankTeams', () => {
 
 describe('awards', () => {
   it('names fastest, fewest hints, teamwork and photo finish', () => {
-    const a = t({ id: 'a', escapedAt: 500_000, hintsUsed: ['h1'], solvesBy: { p1: 4, p2: 0 } });
+    const a = t({
+      id: 'a',
+      escapedAt: 500_000,
+      hintsUsed: ['h1'],
+      paidHints: ['h1'],
+      solvesBy: { p1: 4, p2: 0 },
+    });
     const b = t({ id: 'b', escapedAt: 503_000, hintsUsed: [], solvesBy: { p1: 2, p2: 2 } });
     expect(awards([a, b])).toEqual({
       fastest: 'a',
@@ -598,6 +623,12 @@ describe('awards', () => {
       teamwork: 'b',
       photoFinish: ['a', 'b'],
     });
+  });
+
+  it('fewest hints counts paid hints only', () => {
+    const a = t({ id: 'a', escapedAt: 500_000, hintsUsed: ['h1', 'h2'], paidHints: [] });
+    const b = t({ id: 'b', escapedAt: 400_000, hintsUsed: ['h1'], paidHints: ['h1'] });
+    expect(awards([a, b]).fewestHints).toBe('a');
   });
 
   it('photo finish is the closest consecutive pair', () => {

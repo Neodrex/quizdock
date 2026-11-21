@@ -23,7 +23,7 @@ export interface Clue {
 export interface Hint {
   id: string;
   text: string;
-  /** Added to the team's time when used. */
+  /** Added to the team's score when asked for or given by the host; timed release is free. */
   penaltyS: number;
   /** Released by itself this many seconds after the stage opened; null = on request or by the host. */
   releaseAfterS: number | null;
@@ -98,11 +98,14 @@ export interface TeamState {
   /** Combined locks: role ids whose part is entered, per lock id. */
   parts: Record<string, string[]>;
   wrong: number;
+  /** Every hint the team has, free (timed) or paid, in release order: all show on phones. */
   hintsUsed: string[];
+  /** Hints the team paid for (asked for or given by the host): the fewest-hints award. */
+  paidHints: string[];
   hintPenaltyS: number;
   /**
-   * Time the host gave the team, in ms. Positive is in the team's favour: it
-   * is subtracted from the ranking score (escapedAt + hint penalties).
+   * Time the host gave the team, in ms. Positive extends the team's deadline
+   * (see deadlineMs); it never changes the ranking score.
    */
   adjustMs: number;
   /** Elapsed ms at which each stage was cleared, by stage index. */

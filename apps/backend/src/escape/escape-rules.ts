@@ -133,6 +133,7 @@ export function newTeam(
     parts: {},
     wrong: 0,
     hintsUsed: [],
+    paidHints: [],
     hintPenaltyS: 0,
     adjustMs: 0,
     stageClearedAt: [],
@@ -226,14 +227,26 @@ export function nextHint(tpl: EscapeTemplate, team: TeamState): Hint | null {
   return tpl.stages[team.stageIndex]?.hints.find((h) => !team.hintsUsed.includes(h.id)) ?? null;
 }
 
-/** Uses the next unused hint of the current stage; anything else leaves the team unchanged. */
-export function useHint(tpl: EscapeTemplate, team: TeamState, hintId: string): TeamState {
+/**
+ * Uses the next unused hint of the current stage; anything else leaves the
+ * team unchanged. `free` (a timed release) shows the hint without its penalty
+ * and without counting it as paid.
+ */
+export function useHint(
+  tpl: EscapeTemplate,
+  team: TeamState,
+  hintId: string,
+  opts: { free?: boolean } = {},
+): TeamState {
   if (team.escapedAt !== null) return team;
   const hint = nextHint(tpl, team);
   if (!hint || hint.id !== hintId) return team;
+  const hintsUsed = [...team.hintsUsed, hintId];
+  if (opts.free) return { ...team, hintsUsed };
   return {
     ...team,
-    hintsUsed: [...team.hintsUsed, hintId],
+    hintsUsed,
+    paidHints: [...team.paidHints, hintId],
     hintPenaltyS: team.hintPenaltyS + hint.penaltyS,
   };
 }
@@ -259,6 +272,11 @@ export function hostUnlock(
 /** The host gives a team `deltaMs` (negative takes time away); see TeamState.adjustMs. */
 export function adjustTime(team: TeamState, deltaMs: number): TeamState {
   return { ...team, adjustMs: team.adjustMs + deltaMs };
+}
+
+/** The team's own time limit in run ms: the run's duration plus the host's adjustments. */
+export function deadlineMs(durationMs: number, team: TeamState): number {
+  return durationMs + team.adjustMs;
 }
 
 /** FNV-1a, 32 bit: a small pure hash for a stable per-team order. */
@@ -356,17 +374,17 @@ export function playerView(tpl: EscapeTemplate, team: TeamState, playerId: strin
 export interface Ranked {
   team: TeamState;
   place: number;
-  /** Escaped: time in ms including hint penalties, minus host adjustments. */
+  /** Escaped: time in ms including paid hint penalties. Host adjustments do not count. */
   scoreMs: number | null;
 }
 
 const scoreMs = (t: TeamState) =>
-  t.escapedAt === null ? null : t.escapedAt + t.hintPenaltyS * 1000 - t.adjustMs;
+  t.escapedAt === null ? null : t.escapedAt + t.hintPenaltyS * 1000;
 
 const byId = (a: TeamState, b: TeamState) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 /**
- * Escaped teams first by time plus hint penalties minus host adjustments; the rest by stage reached,
+ * Escaped teams first by time plus hint penalties; the rest by stage reached,
  * then by when they cleared their last stage. Equal teams by id, so stable.
  */
 export function rankTeams(teams: TeamState[]): Ranked[] {
@@ -406,9 +424,9 @@ export interface Awards {
 export function awards(teams: TeamState[]): Awards {
   const escaped = rankTeams(teams).filter((r) => r.scoreMs !== null);
   const fastest = escaped[0]?.team.id ?? null;
-  // Stable sort over the ranking: equal hint counts go to the better place.
+  // Paid hints only (timed ones are free). Stable sort: equal counts go to the better place.
   const fewestHints =
-    [...escaped].sort((a, b) => a.team.hintsUsed.length - b.team.hintsUsed.length)[0]?.team.id ??
+    [...escaped].sort((a, b) => a.team.paidHints.length - b.team.paidHints.length)[0]?.team.id ??
     null;
   const best = [...teams]
     .map((team) => ({ team, e: evenness(team) }))
