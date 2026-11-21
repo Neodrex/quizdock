@@ -13,6 +13,7 @@ import {
   type EscapeAskHint,
   type EscapeAskHintAck,
   type EscapeCreate,
+  type EscapeFinale,
   type EscapeMove,
   type EscapeOpen,
   type EscapeRefusal,
@@ -37,6 +38,7 @@ import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types'
 import {
   announceOf,
   boardOf,
+  finaleOf,
   hintUpdateOf,
   hostStateOf,
   hostTeamOf,
@@ -118,8 +120,12 @@ export class EscapeEngine implements OnModuleDestroy {
   private readonly queue = new SerialQueue();
   /** One ticker per running run, keyed by game id (timed hints, time-up, stuck). */
   private readonly ticker = new EscapeTicker(this.log);
-  /** Board throttle per room: when it last went out, and the send waiting, if any. */
-  private readonly boards = new Map<string, { at: number; timer: NodeJS.Timeout | null }>();
+  /**
+   * Board throttle per room: present while a board went out less than
+   * `boardEveryMs` ago; `pending` when another was asked for meanwhile. An
+   * entry removes itself once idle, so nothing stays behind a room.
+   */
+  private readonly boards = new Map<string, { pending: boolean; timer: NodeJS.Timeout }>();
   /**
    * R1/R2: when each player of a run lost their last socket (epoch ms), by
    * game id. In process, like the tickers: after a restart, members without a
@@ -144,7 +150,13 @@ export class EscapeEngine implements OnModuleDestroy {
 
   onModuleDestroy(): void {
     this.ticker.stopAll();
-    for (const b of this.boards.values()) if (b.timer) clearTimeout(b.timer);
+    for (const b of this.boards.values()) clearTimeout(b.timer);
+    this.boards.clear();
+  }
+
+  /** What this process keeps for a run and its room (tests check that nothing stays). */
+  inProcess(id: GameId, pin: string): { ticking: boolean; gone: boolean; board: boolean } {
+    return { ticking: this.ticker.has(id), gone: this.gone.has(id), board: this.boards.has(pin) };
   }
 
   /**
@@ -257,6 +269,8 @@ export class EscapeEngine implements OnModuleDestroy {
     const meta = await this.game.getMeta(pin);
     if (meta?.kind !== 'escape') return;
     await this.mutate(pin, undefined, async (ref) => {
+      // Roles move only while the run plays: its ticker clears what is kept here.
+      if (ref.run.phase !== 'running') return;
       const sockets = await this.server.in(pin).fetchSockets();
       if (sockets.some((s) => s.data.pin === pin && s.data.playerId === playerId)) return;
       const gone = this.gone.get(ref.id) ?? new Map<string, number>();
@@ -420,7 +434,7 @@ export class EscapeEngine implements OnModuleDestroy {
       await this.teamChanged(ref, v, team.id, update ? [update] : [], announce);
       // T4: the last team out ends the run.
       if (result.outcome === 'escaped' && allDone(ref.run.clock, v.teams, elapsed)) {
-        await this.finish(ref);
+        await this.finale(ref);
       }
       return { ok: true, outcome: result.outcome };
     });
@@ -561,7 +575,7 @@ export class EscapeEngine implements OnModuleDestroy {
       const v = await this.viewOf(ref);
       await this.teamChanged(ref, v, team.id, update ? [update] : [], announce);
       if (result.outcome === 'escaped' && allDone(ref.run.clock, v.teams, elapsed)) {
-        await this.finish(ref);
+        await this.finale(ref);
       }
     });
   }
@@ -580,16 +594,24 @@ export class EscapeEngine implements OnModuleDestroy {
   private async tick(pin: string, id: GameId): Promise<void> {
     await this.queue.run(id, async () => {
       const meta = await this.game.getMeta(pin);
-      const mine = meta?.id === id && meta.kind === 'escape' && meta.state !== GameState.Ended;
+      // E4: the room moved to another game (back to its lobby, next quiz).
+      const mine = meta?.id === id && meta.kind === 'escape';
       const [snap, run] = mine
         ? await Promise.all([this.store.snapshot(id), this.store.run(id)])
         : [null, null];
       if (!meta || !snap || !run || run.phase !== 'running') {
-        this.ticker.stop(id);
-        this.gone.delete(id);
+        this.forget(id);
         return;
       }
       const ref: RunRef = { pin, id, meta, snap, run };
+      // E3: the room closed under the run (host:end, or the host window ran out).
+      if (meta.state === GameState.Ended) {
+        await this.finale(ref, true).catch((err: Error) => {
+          this.forget(id);
+          this.log.warn(`finale of closed room ${pin}: ${err.message}`);
+        });
+        return;
+      }
       // R2: roles move off members gone past the grace, paused or not.
       if (snap.template.mode === 'roles' && this.gone.has(id)) {
         await this.reconcileRoles(ref, await this.viewOf(ref));
@@ -627,25 +649,86 @@ export class EscapeEngine implements OnModuleDestroy {
         // Stuck and unstuck alone: the host's team detail only.
         await this.teamChanged(ref, v, teamId, updates, [...new Set(announce)]);
       }
-      if (done) await this.finish(ref);
+      if (done) await this.finale(ref);
+    });
+  }
+
+  // ── End and finale (E1–E3, T4) ──
+
+  /** E1: the host ends the run now (running only); the finale follows at once. */
+  async end(pin: string, hostUserId: string): Promise<void> {
+    await this.mutate(pin, hostUserId, async (ref) => {
+      if (ref.run.phase !== 'running') throw new BadRequestException('escape.wrong_phase');
+      await this.finale(ref);
     });
   }
 
   /**
-   * T4/E1: the run ends (every team escaped or timed out); its clock freezes
-   * and the ticker stops. In the run's queue. The finale comes in Task 3.15.
+   * E2: the finale to the whole room: from a running run (it ends first), or
+   * again from the finale, with the same results.
    */
-  private async finish(ref: RunRef): Promise<void> {
-    const run: EscapeRun = {
-      ...ref.run,
-      phase: 'finished',
-      clock: endClock(ref.run.clock, Date.now()),
-    };
-    await this.store.saveRun(ref.id, run);
-    this.ticker.stop(ref.id);
-    this.gone.delete(ref.id);
+  async showFinale(pin: string, hostUserId: string): Promise<void> {
+    await this.mutate(pin, hostUserId, async (ref) => {
+      if (ref.run.phase === 'forming') throw new BadRequestException('escape.wrong_phase');
+      const stored = ref.run.phase === 'finale' ? await this.store.results(ref.id) : null;
+      if (stored) this.server.to(pin).emit('escape:finale', stored);
+      else await this.finale(ref);
+    });
+  }
+
+  /**
+   * E2/T4: the run is over. Clocks freeze, teams past their deadline count as
+   * timed out, the ranking and awards are kept in `results`, the room goes to
+   * its podium, and everyone in it gets the finale (no answers: names, counts
+   * and times). The host console also gets its full view.
+   *
+   * `closed` (E3): the room ended under the run. Best effort: the results and
+   * the finale still go out, the room stays ENDED and is not kept alive.
+   * Without its host (HOST_DISCONNECTED, owner decision 1) the podium is where
+   * the room resumes when the host is back.
+   */
+  private async finale(ref: RunRef, closed = false): Promise<EscapeFinale> {
+    const now = Date.now();
+    const clock = endClock(ref.run.clock, now);
+    const run: EscapeRun = { ...ref.run, phase: 'finale', clock };
     const next = { ...ref, run };
-    await this.broadcast(next, await this.viewOf(next));
+    const elapsed = runElapsed(clock, now);
+    const v = await this.viewOf(next);
+    const late: TeamRecord[] = [];
+    const teams = v.teams.map((r) => {
+      if (r.timedOut || !isTimedOut(clock, r.team, elapsed)) return r;
+      const out = { ...r, timedOut: true };
+      late.push(out);
+      return out;
+    });
+    const final = { ...v, run, teams };
+    const finale = finaleOf(final);
+    await this.store.save(ref.id, { run, teams: late });
+    await this.store.saveResults(ref.id, finale);
+    this.forget(ref.id);
+    // A room ended meanwhile stays ended (escape:end racing host:end).
+    if (!closed && ref.meta.state !== GameState.Ended) {
+      const away = ref.meta.state === GameState.HostDisconnected;
+      await this.redis.hset(
+        gameKeys.game(ref.id),
+        gameHash(away ? { prevState: GameState.Podium } : { state: GameState.Podium }),
+      );
+      await this.game.touchRoom(ref.pin);
+      if (!away) {
+        this.server
+          .to(ref.pin)
+          .emit('game:state', { state: GameState.Podium, questionIndex: -1, totalQuestions: 0 });
+      }
+    }
+    await this.broadcast(next, final);
+    this.server.to(ref.pin).emit('escape:finale', finale);
+    return finale;
+  }
+
+  /** Drops what this process keeps for a run that no longer plays (ticker, presence). */
+  private forget(id: GameId): void {
+    this.ticker.stop(id);
+    this.gone.delete(id);
   }
 
   /**
@@ -912,30 +995,42 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /** The board to the screens and the host, at most every `boardEveryMs` (the latest wins). */
   private toBoard(ref: RunRef, v: RunView): void {
-    const now = Date.now();
-    const last = this.boards.get(ref.pin);
-    const wait = last ? last.at + this.timings.boardEveryMs - now : 0;
-    if (wait <= 0) {
-      this.boards.set(ref.pin, { at: now, timer: null });
-      this.emitBoard(ref.pin, v);
+    const held = this.boards.get(ref.pin);
+    if (held) {
+      held.pending = true;
       return;
     }
-    if (last!.timer) return;
-    last!.timer = setTimeout(() => {
-      last!.timer = null;
-      void this.boardNow(ref.pin).catch((err: Error) =>
-        this.log.warn(`board ${ref.pin}: ${err.message}`),
-      );
-    }, wait);
-    last!.timer.unref?.();
+    this.emitBoard(ref.pin, v);
+    this.holdBoard(ref.pin);
+  }
+
+  /** No board for `boardEveryMs`; then the latest, if one was asked for meanwhile. */
+  private holdBoard(pin: string): void {
+    const held = {
+      pending: false,
+      timer: setTimeout(() => {
+        if (this.boards.get(pin) === held) this.boards.delete(pin);
+        if (!held.pending) return;
+        void this.boardNow(pin).catch((err: Error) =>
+          this.log.warn(`board ${pin}: ${err.message}`),
+        );
+      }, this.timings.boardEveryMs),
+    };
+    held.timer.unref?.();
+    this.boards.set(pin, held);
   }
 
   private async boardNow(pin: string): Promise<void> {
     const meta = await this.game.getMeta(pin);
     if (meta?.kind !== 'escape') return;
-    const ref = await this.requireRun(pin);
-    this.boards.set(pin, { at: Date.now(), timer: null });
-    this.emitBoard(pin, await this.viewOf(ref));
+    const v = await this.viewOf(await this.requireRun(pin));
+    const held = this.boards.get(pin);
+    if (held) {
+      held.pending = true;
+      return;
+    }
+    this.emitBoard(pin, v);
+    this.holdBoard(pin);
   }
 
   private emitBoard(pin: string, v: RunView): void {

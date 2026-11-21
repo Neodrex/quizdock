@@ -140,7 +140,7 @@ export function hintTests(ctx: EscapeContext): void {
     expect(await unstuck).toMatchObject({ id: 't1', stuck: false, solved: ['lobby-door'] });
   });
 
-  it('T3/T4: a team past its deadline times out; when every team is done the run finishes', async () => {
+  it('T3/T4: a team past its deadline times out; when every team is done the finale starts', async () => {
     const { pin, teams, host, screen } = await runningRoom(ctx, { players: 2, teams: 2 });
     const timeUps = [
       nextEvent<EscapeTeamUpdate>(teams.t1[0].socket, 'escape:team-update', {
@@ -167,10 +167,10 @@ export function hintTests(ctx: EscapeContext): void {
     await eventually(async () =>
       expect(a.last().team).toMatchObject({ timedOut: true, deadlineAt: null }),
     );
-    // t2 still plays until its own deadline; then the run finishes on its own.
+    // t2 still plays until its own deadline; then the finale starts on its own.
     expect(await submitAs(b, pin, 'lobby-door', '0417')).toMatchObject({ ok: true });
     await host.emitWithAck('escape:adjust-time', { pin, deltaS: -3600, teamId: 't2' });
-    const finished = await stateWhere(b.socket, (s: EscapePlayerState) => s.phase === 'finished');
+    const finished = await stateWhere(b.socket, (s: EscapePlayerState) => s.phase === 'finale');
     expect(finished.team?.timedOut).toBe(true);
     expect(await submitAs(b, pin, 'lobby-badge', ['blue'])).toEqual({
       ok: false,

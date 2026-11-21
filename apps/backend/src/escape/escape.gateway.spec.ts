@@ -6,6 +6,7 @@ import {
   seedTemplate,
 } from '../../test/escape/escape-harness';
 import { clockTests } from '../../test/escape/clock';
+import { finaleTests } from '../../test/escape/finale';
 import { hintTests } from '../../test/escape/hints';
 import { lobbyTests } from '../../test/escape/lobby';
 import { playTests } from '../../test/escape/play';
@@ -39,4 +40,5 @@ describe('EscapeGateway (socket integration)', () => {
   describe('hints', () => hintTests(ctx));
   describe('clock', () => clockTests(ctx));
   describe('presence', () => presenceTests(ctx));
+  describe('finale', () => finaleTests(ctx));
 });

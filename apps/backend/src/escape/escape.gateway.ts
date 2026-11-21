@@ -198,6 +198,27 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     return OK;
   }
 
+  /** E1: the host ends the run now; the finale follows. */
+  @SubscribeMessage('escape:end')
+  async end(@ConnectedSocket() socket: EscapeSocket, @MessageBody() payload: unknown): Promise<Ok> {
+    const hostId = this.requireHostId(socket);
+    const dto = parse(escapePinSchema, payload);
+    await this.engine.end(dto.pin, hostId);
+    return OK;
+  }
+
+  /** E2: the finale to the whole room (ends a running run first; again from the finale). */
+  @SubscribeMessage('escape:finale')
+  async finale(
+    @ConnectedSocket() socket: EscapeSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<Ok> {
+    const hostId = this.requireHostId(socket);
+    const dto = parse(escapePinSchema, payload);
+    await this.engine.showFinale(dto.pin, hostId);
+    return OK;
+  }
+
   /** R2: a player's socket left; a stale one (the player is back on another) changes nothing. */
   async handleDisconnect(socket: EscapeSocket): Promise<void> {
     const { pin, playerId } = socket.data;

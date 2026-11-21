@@ -277,7 +277,7 @@ export function playTests(ctx: EscapeContext): void {
       expect(await cleared).toMatchObject({ kind: 'stage-cleared', stageIndex: 0, by: null });
       expect(await announce).toMatchObject({ teamId: 't1', stageIndex: 0 });
       const escaped = teamUpdate(a, (u) => u.kind === 'escaped');
-      const finished = stateWhere(a.socket, (s) => s.phase === 'finished');
+      const finished = stateWhere(a.socket, (s) => s.phase === 'finale');
       for (const stage of ctx.vault.stages.slice(1)) {
         for (const lock of stage.locks) {
           expect(await unlock(host, pin, 't1', lock.id)).toEqual({ ok: true });
