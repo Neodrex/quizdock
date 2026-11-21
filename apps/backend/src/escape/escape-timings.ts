@@ -6,7 +6,7 @@ export const ESCAPE_HOST_WINDOW_MS = 15 * 60_000;
 
 /**
  * Escape run timings (M3 plan §1.5). Not in SETTINGS: the backend reads
- * `process.env` only in the settings module, and new entries would touch the
+ * the environment only in the settings module, and new entries would touch the
  * upstream registry. Public and mutable so tests can speed them up through
  * `app.get(EscapeTimings)`. Move to SETTINGS if operators need to tune them.
  */
