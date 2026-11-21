@@ -634,3 +634,13 @@ describe('awards', () => {
     });
   });
 });
+
+describe('assignRoles with unusual ids', () => {
+  it('treats __proto__ as an ordinary member id', () => {
+    const out = assignRoles(['__proto__', 'p2'], ['nav', 'dec']);
+    expect(Object.keys(out)).toEqual(['__proto__', 'p2']);
+    expect(Object.hasOwn(out, '__proto__')).toBe(true);
+    expect(out['__proto__']).toEqual(['nav']);
+    expect(Object.getPrototypeOf(out)).toBe(Object.prototype);
+  });
+});
