@@ -16,6 +16,7 @@ import {
   normalizeCode,
   playerView,
   rankTeams,
+  reassignRoles,
   submit,
   useHint,
 } from './escape-rules';
@@ -115,6 +116,46 @@ describe('assignRoles', () => {
   });
   it('nobody connected: nobody holds anything', () => {
     expect(assignRoles([], roles)).toEqual({});
+  });
+});
+
+describe('reassignRoles', () => {
+  const r3 = ['r1', 'r2', 'r3'];
+  const start = assignRoles(['a', 'b', 'c'], r3);
+
+  it('keeps current roles; an orphaned role goes to the least loaded, earlier first', () => {
+    expect(reassignRoles(start, ['b', 'c'], r3)).toEqual({ b: ['r2', 'r1'], c: ['r3'] });
+  });
+  it('a rejoining member shares a role of the most loaded holder', () => {
+    const left = reassignRoles(start, ['b', 'c'], r3);
+    expect(reassignRoles(left, ['b', 'c', 'a'], r3)).toEqual({
+      b: ['r2', 'r1'],
+      c: ['r3'],
+      a: ['r1'],
+    });
+  });
+  it('a new member shares the first role when everyone holds as many', () => {
+    expect(reassignRoles(start, ['a', 'b', 'c', 'd'], r3)).toEqual({
+      a: ['r1'],
+      b: ['r2'],
+      c: ['r3'],
+      d: ['r1'],
+    });
+  });
+  it('nobody connected: nobody holds anything', () => {
+    expect(reassignRoles(start, [], r3)).toEqual({});
+  });
+  it('every role keeps a connected holder while anyone is connected', () => {
+    const steps = [['b', 'c'], ['c'], ['c', 'a'], ['a', 'd', 'e'], ['e'], [], ['b', 'a'], ['a']];
+    let roles = start;
+    for (const connected of steps) {
+      roles = reassignRoles(roles, connected, r3);
+      expect(Object.keys(roles).sort()).toEqual([...connected].sort());
+      for (const m of connected) expect(roles[m].length).toBeGreaterThan(0);
+      if (connected.length) {
+        for (const r of r3) expect(Object.values(roles).flat()).toContain(r);
+      }
+    }
   });
 });
 

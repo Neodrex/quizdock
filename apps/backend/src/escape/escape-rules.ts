@@ -52,9 +52,9 @@ export function checkAnswer(lock: Lock, input: LockInput): boolean {
 }
 
 /**
- * Round-robin over the connected members. Fewer members than roles: some hold
- * several. More: some roles are shared. Called again when someone leaves, so a
- * role is never left without a player.
+ * Initial assignment: round-robin over the connected members. Fewer members
+ * than roles: some hold several. More: some roles are shared. Later changes
+ * go through reassignRoles.
  */
 export function assignRoles(memberIds: string[], roleIds: string[]): Record<string, string[]> {
   const out: Record<string, string[]> = {};
@@ -67,6 +67,44 @@ export function assignRoles(memberIds: string[], roleIds: string[]): Record<stri
     if (role && !out[member].includes(role)) out[member].push(role);
   }
   return out;
+}
+
+/**
+ * Sticky reassignment when members connect or leave. Connected members keep
+ * their roles; a role left without a connected holder goes to the connected
+ * member holding the fewest (earlier in `connected` on ties); a member with no
+ * role shares the latest role of the most loaded holder (for a rejoiner, often
+ * the role they left), or `roleIds[0]` when everyone holds as many.
+ * Disconnected members are dropped.
+ */
+export function reassignRoles(
+  prev: Record<string, string[]>,
+  connected: string[],
+  roleIds: string[],
+): Record<string, string[]> {
+  const known = new Set(roleIds);
+  // A Map, so ids like "__proto__" stay plain keys.
+  const held = new Map<string, string[]>(
+    connected.map((m) => [m, Object.hasOwn(prev, m) ? prev[m].filter((r) => known.has(r)) : []]),
+  );
+  if (!held.size) return {};
+  const leastLoaded = () =>
+    [...held.keys()].reduce((a, b) => (held.get(b)!.length < held.get(a)!.length ? b : a));
+  for (const role of roleIds) {
+    if (![...held.values()].some((rs) => rs.includes(role))) {
+      const m = leastLoaded();
+      held.set(m, [...held.get(m)!, role]);
+    }
+  }
+  const holders = [...held.entries()].filter(([, rs]) => rs.length);
+  const counts = holders.map(([, rs]) => rs.length);
+  const allEqual = counts.every((c) => c === counts[0]);
+  const busiest = holders.find(([, rs]) => rs.length === Math.max(...counts));
+  const shared = allEqual ? roleIds[0] : busiest?.[1].at(-1);
+  if (shared !== undefined) {
+    for (const [m, rs] of held) if (!rs.length) held.set(m, [shared]);
+  }
+  return Object.fromEntries(held);
 }
 
 export function newTeam(
