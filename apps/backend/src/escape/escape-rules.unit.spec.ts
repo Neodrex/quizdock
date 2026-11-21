@@ -19,6 +19,7 @@ import {
   submit,
   useHint,
 } from './escape-rules';
+import { tpl } from './fixtures';
 
 const code: CodeLock = { id: 'l1', label: 'Safe', kind: 'code', answer: 'A-17 b' };
 const phrase: PhraseLock = {
@@ -107,51 +108,6 @@ describe('assignRoles', () => {
     expect(assignRoles([], roles)).toEqual({});
   });
 });
-
-const tpl: EscapeTemplate = {
-  id: 't',
-  title: 'T',
-  intro: '',
-  difficulty: 'standard',
-  targetMinutes: 35,
-  mode: 'roles',
-  roles: [
-    { id: 'nav', name: 'Navigator', description: '' },
-    { id: 'dec', name: 'Decoder', description: '' },
-  ],
-  stages: [
-    {
-      id: 's1',
-      title: 'One',
-      intro: '',
-      clues: [],
-      hints: [],
-      unlockText: '',
-      locks: [
-        { id: 'safe', label: 'Safe', kind: 'code', answer: '1234' },
-        {
-          id: 'duo',
-          label: 'Duo',
-          kind: 'combined',
-          parts: [
-            { roleId: 'nav', answer: 'north' },
-            { roleId: 'dec', answer: '42' },
-          ],
-        },
-      ],
-    },
-    {
-      id: 's2',
-      title: 'Two',
-      intro: '',
-      clues: [],
-      hints: [],
-      unlockText: '',
-      locks: [{ id: 'word', label: 'Word', kind: 'phrase', answers: ['out'] }],
-    },
-  ],
-  finale: '',
-};
 
 const team = () => newTeam(tpl, 'A', 'Alpha', ['p1', 'p2']);
 
