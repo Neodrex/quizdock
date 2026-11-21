@@ -3,6 +3,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { AppConfigController, ICONS } from './app-config/app-config.controller';
 import { AuthModule } from './auth/auth.module';
 import { DemoModule } from './demo/demo.module';
+import { EscapeModule } from './escape/escape.module';
 import { GameModule } from './game/game.module';
 import { HealthController } from './health/health.controller';
 import { MeController } from './me/me.controller';
@@ -67,6 +68,7 @@ const serveStatic = clientDir
     AuthModule,
     UsersModule,
     QuizzesModule,
+    EscapeModule,
     SelectionsModule,
     StoreModule,
     QuestionsModule,

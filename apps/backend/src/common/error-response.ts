@@ -18,6 +18,8 @@ export interface ErrorBody {
   code: string;
   params?: Record<string, string | number>;
   errors?: { field: string; code: string }[];
+  /** What keeps an authored thing from running, one line each (`escape_template.invalid`). */
+  problems?: string[];
 }
 
 /**
@@ -40,7 +42,9 @@ function fromPayload(payload: unknown): ErrorBody {
     const o = payload as Record<string, unknown>;
     // Forme paramétrée : throw new BadRequestException({ code, params })
     if (typeof o.code === 'string') {
-      return { code: o.code, params: o.params as ErrorBody['params'] };
+      const body: ErrorBody = { code: o.code, params: o.params as ErrorBody['params'] };
+      if (Array.isArray(o.problems)) body.problems = o.problems.map(String);
+      return body;
     }
     // Forme Nest par défaut { statusCode, message, error } : le code voyage dans `message`.
     if (typeof o.message === 'string') return { code: o.message };

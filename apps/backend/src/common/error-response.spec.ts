@@ -27,6 +27,14 @@ describe('toErrorResponse (enveloppe tokenisée, ADR 0001)', () => {
     });
   });
 
+  it('HttpException avec { code, problems } → problems conservés', () => {
+    expect(
+      toErrorResponse(
+        new BadRequestException({ code: 'escape_template.invalid', problems: ['No stages.'] }),
+      ),
+    ).toEqual({ status: 400, body: { code: 'escape_template.invalid', problems: ['No stages.'] } });
+  });
+
   it('WsException → { code }', () => {
     expect(toErrorResponse(new WsException('host.auth_required')).body).toEqual({
       code: 'host.auth_required',
