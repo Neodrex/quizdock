@@ -5,7 +5,7 @@ import { tpl } from './fixtures';
 const stage = (over: Partial<Stage> = {}): Stage => ({ ...tpl.stages[1], ...over });
 const withStage = (over: Partial<Stage>): EscapeTemplate => ({
   ...tpl,
-  stages: [tpl.stages[0], stage(over)],
+  stages: [tpl.stages[0], stage(over), tpl.stages[2]],
 });
 const withLock = (lock: Lock) => withStage({ locks: [lock] });
 const expectError = (t: EscapeTemplate, text: string) =>
@@ -16,8 +16,9 @@ describe('validateTemplate', () => {
     expect(validateTemplate(tpl)).toEqual([]);
   });
 
-  it('needs at least one stage', () => {
-    expectError({ ...tpl, stages: [] }, 'at least one stage');
+  it('needs at least 3 stages', () => {
+    expectError({ ...tpl, stages: [] }, 'at least 3 stages');
+    expectError({ ...tpl, stages: tpl.stages.slice(0, 2) }, 'at least 3 stages');
   });
 
   it('allows at most 8 stages', () => {
@@ -120,6 +121,29 @@ describe('validateTemplate', () => {
     expectError(
       withLock({ id: 'c', label: 'C', kind: 'choice', options, correct: ['o3'] }),
       'choice',
+    );
+  });
+
+  it('choice locks need at least 2 options and no duplicate ids', () => {
+    const o = (id: string) => ({ id, label: id, image: null });
+    const choice = (options: { id: string; label: string; image: null }[], correct: string[]) =>
+      withLock({ id: 'c', label: 'C', kind: 'choice', options, correct });
+    expectError(choice([o('o1')], ['o1']), 'at least 2 options');
+    expectError(choice([o('o1'), o('o1')], ['o1']), 'duplicate option id');
+    expectError(choice([o('o1'), o('o2')], ['o1', 'o1']), 'duplicate correct id');
+    expect(validateTemplate(choice([o('o1'), o('o2')], ['o2']))).toEqual([]);
+  });
+
+  it('sequence locks need at least 2 items', () => {
+    expectError(
+      withLock({
+        id: 'q',
+        label: 'Q',
+        kind: 'sequence',
+        items: [{ id: 'i1', label: 'A' }],
+        order: ['i1'],
+      }),
+      'at least 2 items',
     );
   });
 

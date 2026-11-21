@@ -2,6 +2,7 @@ import { normalizeAnswer } from '@quiz-dock/contracts';
 import type { EscapeTemplate, Lock } from './escape.types';
 import { normalizeCode } from './escape-rules';
 
+const MIN_STAGES = 3;
 const MAX_STAGES = 8;
 const MAX_LOCKS = 4;
 
@@ -20,12 +21,19 @@ function lockProblems(lock: Lock, t: EscapeTemplate, roleIds: Set<string>): stri
       break;
     case 'choice': {
       const options = new Set(lock.options.map((o) => o.id));
+      if (lock.options.length < 2) out.push(`${name}: choice needs at least 2 options`);
+      if (options.size !== lock.options.length) out.push(`${name}: duplicate option id`);
+      // A repeated correct id can never be matched by a set of distinct picks.
+      if (new Set(lock.correct).size !== lock.correct.length) {
+        out.push(`${name}: duplicate correct id`);
+      }
       if (!lock.correct.length || lock.correct.some((id) => !options.has(id))) {
         out.push(`${name}: choice needs correct options from its own options`);
       }
       break;
     }
     case 'sequence': {
+      if (lock.items.length < 2) out.push(`${name}: sequence needs at least 2 items`);
       const items = new Set(lock.items.map((i) => i.id));
       const order = new Set(lock.order);
       const permutation =
@@ -59,7 +67,7 @@ export function validateTemplate(t: EscapeTemplate): string[] {
   if (!(t.targetMinutes >= 5 && t.targetMinutes <= 180)) {
     out.push('The target time must be 5 to 180 minutes.');
   }
-  if (!t.stages.length) out.push('A template needs at least one stage.');
+  if (t.stages.length < MIN_STAGES) out.push(`A template needs at least ${MIN_STAGES} stages.`);
   if (t.stages.length > MAX_STAGES) out.push(`A template has at most ${MAX_STAGES} stages.`);
 
   const roleIds = new Set(t.roles.map((r) => r.id));

@@ -173,9 +173,11 @@ describe('submit', () => {
       parts: {},
       stageClearedAt: [3000],
     });
-    const out = submit(tpl, cleared.team, { playerId: 'p2', lockId: 'word', input: 'OUT' }, 9000);
+    const next = submit(tpl, cleared.team, { playerId: 'p2', lockId: 'word', input: 'OUT' }, 6000);
+    expect(next.result).toEqual({ outcome: 'stage-cleared', stageIndex: 1 });
+    const out = submit(tpl, next.team, { playerId: 'p1', lockId: 'exit', input: '99' }, 9000);
     expect(out.result).toEqual({ outcome: 'escaped' });
-    expect(out.team.escapedAt).toBe(9000);
+    expect(out.team).toMatchObject({ escapedAt: 9000, stageClearedAt: [3000, 6000, 9000] });
   });
 
   it('refuses locks of other stages, solved locks and escaped teams', () => {
@@ -201,6 +203,7 @@ describe('submit', () => {
       { playerId: 'p1', lockId: 'duo', roleId: 'nav', input: 'north' },
       { playerId: 'p2', lockId: 'duo', roleId: 'dec', input: '42' },
       { playerId: 'p2', lockId: 'word', input: 'out' },
+      { playerId: 'p1', lockId: 'exit', input: '99' },
     ]) {
       const before = structuredClone(t);
       const r = submit(tpl, t, s, 1);
@@ -223,6 +226,7 @@ describe('hints', () => {
         ],
       },
       { ...tpl.stages[1], hints: [{ id: 'h3', text: 'Later', penaltyS: 30, releaseAfterS: null }] },
+      tpl.stages[2],
     ],
   };
   it('gives the stage hints in order and adds their penalty', () => {
@@ -298,6 +302,7 @@ describe('playerView', () => {
         ],
       },
       tpl.stages[1],
+      tpl.stages[2],
     ],
   };
   // Every lock kind and hints in one stage, so no secret is absent by accident.
@@ -337,6 +342,7 @@ describe('playerView', () => {
         ],
       },
       tplClues.stages[1],
+      tplClues.stages[2],
     ],
   };
 

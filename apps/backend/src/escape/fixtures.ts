@@ -1,6 +1,6 @@
 import type { EscapeTemplate } from './escape.types';
 
-/** A small valid roles-mode template: two stages, a code and a combined lock, then a phrase. */
+/** A small valid roles-mode template: three stages: a code and a combined lock, a phrase, then a code. */
 export const tpl: EscapeTemplate = {
   id: 't',
   title: 'T',
@@ -41,6 +41,15 @@ export const tpl: EscapeTemplate = {
       hints: [],
       unlockText: '',
       locks: [{ id: 'word', label: 'Word', kind: 'phrase', answers: ['out'] }],
+    },
+    {
+      id: 's3',
+      title: 'Three',
+      intro: '',
+      clues: [],
+      hints: [],
+      unlockText: '',
+      locks: [{ id: 'exit', label: 'Exit', kind: 'code', answer: '99' }],
     },
   ],
   finale: '',
