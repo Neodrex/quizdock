@@ -198,12 +198,12 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     return OK;
   }
 
-  /** A player gone: the host and the screens see it. Role moves come with presence (Task 3.14). */
+  /** R2: a player's socket left; a stale one (the player is back on another) changes nothing. */
   async handleDisconnect(socket: EscapeSocket): Promise<void> {
     const { pin, playerId } = socket.data;
     if (!pin || !playerId) return;
-    await this.engine.presenceChanged(pin).catch((err: Error) => {
-      this.log.warn(`presenceChanged ${pin}/${playerId}: ${err.message}`);
+    await this.engine.playerGone(pin, playerId).catch((err: Error) => {
+      this.log.warn(`playerGone ${pin}/${playerId}: ${err.message}`);
     });
   }
 

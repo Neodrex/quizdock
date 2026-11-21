@@ -86,18 +86,33 @@ export function stringsIn(value: unknown): string[] {
 /**
  * Leaks in what a phone or a screen `record()`ed: a state is checked against
  * its own roles, and hint texts against the hints its team was told of
- * (`escape:team-update {hint}`); screens are told of none.
+ * (`escape:team-update {hint}`); screens are told of none. With `me` (the
+ * phone's player id), a state's roles are the ones its team lists for `me`,
+ * and a `view.roles` that differs is reported: after a role change, a player
+ * sees the clues of the roles they now hold and of no role they lost.
  */
-export function receivedLeaks(seen: [string, unknown][], tpl: EscapeTemplate): string[] {
+export function receivedLeaks(
+  seen: [string, unknown][],
+  tpl: EscapeTemplate,
+  me?: string,
+): string[] {
   const released = new Set<string>();
   for (const [event, p] of seen) {
     const u = p as { kind?: string; hintId?: string };
     if (event === 'escape:team-update' && u.kind === 'hint' && u.hintId) released.add(u.hintId);
   }
-  return seen.flatMap(([event, p]) =>
-    leaksIn(p, tpl, {
-      released,
-      roles: event === 'escape:state' ? ((p as EscapePlayerState).view?.roles ?? []) : [],
-    }).map((line) => `${event} ${line}`),
-  );
+  return seen.flatMap(([event, p]) => {
+    if (event !== 'escape:state') {
+      return leaksIn(p, tpl, { released }).map((line) => `${event} ${line}`);
+    }
+    const s = p as EscapePlayerState;
+    const shown = s.view?.roles ?? [];
+    const held =
+      me === undefined ? shown : (s.team?.members.find((m) => m.playerId === me)?.roles ?? []);
+    const found = leaksIn(p, tpl, { released, roles: held }).map((line) => `${event} ${line}`);
+    if (s.view && [...shown].sort().join() !== [...held].sort().join()) {
+      found.push(`${event} view.roles ${shown.join()} but the team lists ${held.join()}`);
+    }
+    return found;
+  });
 }

@@ -91,6 +91,16 @@ const fresh = (team: TeamState): TeamRecord => ({
   timedOut: false,
 });
 
+/** The same roles per member, whatever the key and role order. */
+function sameRoles(a: Record<string, string[]>, b: Record<string, string[]>): boolean {
+  const flat = (r: Record<string, string[]>) =>
+    Object.entries(r)
+      .map(([m, rs]) => `${m}:${[...rs].sort().join(',')}`)
+      .sort()
+      .join(';');
+  return flat(a) === flat(b);
+}
+
 const membersIndex = (teams: TeamState[]): Record<string, string> =>
   Object.fromEntries(teams.flatMap((t) => t.members.map((m) => [m, t.id])));
 
@@ -110,6 +120,13 @@ export class EscapeEngine implements OnModuleDestroy {
   private readonly ticker = new EscapeTicker(this.log);
   /** Board throttle per room: when it last went out, and the send waiting, if any. */
   private readonly boards = new Map<string, { at: number; timer: NodeJS.Timeout | null }>();
+  /**
+   * R1/R2: when each player of a run lost their last socket (epoch ms), by
+   * game id. In process, like the tickers: after a restart, members without a
+   * socket count as gone since boot (R4).
+   */
+  private readonly gone = new Map<GameId, Map<string, number>>();
+  private readonly bootAt = Date.now();
 
   constructor(
     private readonly game: GameService,
@@ -141,7 +158,10 @@ export class EscapeEngine implements OnModuleDestroy {
       const meta = await this.game.getMeta(pin);
       if (meta?.kind !== 'escape') continue;
       const run = await this.store.run(meta.id);
-      if (run?.phase === 'running') this.startTicker(pin, meta.id);
+      if (run?.phase !== 'running') continue;
+      // R4: every member counts as gone since boot until they sync again.
+      this.gone.set(meta.id, new Map());
+      this.startTicker(pin, meta.id);
     }
   }
 
@@ -211,6 +231,10 @@ export class EscapeEngine implements OnModuleDestroy {
           await this.broadcast(ref, await this.applyMove(ref, v, me.playerId, to.id));
           return;
         }
+        // R3: back; their team's roles at once (a returning member shares one).
+        this.gone.get(ref.id)?.delete(me.playerId);
+        const team = teamOf(this.teamsOf(v), me.playerId);
+        if (team && (await this.reconcileRoles(ref, v, [team.id]))) return;
         this.placeInTeamRoom(socket, ref.id, v, me.playerId);
         socket.emit('escape:state', playerStateOf(v, me.playerId));
         // The host sees who is here.
@@ -223,14 +247,25 @@ export class EscapeEngine implements OnModuleDestroy {
     });
   }
 
-  /** A player's socket left: the host and the screens see it (roles move in 3.14). */
-  async presenceChanged(pin: string): Promise<void> {
+  /**
+   * R2: a player's socket left. A stale socket (the player is back on another
+   * one, `game.engine.ts` handlePlayerDisconnect) changes nothing. Otherwise
+   * the player counts as gone from now: their roles move on the first tick
+   * past `roleGraceMs`. The host and the screens see them disconnected.
+   */
+  async playerGone(pin: string, playerId: string): Promise<void> {
     const meta = await this.game.getMeta(pin);
     if (meta?.kind !== 'escape') return;
-    const ref = await this.requireRun(pin);
-    const v = await this.viewOf(ref);
-    this.toHost(ref, v);
-    this.toBoard(ref, v);
+    await this.mutate(pin, undefined, async (ref) => {
+      const sockets = await this.server.in(pin).fetchSockets();
+      if (sockets.some((s) => s.data.pin === pin && s.data.playerId === playerId)) return;
+      const gone = this.gone.get(ref.id) ?? new Map<string, number>();
+      gone.set(playerId, Date.now());
+      this.gone.set(ref.id, gone);
+      const v = await this.viewOf(ref);
+      this.toHost(ref, v);
+      this.toBoard(ref, v);
+    });
   }
 
   // ── Formation (F1–F5) ──
@@ -248,7 +283,7 @@ export class EscapeEngine implements OnModuleDestroy {
           v.players.filter((p) => p.connected).map((p) => p.playerId),
         );
       }
-      const live = this.connectedOf(v);
+      const live = this.holdersOf(ref.id, v);
       const recs = teams.map((t) => fresh({ ...t, roles: rolesFor(tpl, t, live) }));
       const run: EscapeRun = {
         ...ref.run,
@@ -324,7 +359,7 @@ export class EscapeEngine implements OnModuleDestroy {
         teams = teams.map((t) => (t === to ? { ...t, members: [...t.members, p.playerId] } : t));
       }
       if (!teams.length) throw new BadRequestException('escape.no_players');
-      const live = this.connectedOf(v);
+      const live = this.holdersOf(ref.id, v);
       const recs = teams.map((t) => fresh({ ...t, roles: rolesFor(tpl, t, live) }));
       const now = Date.now();
       const run: EscapeRun = {
@@ -551,10 +586,15 @@ export class EscapeEngine implements OnModuleDestroy {
         : [null, null];
       if (!meta || !snap || !run || run.phase !== 'running') {
         this.ticker.stop(id);
+        this.gone.delete(id);
         return;
       }
-      if (run.clock.pausedAt) return;
       const ref: RunRef = { pin, id, meta, snap, run };
+      // R2: roles move off members gone past the grace, paused or not.
+      if (snap.template.mode === 'roles' && this.gone.has(id)) {
+        await this.reconcileRoles(ref, await this.viewOf(ref));
+      }
+      if (run.clock.pausedAt) return;
       const elapsed = runElapsed(run.clock, Date.now());
       const stored = await this.store.teams(id);
       const recs = run.teamIds.flatMap((t) => stored.get(t) ?? []);
@@ -603,6 +643,7 @@ export class EscapeEngine implements OnModuleDestroy {
     };
     await this.store.saveRun(ref.id, run);
     this.ticker.stop(ref.id);
+    this.gone.delete(ref.id);
     const next = { ...ref, run };
     await this.broadcast(next, await this.viewOf(next));
   }
@@ -732,8 +773,53 @@ export class EscapeEngine implements OnModuleDestroy {
     return v.teams.map((r) => r.team);
   }
 
-  private connectedOf(v: RunView): Set<string> {
-    return new Set(v.players.filter((p) => p.connected).map((p) => p.playerId));
+  /**
+   * R1: who may hold a role: the members with a live socket, plus those gone
+   * for less than `roleGraceMs` (since boot for a member never seen gone, R4).
+   * Expired entries are dropped.
+   */
+  private holdersOf(id: GameId, v: RunView): Set<string> {
+    const gone = this.gone.get(id);
+    const out = new Set<string>();
+    for (const p of v.players) {
+      const since = gone?.get(p.playerId) ?? this.bootAt;
+      const within = v.now - since < this.timings.roleGraceMs;
+      if (p.connected || within) out.add(p.playerId);
+      if (!within) gone?.delete(p.playerId);
+      // Just booted: a member without a socket is tracked until the grace ends.
+      else if (gone && !p.connected) gone.set(p.playerId, since);
+    }
+    if (gone && !gone.size) this.gone.delete(id);
+    return out;
+  }
+
+  /**
+   * F4/R2/R3: recomputes the roles of `teamIds` (all by default) for the
+   * current holders. A team whose roles changed is saved, and its phones get
+   * `team-update {roles}` and their new state. Whether any changed.
+   */
+  private async reconcileRoles(ref: RunRef, v: RunView, teamIds?: string[]): Promise<boolean> {
+    const tpl = ref.snap.template;
+    if (tpl.mode !== 'roles' || (ref.run.phase !== 'running' && ref.run.phase !== 'forming')) {
+      return false;
+    }
+    const live = this.holdersOf(ref.id, v);
+    const changed: TeamRecord[] = [];
+    const recs = v.teams.map((rec) => {
+      if (teamIds && !teamIds.includes(rec.team.id)) return rec;
+      const roles = rolesFor(tpl, rec.team, live);
+      if (sameRoles(roles, rec.team.roles)) return rec;
+      const next = { ...rec, team: { ...rec.team, roles } };
+      changed.push(next);
+      return next;
+    });
+    if (!changed.length) return false;
+    await this.store.save(ref.id, { teams: changed });
+    const next = { ...v, teams: recs };
+    for (const rec of changed) {
+      await this.teamChanged(ref, next, rec.team.id, [{ teamId: rec.team.id, kind: 'roles' }]);
+    }
+    return true;
   }
 
   /** Moves a player, recomputes both teams' roles (F4) and saves; the new view. */
@@ -746,7 +832,7 @@ export class EscapeEngine implements OnModuleDestroy {
     const before = this.teamsOf(v);
     const after = moveMember(before, playerId, teamId);
     if (after === before) return v;
-    const live = this.connectedOf(v);
+    const live = this.holdersOf(ref.id, v);
     const tpl = ref.snap.template;
     const changed: TeamRecord[] = [];
     const recs = v.teams.map((rec, i) => {
