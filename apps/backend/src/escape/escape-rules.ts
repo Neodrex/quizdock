@@ -130,6 +130,7 @@ export function newTeam(
     wrong: 0,
     hintsUsed: [],
     hintPenaltyS: 0,
+    adjustMs: 0,
     stageClearedAt: [],
     escapedAt: null,
     hostUnlocks: [],
@@ -249,6 +250,11 @@ export function hostUnlock(
   return solveLock(tpl, { ...team, hostUnlocks: [...team.hostUnlocks, lockId] }, lockId, at);
 }
 
+/** The host gives a team `deltaMs` (negative takes time away); see TeamState.adjustMs. */
+export function adjustTime(team: TeamState, deltaMs: number): TeamState {
+  return { ...team, adjustMs: team.adjustMs + deltaMs };
+}
+
 /** FNV-1a, 32 bit: a small pure hash for a stable per-team order. */
 function fnv1a(text: string): number {
   let h = 0x811c9dc5;
@@ -344,17 +350,17 @@ export function playerView(tpl: EscapeTemplate, team: TeamState, playerId: strin
 export interface Ranked {
   team: TeamState;
   place: number;
-  /** Escaped: time in ms including hint penalties. */
+  /** Escaped: time in ms including hint penalties, minus host adjustments. */
   scoreMs: number | null;
 }
 
 const scoreMs = (t: TeamState) =>
-  t.escapedAt === null ? null : t.escapedAt + t.hintPenaltyS * 1000;
+  t.escapedAt === null ? null : t.escapedAt + t.hintPenaltyS * 1000 - t.adjustMs;
 
 const byId = (a: TeamState, b: TeamState) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 /**
- * Escaped teams first by time plus hint penalties; the rest by stage reached,
+ * Escaped teams first by time plus hint penalties minus host adjustments; the rest by stage reached,
  * then by when they cleared their last stage. Equal teams by id, so stable.
  */
 export function rankTeams(teams: TeamState[]): Ranked[] {

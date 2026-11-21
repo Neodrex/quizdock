@@ -7,6 +7,7 @@ import type {
   TeamState,
 } from './escape.types';
 import {
+  adjustTime,
   assignRoles,
   awards,
   checkAnswer,
@@ -518,6 +519,19 @@ describe('rankTeams', () => {
       'stuck',
       'slow',
       'none',
+    ]);
+  });
+
+  it('time the host adds for a team improves its score', () => {
+    const a = t({ id: 'a', escapedAt: 500_000 });
+    const b = t({ id: 'b', escapedAt: 530_000 });
+    expect(team().adjustMs).toBe(0);
+    const helped = adjustTime(adjustTime(b, 20_000), 20_000);
+    expect(helped.adjustMs).toBe(40_000);
+    expect(b.adjustMs).toBe(0);
+    expect(rankTeams([a, helped]).map((r) => [r.team.id, r.scoreMs])).toEqual([
+      ['b', 490_000],
+      ['a', 500_000],
     ]);
   });
 

@@ -98,6 +98,11 @@ export interface TeamState {
   wrong: number;
   hintsUsed: string[];
   hintPenaltyS: number;
+  /**
+   * Time the host gave the team, in ms. Positive is in the team's favour: it
+   * is subtracted from the ranking score (escapedAt + hint penalties).
+   */
+  adjustMs: number;
   /** Elapsed ms at which each stage was cleared, by stage index. */
   stageClearedAt: number[];
   escapedAt: number | null;
