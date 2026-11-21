@@ -12,6 +12,7 @@ import {
   newTeam,
   nextHint,
   normalizeCode,
+  playerView,
   submit,
   useHint,
 } from './escape-rules';
@@ -321,6 +322,121 @@ describe('hostUnlock', () => {
     expect(hostUnlock(tpl, { ...team(), escapedAt: 5 }, 'safe', 6).result).toEqual({
       outcome: 'refused',
       reason: 'escaped',
+    });
+  });
+});
+
+describe('playerView', () => {
+  const tplClues: EscapeTemplate = {
+    ...tpl,
+    stages: [
+      {
+        ...tpl.stages[0],
+        clues: [
+          { id: 'c1', roleId: null, kind: 'text', body: 'Shared' },
+          { id: 'c2', roleId: 'nav', kind: 'text', body: 'North is 1' },
+          { id: 'c3', roleId: 'dec', kind: 'text', body: 'Forty-two' },
+        ],
+      },
+      tpl.stages[1],
+    ],
+  };
+  // Every lock kind and hints in one stage, so no secret is absent by accident.
+  const tplAll: EscapeTemplate = {
+    ...tplClues,
+    stages: [
+      {
+        ...tplClues.stages[0],
+        locks: [
+          ...tplClues.stages[0].locks,
+          {
+            id: 'pick',
+            label: 'Pick',
+            kind: 'choice',
+            options: [
+              { id: 'o1', label: 'One', image: null },
+              { id: 'o2', label: 'Two', image: null },
+            ],
+            correct: ['o2'],
+          },
+          {
+            id: 'seq',
+            label: 'Seq',
+            kind: 'sequence',
+            items: [
+              { id: 'i3', label: 'Third' },
+              { id: 'i1', label: 'First' },
+              { id: 'i2', label: 'Second' },
+            ],
+            order: ['i3', 'i1', 'i2'],
+          },
+          { id: 'say', label: 'Say', kind: 'phrase', answers: ['xyzzy'] },
+        ],
+        hints: [
+          { id: 'h1', text: 'Used hint', penaltyS: 60, releaseAfterS: null },
+          { id: 'h2', text: 'Unused hint', penaltyS: 60, releaseAfterS: null },
+        ],
+      },
+      tplClues.stages[1],
+    ],
+  };
+
+  it('shows shared clues and the player role clues only', () => {
+    const v = playerView(tplClues, team(), 'p1');
+    expect(v.clues.map((c) => c.id)).toEqual(['c1', 'c2']);
+    expect(v.roles).toEqual(['nav']);
+  });
+  it('never contains an answer', () => {
+    const json = JSON.stringify(playerView(tplClues, team(), 'p1'));
+    for (const secret of ['1234', 'north', '"42"', '"answer"', '"correct"', '"order"']) {
+      expect(json).not.toContain(secret);
+    }
+  });
+  it('never contains an answer, other roles clues or unused hints, for any lock kind', () => {
+    const t = useHint(tplAll, team(), 'h1');
+    for (const p of ['p1', 'p2']) {
+      const json = JSON.stringify(playerView(tplAll, t, p));
+      for (const secret of [
+        '1234',
+        'north',
+        '"42"',
+        'xyzzy',
+        '"answer"',
+        '"answers"',
+        '"correct"',
+        '"order"',
+        '"parts"',
+        'Unused hint',
+        p === 'p1' ? 'Forty-two' : 'North is 1',
+      ]) {
+        expect(json).not.toContain(secret);
+      }
+      expect(json).toContain('Used hint');
+    }
+  });
+  it('choice options in authored order; sequence items by id, not the answer order', () => {
+    const v = playerView(tplAll, team(), 'p1');
+    expect(v.locks.find((l) => l.id === 'pick')?.options?.map((o) => o.id)).toEqual(['o1', 'o2']);
+    expect(v.locks.find((l) => l.id === 'seq')?.items?.map((i) => i.id)).toEqual([
+      'i1',
+      'i2',
+      'i3',
+    ]);
+  });
+  it('copies only known fields, so stray authored data cannot leak', () => {
+    const leaky = structuredClone(tplAll);
+    const pick = leaky.stages[0].locks[2] as ChoiceLock;
+    Object.assign(pick.options[0], { isCorrect: true });
+    Object.assign(leaky.stages[0].clues[0], { note: 'secret' });
+    const json = JSON.stringify(playerView(leaky, team(), 'p1'));
+    expect(json).not.toContain('isCorrect');
+    expect(json).not.toContain('secret');
+  });
+  it('combined locks show only the parts the player can enter', () => {
+    const v = playerView(tplClues, team(), 'p2');
+    expect(v.locks.find((l) => l.id === 'duo')).toMatchObject({
+      kind: 'combined',
+      myParts: ['dec'],
     });
   });
 });

@@ -1,5 +1,6 @@
 import { normalizeAnswer } from '@quiz-dock/contracts';
 import type {
+  Clue,
   EscapeTemplate,
   Hint,
   Lock,
@@ -200,4 +201,80 @@ export function hostUnlock(
   if (!lock) return refuse('unknown-lock');
   if (team.solved.includes(lockId)) return refuse('already-solved');
   return solveLock(tpl, { ...team, hostUnlocks: [...team.hostUnlocks, lockId] }, lockId, at);
+}
+
+export interface PlayerLockView {
+  id: string;
+  label: string;
+  kind: Lock['kind'];
+  solved: boolean;
+  options?: { id: string; label: string; image: string | null }[];
+  /** Sequence items, shuffled by the engine per team. */
+  items?: { id: string; label: string }[];
+  /** Combined: the role ids this player may enter, and which parts are already in. */
+  myParts?: string[];
+  partsDone?: string[];
+}
+
+export interface PlayerView {
+  stageIndex: number;
+  stageCount: number;
+  title: string;
+  intro: string;
+  roles: string[];
+  clues: Clue[];
+  locks: PlayerLockView[];
+  hints: { id: string; text: string }[];
+  escaped: boolean;
+}
+
+/**
+ * Everything one phone may know. This is the security boundary: no answers
+ * (answer, answers, correct, order, combined part answers), no clues of roles
+ * the player does not hold, no unused hints. Fields are copied one by one so
+ * nothing extra in authored data can leak.
+ */
+export function playerView(tpl: EscapeTemplate, team: TeamState, playerId: string): PlayerView {
+  const stage = tpl.stages[Math.min(team.stageIndex, tpl.stages.length - 1)];
+  const roles = [...(team.roles[playerId] ?? [])];
+  return {
+    stageIndex: team.stageIndex,
+    stageCount: tpl.stages.length,
+    title: stage.title,
+    intro: stage.intro,
+    roles,
+    clues: stage.clues
+      .filter((c) => c.roleId === null || roles.includes(c.roleId))
+      .map(({ id, roleId, kind, body }) => ({ id, roleId, kind, body })),
+    locks: stage.locks.map((l): PlayerLockView => {
+      const base = { id: l.id, label: l.label, kind: l.kind, solved: team.solved.includes(l.id) };
+      switch (l.kind) {
+        case 'choice':
+          return {
+            ...base,
+            options: l.options.map(({ id, label, image }) => ({ id, label, image })),
+          };
+        case 'sequence':
+          // Sorted by id so the authored order (often the answer) never shows; the engine shuffles per team.
+          return {
+            ...base,
+            items: l.items
+              .map(({ id, label }) => ({ id, label }))
+              .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
+          };
+        case 'combined':
+          return {
+            ...base,
+            myParts: l.parts.map((p) => p.roleId).filter((r) => roles.includes(r)),
+            partsDone: [...(team.parts[l.id] ?? [])],
+          };
+        default:
+          return base;
+      }
+    }),
+    hints: stage.hints
+      .filter((h) => team.hintsUsed.includes(h.id))
+      .map(({ id, text }) => ({ id, text })),
+    escaped: team.escapedAt !== null,
+  };
 }
