@@ -103,6 +103,8 @@ const parseJson = <T>(schema: z.ZodType<T>, raw: string | null): T | null =>
 /** What one `save` writes, all in one MULTI. */
 export interface EscapeWrite {
   run?: EscapeRun;
+  /** Drop every team and the whole members index first (new teams, or empty ones dropped at start). */
+  replace?: boolean;
   /** Each record replaces the team of the same id. */
   teams?: TeamRecord[];
   /** The members index: playerId → teamId to set, playerIds to drop. */
@@ -167,8 +169,9 @@ export class EscapeStore {
     const set = write.members?.set ?? {};
     const del = write.members?.del ?? [];
     const members = Object.keys(set).length > 0 || del.length > 0;
-    if (!write.run && !teams.length && !members) return;
+    if (!write.run && !write.replace && !teams.length && !members) return;
     const pipe = this.redis.multi();
+    if (write.replace) pipe.del(escapeKeys.teams(id), escapeKeys.members(id));
     if (write.run) pipe.set(escapeKeys.run(id), JSON.stringify(write.run), 'EX', ESCAPE_TTL_S);
     if (teams.length) {
       const key = escapeKeys.teams(id);

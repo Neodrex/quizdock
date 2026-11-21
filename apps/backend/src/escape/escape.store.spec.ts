@@ -152,6 +152,27 @@ describe('EscapeStore (Redis)', () => {
     expect(await store.teamOfPlayer(id, 'p2')).toBeNull();
   });
 
+  it('replaces every team and the whole members index in one MULTI', async () => {
+    await store.writeOpen(id, snapshot, run);
+    await store.save(id, {
+      teams: [record('t1', ['p1']), record('t2', ['p2'])],
+      members: { set: { p1: 't1', p2: 't2' } },
+    });
+    const multi = jest.spyOn(redis, 'multi');
+    await store.save(id, {
+      replace: true,
+      teams: [record('t1', ['p2'])],
+      members: { set: { p2: 't1' } },
+    });
+    expect(multi).toHaveBeenCalledTimes(1);
+    expect([...(await store.teams(id)).keys()]).toEqual(['t1']);
+    expect(await store.teamOfPlayer(id, 'p1')).toBeNull();
+    expect(await store.teamOfPlayer(id, 'p2')).toBe('t1');
+
+    await store.save(id, { replace: true });
+    expect((await store.teams(id)).size).toBe(0);
+  });
+
   it('keeps the snapshot it read: no second GET', async () => {
     await store.writeOpen(id, snapshot, run);
     const fresh = new EscapeStore(redis);
