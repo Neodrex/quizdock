@@ -10,6 +10,7 @@
  */
 
 export * from './background';
+export * from './escape';
 export * from './image-choice';
 export * from './media-sniff';
 export * from './preferences';

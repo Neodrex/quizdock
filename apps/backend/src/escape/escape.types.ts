@@ -1,5 +1,7 @@
 /** Live escape rooms: templates (authored) and run state (per session). */
 
+import type { EscapeTemplateContent } from '@quiz-dock/contracts';
+
 export type TeamworkMode = 'roles' | 'parallel';
 export type Difficulty = 'standard' | 'hard';
 
@@ -128,3 +130,8 @@ export type SubmitResult =
         | 'not-your-part'
         | 'bad-input';
     };
+
+/** Compile-time check: stored content (plus an id) is a valid EscapeTemplate, and back. */
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+export const contentMatchesTemplate: Same<EscapeTemplateContent & { id: string }, EscapeTemplate> =
+  true;
