@@ -107,6 +107,10 @@ export function reassignRoles(
   return Object.fromEntries(held);
 }
 
+/** Own properties only, so ids like "constructor" never reach Object.prototype. */
+const own = <T>(rec: Record<string, T>, key: string): T | undefined =>
+  Object.hasOwn(rec, key) ? rec[key] : undefined;
+
 export function newTeam(
   tpl: EscapeTemplate,
   id: string,
@@ -182,12 +186,13 @@ export function submit(
     result: { outcome: 'refused', reason } as SubmitResult,
   });
   if (team.escapedAt !== null) return refuse('escaped');
-  const lock = tpl.stages[team.stageIndex].locks.find((l) => l.id === s.lockId);
+  if (!team.members.includes(s.playerId)) return refuse('not-a-member');
+  const lock = tpl.stages[team.stageIndex]?.locks.find((l) => l.id === s.lockId);
   if (!lock) return refuse('unknown-lock');
   if (team.solved.includes(lock.id)) return refuse('already-solved');
   const credit = (t: TeamState) => ({
     ...t,
-    solvesBy: { ...t.solvesBy, [s.playerId]: (t.solvesBy[s.playerId] ?? 0) + 1 },
+    solvesBy: { ...t.solvesBy, [s.playerId]: (own(t.solvesBy, s.playerId) ?? 0) + 1 },
   });
   const wrong = () => ({
     team: { ...team, wrong: team.wrong + 1 },
@@ -197,7 +202,7 @@ export function submit(
   if (lock.kind === 'combined') {
     if (typeof s.input !== 'string' || !s.roleId) return refuse('bad-input');
     const part = lock.parts.find((p) => p.roleId === s.roleId);
-    if (!part || !(team.roles[s.playerId] ?? []).includes(s.roleId)) {
+    if (!part || !(own(team.roles, s.playerId) ?? []).includes(s.roleId)) {
       return refuse('not-your-part');
     }
     const entered = team.parts[lock.id] ?? [];
@@ -221,10 +226,11 @@ export function nextHint(tpl: EscapeTemplate, team: TeamState): Hint | null {
   return tpl.stages[team.stageIndex]?.hints.find((h) => !team.hintsUsed.includes(h.id)) ?? null;
 }
 
-/** Uses a hint of the current stage once; anything else leaves the team unchanged. */
+/** Uses the next unused hint of the current stage; anything else leaves the team unchanged. */
 export function useHint(tpl: EscapeTemplate, team: TeamState, hintId: string): TeamState {
-  const hint = tpl.stages[team.stageIndex]?.hints.find((h) => h.id === hintId);
-  if (!hint || team.hintsUsed.includes(hintId)) return team;
+  if (team.escapedAt !== null) return team;
+  const hint = nextHint(tpl, team);
+  if (!hint || hint.id !== hintId) return team;
   return {
     ...team,
     hintsUsed: [...team.hintsUsed, hintId],
@@ -310,7 +316,7 @@ export interface PlayerView {
  */
 export function playerView(tpl: EscapeTemplate, team: TeamState, playerId: string): PlayerView {
   const stage = tpl.stages[Math.min(team.stageIndex, tpl.stages.length - 1)];
-  const roles = [...(team.roles[playerId] ?? [])];
+  const roles = [...(own(team.roles, playerId) ?? [])];
   return {
     stageIndex: team.stageIndex,
     stageCount: tpl.stages.length,
@@ -382,7 +388,7 @@ export function rankTeams(teams: TeamState[]): Ranked[] {
 
 /** Evenness of contribution: 1 when every member solved as much, 0 when one did all. */
 function evenness(t: TeamState): number {
-  const counts = t.members.map((m) => t.solvesBy[m] ?? 0);
+  const counts = t.members.map((m) => own(t.solvesBy, m) ?? 0);
   const total = counts.reduce((a, b) => a + b, 0);
   if (!total || counts.length < 2) return 0;
   return 1 - (Math.max(...counts) - Math.min(...counts)) / total;

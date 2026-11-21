@@ -120,5 +120,11 @@ export type SubmitResult =
   | { outcome: 'escaped' }
   | {
       outcome: 'refused';
-      reason: 'escaped' | 'unknown-lock' | 'already-solved' | 'not-your-part' | 'bad-input';
+      reason:
+        | 'escaped'
+        | 'not-a-member'
+        | 'unknown-lock'
+        | 'already-solved'
+        | 'not-your-part'
+        | 'bad-input';
     };

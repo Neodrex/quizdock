@@ -246,6 +246,33 @@ describe('submit', () => {
     ).toEqual({ outcome: 'refused', reason: 'escaped' });
   });
 
+  it('refuses non-members and an out-of-range stage', () => {
+    expect(submit(tpl, team(), { playerId: 'zz', lockId: 'safe', input: '1234' }, 1)).toEqual({
+      team: team(),
+      result: { outcome: 'refused', reason: 'not-a-member' },
+    });
+    const lost = { ...team(), stageIndex: 9 };
+    expect(submit(tpl, lost, { playerId: 'p1', lockId: 'safe', input: '1234' }, 1).result).toEqual({
+      outcome: 'refused',
+      reason: 'unknown-lock',
+    });
+  });
+
+  it('player ids that name Object.prototype members cannot reach it', () => {
+    const r = submit(tpl, team(), { playerId: 'constructor', lockId: 'safe', input: '1234' }, 1);
+    expect(r.result).toEqual({ outcome: 'refused', reason: 'not-a-member' });
+    const odd = newTeam(tpl, 'A', 'Alpha', ['constructor', 'p2']);
+    const solved = submit(tpl, odd, { playerId: 'constructor', lockId: 'safe', input: '1234' }, 1);
+    expect(solved.team.solvesBy).toEqual({ constructor: 1 });
+    const part = submit(
+      tpl,
+      { ...odd, roles: { p2: ['dec'] } },
+      { playerId: 'constructor', lockId: 'duo', roleId: 'nav', input: 'north' },
+      1,
+    );
+    expect(part.result).toEqual({ outcome: 'refused', reason: 'not-your-part' });
+  });
+
   it('never mutates the team it is given', () => {
     let t = team();
     for (const s of [
@@ -294,6 +321,14 @@ describe('hints', () => {
     const t = team();
     expect(useHint(withHints, t, 'h3')).toBe(t);
     expect(useHint(withHints, t, 'nope')).toBe(t);
+  });
+  it('accepts only the next unused hint', () => {
+    const t = team();
+    expect(useHint(withHints, t, 'h2')).toBe(t);
+  });
+  it('refuses once the team has escaped', () => {
+    const t = { ...team(), escapedAt: 5 };
+    expect(useHint(withHints, t, 'h1')).toBe(t);
   });
 });
 
@@ -484,6 +519,9 @@ describe('playerView', () => {
     const json = JSON.stringify(playerView(leaky, team(), 'p1'));
     expect(json).not.toContain('isCorrect');
     expect(json).not.toContain('secret');
+  });
+  it('a player id naming an Object.prototype member sees no roles', () => {
+    expect(playerView(tplClues, team(), 'constructor')).toMatchObject({ roles: [] });
   });
   it('combined locks show only the parts the player can enter', () => {
     const v = playerView(tplClues, team(), 'p2');
