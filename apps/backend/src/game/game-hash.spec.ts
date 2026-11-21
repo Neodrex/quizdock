@@ -1,4 +1,4 @@
-import { deserializeRoom, roomHash } from './game-hash';
+import { deserializeGame, deserializeRoom, roomHash } from './game-hash';
 
 describe('a room as Redis keeps it', () => {
   const env = process.env;
@@ -18,5 +18,15 @@ describe('a room as Redis keeps it', () => {
     process.env = { ...env };
     delete process.env.LIVE_MOTION;
     expect(deserializeRoom(raw).motion).toBe(true);
+  });
+});
+
+describe('a game as Redis keeps it', () => {
+  const raw = { quizId: '', state: 'LOBBY', currentIndex: '-1', totalQuestions: '0' };
+
+  it('knows an escape game by its kind; a quiz has no kind at all', () => {
+    expect(deserializeGame({ ...raw, kind: 'escape' }).kind).toBe('escape');
+    expect('kind' in deserializeGame(raw)).toBe(false);
+    expect('kind' in deserializeGame({ ...raw, kind: 'other' })).toBe(false);
   });
 });

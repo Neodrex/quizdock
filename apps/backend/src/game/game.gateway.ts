@@ -763,7 +763,10 @@ export function messageBudget(now: () => number = Date.now) {
   };
 }
 
-function playerOf(socket: GameSocket, pin: string): { pin: string; playerId: string } | null {
+export function playerOf(
+  socket: GameSocket,
+  pin: string,
+): { pin: string; playerId: string } | null {
   const { pin: joined, playerId } = socket.data;
   return joined && joined === pin && playerId ? { pin: joined, playerId } : null;
 }

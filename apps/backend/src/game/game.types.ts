@@ -266,6 +266,8 @@ export interface GameMeta {
   id: GameId;
   /** The room it is played in. */
   roomId: string;
+  /** 'escape': an escape run (src/escape); absent: a quiz. */
+  kind?: 'escape';
   /** The room's name ('' = the default) and its host's name. */
   roomName: string;
   hostName: string;

@@ -104,6 +104,7 @@ import {
   waitedStep,
 } from './steps';
 import { settings } from '../admin/settings/settings.service';
+import { ESCAPE_HOST_WINDOW_MS } from '../escape/escape-timings';
 
 type GameServer = Server<Record<string, never>, ServerToClientEvents>;
 
@@ -245,7 +246,10 @@ export class GameEngine {
       // room left without its host ends after its window; any other has its grace,
       // which the host's console cancels as it reconnects (`host:attach`).
       if (meta.state === GameState.HostDisconnected) {
-        const windowMs = settings.get(SETTINGS.GAME_HOST_WINDOW_MS);
+        const windowMs =
+          meta.kind === 'escape'
+            ? ESCAPE_HOST_WINDOW_MS
+            : settings.get(SETTINGS.GAME_HOST_WINDOW_MS);
         this.timers.arm('hostWindow', pin, windowMs, () => this.endOrphaned(ref, meta.hostUserId));
       } else if (meta.state !== GameState.Ended) {
         const graceMs = settings.get(SETTINGS.GAME_HOST_GRACE_MS);
@@ -1586,7 +1590,8 @@ export class GameEngine {
       totalQuestions: meta.totalQuestions,
     });
 
-    const windowMs = settings.get(SETTINGS.GAME_HOST_WINDOW_MS);
+    const windowMs =
+      meta.kind === 'escape' ? ESCAPE_HOST_WINDOW_MS : settings.get(SETTINGS.GAME_HOST_WINDOW_MS);
     this.timers.arm('hostWindow', pin, windowMs, () => this.endOrphaned(ref, hostUserId));
   }
 
@@ -2091,6 +2096,7 @@ export class GameEngine {
 
   private async pauseOrResume(pin: string, hostUserId: string, paused: boolean): Promise<void> {
     const meta = await this.requireHost(pin, hostUserId);
+    if (meta.kind === 'escape') throw new BadRequestException('session.escape_game');
     await this.redis.hset(gameKeys.game(meta.id), gameHash({ paused }));
     meta.paused = paused;
     if (paused) {

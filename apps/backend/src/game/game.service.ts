@@ -227,6 +227,7 @@ export class GameService {
       pickOwnName?: boolean;
       participantAccess?: ParticipantAccess;
     },
+    opts: { empty?: boolean } = {},
   ): Promise<CreateSessionResult> {
     // Open access is the admin's to allow (#57): a client asking for it anyway is refused.
     const open = dto.participantAccess === 'open';
@@ -235,8 +236,8 @@ export class GameService {
     }
     const first = dto.selectionId ? await this.firstOfSelection(hostUserId, dto.selectionId) : null;
     const quizId = first?.quizId ?? dto.quizId;
-    if (!quizId) throw new BadRequestException('validation');
-    const snapshot = await this.playableSnapshot(hostUserId, quizId);
+    if (!quizId && !opts.empty) throw new BadRequestException('validation');
+    const snapshot = quizId ? await this.playableSnapshot(hostUserId, quizId) : null;
     const roomId = randomBytes(16).toString('hex');
     const pin = await this.allocatePin(roomId);
     const gameId = newGameId();

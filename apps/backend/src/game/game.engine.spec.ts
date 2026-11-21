@@ -1011,6 +1011,36 @@ describe('GameEngine (characterization)', () => {
     });
   });
 
+  describe('an escape game in the room', () => {
+    it('refuses the quiz pause and writes nothing', async () => {
+      await seed(snapshotOf([question()]), { kind: 'escape', quizId: '', state: 'ESCAPE' });
+      const before = await redis.hgetall(gameKeys.game(gameId));
+      await expect(engine.setPaused(pin, HOST, true)).rejects.toThrow('session.escape_game');
+      expect(await redis.hgetall(gameKeys.game(gameId))).toEqual(before);
+    });
+
+    it('waits 15 minutes for a host who left, a quiz the setting (owner decision 1)', async () => {
+      const timers = (engine as unknown as { timers: { arm: jest.Mock } }).timers;
+      const arm = jest.spyOn(timers, 'arm');
+      const declare = () =>
+        (
+          engine as unknown as { declareHostDisconnected(r: unknown, h: string): Promise<void> }
+        ).declareHostDisconnected({ pin, id: gameId }, HOST);
+      const windowOf = () => arm.mock.calls.find(([kind]) => kind === 'hostWindow')?.[2];
+
+      await seed(snapshotOf([question()]), { kind: 'escape', quizId: '', state: 'ESCAPE' });
+      await declare();
+      expect(windowOf()).toBe(15 * 60_000);
+
+      arm.mockClear();
+      process.env.GAME_HOST_WINDOW_MS = '4321';
+      await setGame({ state: 'LOBBY' });
+      await redis.hdel(gameKeys.game(gameId), 'kind');
+      await declare();
+      expect(windowOf()).toBe(4321);
+    });
+  });
+
   describe('end', () => {
     it('ends even when the quiz was deleted meanwhile, and says so', async () => {
       await seed(snapshotOf([question()]));

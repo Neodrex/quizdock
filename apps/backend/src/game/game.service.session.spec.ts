@@ -118,6 +118,22 @@ describe('GameService: the hashes of a new session (integration)', () => {
     });
   });
 
+  it('opens an empty room for an escape run: a lobby with no quiz and no snapshot', async () => {
+    const { pin } = await game.createSession(ownerId, {}, { empty: true });
+    pins.push(pin);
+    const gameId = (await redis.hget(gameKeys.room(pin), 'gameId')) as never;
+    expect(await redis.hgetall(gameKeys.game(gameId))).toMatchObject({
+      quizId: '',
+      state: 'LOBBY',
+      totalQuestions: '0',
+    });
+    expect(await redis.exists(gameKeys.snapshot(gameId))).toBe(0);
+  });
+
+  it('still refuses a room with no quiz when it is not asked for empty', async () => {
+    await expect(game.createSession(ownerId, {})).rejects.toThrow('validation');
+  });
+
   it('opens a room with its game sounds off: the host turns on the ones they want', async () => {
     const { pin } = await game.createSession(ownerId, { quizId });
     pins.push(pin);
