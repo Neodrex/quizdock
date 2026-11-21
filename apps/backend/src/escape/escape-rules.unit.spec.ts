@@ -55,12 +55,21 @@ describe('normalizeCode', () => {
   it('keeps letters and digits, upper case', () => {
     expect(normalizeCode(' a-17 b ')).toBe('A17B');
   });
+  it('strips diacritics first', () => {
+    expect(normalizeCode('été')).toBe('ETE');
+  });
 });
 
 describe('checkAnswer', () => {
   it('code: ignores case, spaces and punctuation', () => {
     expect(checkAnswer(code, 'a17b')).toBe(true);
     expect(checkAnswer(code, 'A18B')).toBe(false);
+  });
+  it('code: accents ignored, not dropped', () => {
+    const accented = (answer: string): CodeLock => ({ ...code, answer });
+    expect(checkAnswer(accented('ÉTÉ'), 'ete')).toBe(true);
+    expect(checkAnswer(accented('ÉTÉ'), 'T')).toBe(false);
+    expect(checkAnswer(accented('Ä12'), 'a12')).toBe(true);
   });
   it('phrase: any accepted answer, accents and case ignored', () => {
     expect(checkAnswer(phrase, '  creme   BRULEE ')).toBe(true);

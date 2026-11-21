@@ -10,9 +10,16 @@ import type {
   TeamState,
 } from './escape.types';
 
-/** Codes compare on letters and digits only, upper case: "a-17 b" is "A17B". */
+/** Decomposes (NFD) and drops combining marks, as `normalizeAnswer` does: "été" is "ete". */
+export function stripDiacritics(text: string): string {
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/** Codes compare on letters and digits only, upper case: "a-17 b" is "A17B", "été" is "ETE". */
 export function normalizeCode(text: string): string {
-  return text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return stripDiacritics(text)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
 }
 
 /** Same elements, no duplicates in `a`, order ignored. */

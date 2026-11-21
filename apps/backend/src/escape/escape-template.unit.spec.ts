@@ -167,6 +167,15 @@ describe('validateTemplate', () => {
     );
   });
 
+  it('code answers use letters, digits, spaces and punctuation only', () => {
+    const msg = 'code answers may use letters, digits, spaces and punctuation only';
+    expectError(withLock({ id: 'k', label: 'K', kind: 'code', answer: 'кот' }), msg);
+    expectError(withLock({ id: 'k', label: 'K', kind: 'code', answer: '12🔑' }), msg);
+    expect(
+      validateTemplate(withLock({ id: 'k', label: 'K', kind: 'code', answer: 'Été-12 (b)!' })),
+    ).toEqual([]);
+  });
+
   it('hint penalties and release times are not negative', () => {
     expectError(
       withStage({ hints: [{ id: 'h', text: '', penaltyS: -1, releaseAfterS: null }] }),

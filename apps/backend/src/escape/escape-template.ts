@@ -1,6 +1,9 @@
 import { normalizeAnswer } from '@quiz-dock/contracts';
 import type { EscapeTemplate, Lock } from './escape.types';
-import { normalizeCode } from './escape-rules';
+import { normalizeCode, stripDiacritics } from './escape-rules';
+
+/** Anything else would be silently dropped by normalizeCode. */
+const CODE_CHARS = /^[A-Za-z0-9\s!-/:-@[-`{-~]*$/;
 
 const MIN_STAGES = 3;
 const MAX_STAGES = 8;
@@ -13,6 +16,9 @@ function lockProblems(lock: Lock, t: EscapeTemplate, roleIds: Set<string>): stri
   switch (lock.kind) {
     case 'code':
       if (!normalizeCode(lock.answer)) out.push(`${name} has no answer`);
+      if (!CODE_CHARS.test(stripDiacritics(lock.answer))) {
+        out.push(`${name}: code answers may use letters, digits, spaces and punctuation only`);
+      }
       break;
     case 'phrase':
       if (!lock.answers.length || lock.answers.some((a) => !normalizeAnswer(a))) {
