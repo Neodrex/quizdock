@@ -34,3 +34,21 @@ export function checkAnswer(lock: Lock, input: LockInput): boolean {
       return false;
   }
 }
+
+/**
+ * Round-robin over the connected members. Fewer members than roles: some hold
+ * several. More: some roles are shared. Called again when someone leaves, so a
+ * role is never left without a player.
+ */
+export function assignRoles(memberIds: string[], roleIds: string[]): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  if (!memberIds.length) return out;
+  for (const id of memberIds) out[id] = [];
+  const slots = Math.max(memberIds.length, roleIds.length);
+  for (let i = 0; i < slots; i++) {
+    const member = memberIds[i % memberIds.length];
+    const role = roleIds[i % roleIds.length];
+    if (role && !out[member].includes(role)) out[member].push(role);
+  }
+  return out;
+}

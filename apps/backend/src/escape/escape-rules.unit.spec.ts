@@ -1,5 +1,5 @@
 import type { ChoiceLock, CodeLock, PhraseLock, SequenceLock } from './escape.types';
-import { checkAnswer, normalizeCode } from './escape-rules';
+import { assignRoles, checkAnswer, normalizeCode } from './escape-rules';
 
 const code: CodeLock = { id: 'l1', label: 'Safe', kind: 'code', answer: 'A-17 b' };
 const phrase: PhraseLock = {
@@ -60,5 +60,31 @@ describe('checkAnswer', () => {
   it('rejects the wrong input shape', () => {
     expect(checkAnswer(code, ['a17b'])).toBe(false);
     expect(checkAnswer(choice, 'a')).toBe(false);
+  });
+});
+
+const roles = ['nav', 'dec', 'arc'];
+
+describe('assignRoles', () => {
+  it('one role each when the numbers match', () => {
+    expect(assignRoles(['p1', 'p2', 'p3'], roles)).toEqual({
+      p1: ['nav'],
+      p2: ['dec'],
+      p3: ['arc'],
+    });
+  });
+  it('fewer players than roles: roles are merged', () => {
+    expect(assignRoles(['p1', 'p2'], roles)).toEqual({ p1: ['nav', 'arc'], p2: ['dec'] });
+  });
+  it('more players than roles: roles are shared', () => {
+    expect(assignRoles(['p1', 'p2', 'p3', 'p4'], roles)).toEqual({
+      p1: ['nav'],
+      p2: ['dec'],
+      p3: ['arc'],
+      p4: ['nav'],
+    });
+  });
+  it('nobody connected: nobody holds anything', () => {
+    expect(assignRoles([], roles)).toEqual({});
   });
 });
