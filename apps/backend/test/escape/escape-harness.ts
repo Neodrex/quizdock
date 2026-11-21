@@ -145,7 +145,7 @@ export interface RunningRoom {
 /**
  * A run of `templateId` (Vault Heist by default) with `players` phones dealt in
  * `teams` auto teams and started; every phone has its running state.
- * `beforeStart` runs once the teams exist.
+ * `beforeStart` runs once the teams exist, before the first tick.
  */
 export async function runningRoom(
   ctx: EscapeContext,
@@ -153,7 +153,7 @@ export async function runningRoom(
     players: number;
     teams: number;
     templateId?: string;
-    beforeStart?: (pin: string) => Promise<void>;
+    beforeStart?: (pin: string, room: Omit<RunningRoom, 'teams'>) => Promise<void>;
   },
 ): Promise<RunningRoom> {
   const host = ctx.h.connectHost();
@@ -165,7 +165,7 @@ export async function runningRoom(
   await screen.emitWithAck('spectator:join', { pin });
   await ok(screen.emitWithAck('escape:sync', { pin }), 'screen sync');
   await ok(host.emitWithAck('escape:teams', { pin, mode: 'auto', count: opts.teams }), 'teams');
-  await opts.beforeStart?.(pin);
+  await opts.beforeStart?.(pin, { host, pin, players, screen });
   const running = players.map((p) => stateWhere(p.socket, (s) => s.phase === 'running'));
   await ok(host.emitWithAck('escape:start', { pin }), 'start');
   await Promise.all(running);

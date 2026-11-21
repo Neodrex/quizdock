@@ -4,10 +4,13 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  type OnModuleDestroy,
 } from '@nestjs/common';
 import {
   type ClientToServerEvents,
   type EscapeAnnounce,
+  type EscapeAskHint,
+  type EscapeAskHintAck,
   type EscapeCreate,
   type EscapeMove,
   type EscapeOpen,
@@ -22,24 +25,28 @@ import {
 import type { Server, Socket } from 'socket.io';
 import { playerOf, type GameSocketData } from '../game/game.gateway';
 import { gameHash } from '../game/game-hash';
-import { gameKeys, type GameId } from '../game/game.keys';
+import { ROOM_HASH_KEY, gameKeys, type GameId } from '../game/game.keys';
 import { GameService } from '../game/game.service';
 import type { GameMeta } from '../game/game.types';
 import { RedisService } from '../redis/redis.service';
 import { EscapeAttempts } from './escape-attempts';
-import { isTimedOut, runElapsed } from './escape-clock';
+import { endClock, isTimedOut, runElapsed } from './escape-clock';
 import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
 import {
   announceOf,
   boardOf,
+  hintUpdateOf,
   hostStateOf,
   hostTeamOf,
   outlineOf,
   playerStateOf,
   type RunView,
   submitUpdateOf,
+  timeUpOf,
 } from './escape-payloads';
-import { newTeam, submit } from './escape-rules';
+import { newTeam, nextHint, submit, useHint } from './escape-rules';
+import { allDone, tickTeam } from './escape-tick';
+import { EscapeTicker } from './escape-ticker';
 import { validateTemplate } from './escape-template';
 import { EscapeTemplatesService } from './escape-templates.service';
 import { dealPlayers, makeTeams, moveMember, rolesFor, smallestTeam, teamOf } from './escape-teams';
@@ -93,10 +100,12 @@ const membersIndex = (teams: TeamState[]): Record<string, string> =>
  * playerView's.
  */
 @Injectable()
-export class EscapeEngine {
+export class EscapeEngine implements OnModuleDestroy {
   private readonly log = new Logger(EscapeEngine.name);
   private server!: EscapeServer;
   private readonly queue = new SerialQueue();
+  /** One ticker per running run, keyed by game id (timed hints, time-up, stuck). */
+  private readonly ticker = new EscapeTicker(this.log);
   /** Board throttle per room: when it last went out, and the send waiting, if any. */
   private readonly boards = new Map<string, { at: number; timer: NodeJS.Timeout | null }>();
 
@@ -111,6 +120,27 @@ export class EscapeEngine {
 
   bindServer(server: EscapeServer): void {
     this.server = server;
+    this.recover().catch((err: Error) => this.log.error(`recover: ${err.message}`));
+  }
+
+  onModuleDestroy(): void {
+    this.ticker.stopAll();
+    for (const b of this.boards.values()) if (b.timer) clearTimeout(b.timer);
+  }
+
+  /**
+   * V1: tickers live in this process. After a restart, every escape run still
+   * running gets its ticker again, from Redis (as GameEngine.recoverTimers).
+   */
+  private async recover(): Promise<void> {
+    for (const key of await this.redis.scanKeys(gameKeys.room('*'))) {
+      if (!ROOM_HASH_KEY.test(key)) continue;
+      const pin = key.slice('room:'.length);
+      const meta = await this.game.getMeta(pin);
+      if (meta?.kind !== 'escape') continue;
+      const run = await this.store.run(meta.id);
+      if (run?.phase === 'running') this.startTicker(pin, meta.id);
+    }
   }
 
   // ── Open (O1–O4) ──
@@ -315,6 +345,7 @@ export class EscapeEngine {
         .to(pin)
         .emit('game:state', { state: GameState.Escape, questionIndex: -1, totalQuestions: 0 });
       await this.broadcast({ ...ref, run }, { ...v, run, teams: recs, now });
+      this.startTicker(pin, ref.id);
     });
   }
 
@@ -347,18 +378,141 @@ export class EscapeEngine {
       if (result.outcome === 'wrong') await this.attempts.count(ref.id, rec.team.id);
       const update = submitUpdateOf(tpl, team.id, result, me.playerId, dto.roleId);
       const announce =
-        result.outcome === 'stage-cleared' || result.outcome === 'escaped'
-          ? result.outcome
-          : undefined;
-      await this.teamChanged(
-        ref,
-        await this.viewOf(ref),
-        team.id,
-        update ? [update] : [],
-        announce,
-      );
+        result.outcome === 'stage-cleared' || result.outcome === 'escaped' ? [result.outcome] : [];
+      const v = await this.viewOf(ref);
+      await this.teamChanged(ref, v, team.id, update ? [update] : [], announce);
+      // T4: the last team out ends the run.
+      if (result.outcome === 'escaped' && allDone(ref.run.clock, v.teams, elapsed)) {
+        await this.finish(ref);
+      }
       return { ok: true, outcome: result.outcome };
     });
+  }
+
+  // ── Hints (H1–H4) ──
+
+  /** H1: a team asks for the hint its phone was offered; a double tap releases one. */
+  async askHint(socket: EscapeSocket, dto: EscapeAskHint): Promise<EscapeAskHintAck> {
+    const me = playerOf(socket, dto.pin);
+    if (!me) return { ok: false, reason: 'not-joined' };
+    return this.mutate(dto.pin, undefined, async (ref): Promise<EscapeAskHintAck> => {
+      const at = await this.playing(ref, me.playerId);
+      if (typeof at === 'string') return { ok: false, reason: at };
+      const team = useHint(ref.snap.template, at.rec.team, dto.hintId);
+      if (team === at.rec.team) return { ok: false, reason: 'no-hint' };
+      await this.store.save(ref.id, { teams: [{ ...at.rec, team }] });
+      const update = hintUpdateOf(team.id, dto.hintId, 'request');
+      await this.teamChanged(ref, await this.viewOf(ref), team.id, [update], ['hint']);
+      return { ok: true };
+    });
+  }
+
+  /**
+   * H2: the host releases the next hint, paid, to one team or to every team
+   * still playing (paused or not). The count of teams that got one.
+   */
+  async hostHint(pin: string, hostUserId: string, teamId?: string): Promise<number> {
+    return this.mutate(pin, hostUserId, async (ref) => {
+      if (ref.run.phase !== 'running') throw new BadRequestException('escape.wrong_phase');
+      if (teamId !== undefined && !ref.run.teamIds.includes(teamId)) {
+        throw new NotFoundException('escape.team_not_found');
+      }
+      const tpl = ref.snap.template;
+      const elapsed = runElapsed(ref.run.clock, Date.now());
+      const stored = await this.store.teams(ref.id);
+      const released: { rec: TeamRecord; hintId: string }[] = [];
+      for (const id of teamId === undefined ? ref.run.teamIds : [teamId]) {
+        const rec = stored.get(id);
+        if (!rec || rec.timedOut || isTimedOut(ref.run.clock, rec.team, elapsed)) continue;
+        const hint = nextHint(tpl, rec.team);
+        const team = hint ? useHint(tpl, rec.team, hint.id) : rec.team;
+        if (hint && team !== rec.team) released.push({ rec: { ...rec, team }, hintId: hint.id });
+      }
+      if (!released.length) return 0;
+      await this.store.save(ref.id, { teams: released.map((r) => r.rec) });
+      const v = await this.viewOf(ref);
+      for (const { rec, hintId } of released) {
+        const update = hintUpdateOf(rec.team.id, hintId, 'host');
+        await this.teamChanged(ref, v, rec.team.id, [update], ['hint']);
+      }
+      return released.length;
+    });
+  }
+
+  // ── Ticker (H3, T3, T4, K2) ──
+
+  private startTicker(pin: string, id: GameId): void {
+    this.ticker.start(id, this.timings.tickMs, () => this.tick(pin, id));
+  }
+
+  /**
+   * One tick of a run, in its queue: timed hints (free), time-ups and stuck
+   * flags per team, then the end of the run once every team is done. A run
+   * that is no longer the room's running escape game stops its ticker.
+   */
+  private async tick(pin: string, id: GameId): Promise<void> {
+    await this.queue.run(id, async () => {
+      const meta = await this.game.getMeta(pin);
+      const mine = meta?.id === id && meta.kind === 'escape' && meta.state !== GameState.Ended;
+      const [snap, run] = mine
+        ? await Promise.all([this.store.snapshot(id), this.store.run(id)])
+        : [null, null];
+      if (!meta || !snap || !run || run.phase !== 'running') {
+        this.ticker.stop(id);
+        return;
+      }
+      if (run.clock.pausedAt) return;
+      const ref: RunRef = { pin, id, meta, snap, run };
+      const elapsed = runElapsed(run.clock, Date.now());
+      const stored = await this.store.teams(id);
+      const recs = run.teamIds.flatMap((t) => stored.get(t) ?? []);
+      const ticks = recs.map((rec) =>
+        tickTeam(snap.template, rec, run.clock, elapsed, this.timings.stuckMs),
+      );
+      const changed = ticks.filter((t, i) => t.rec !== recs[i]).map((t) => t.rec);
+      if (changed.length) await this.store.save(id, { teams: changed });
+      const done = allDone(
+        run.clock,
+        ticks.map((t) => t.rec),
+        elapsed,
+      );
+      if (!ticks.some((t) => t.events.length) && !done) return;
+      const v = await this.viewOf(ref);
+      for (const { rec, events } of ticks) {
+        if (!events.length) continue;
+        const teamId = rec.team.id;
+        const updates: EscapeTeamUpdate[] = [];
+        const announce: EscapeAnnounce['kind'][] = [];
+        for (const e of events) {
+          if (e === 'time-up') {
+            updates.push(timeUpOf(teamId));
+            announce.push('time-up');
+          } else if (e.startsWith('hint:')) {
+            updates.push(hintUpdateOf(teamId, e.slice('hint:'.length), 'timer'));
+            announce.push('hint');
+          }
+        }
+        // Stuck and unstuck alone: the host's team detail only.
+        await this.teamChanged(ref, v, teamId, updates, [...new Set(announce)]);
+      }
+      if (done) await this.finish(ref);
+    });
+  }
+
+  /**
+   * T4/E1: the run ends (every team escaped or timed out); its clock freezes
+   * and the ticker stops. In the run's queue. The finale comes in Task 3.15.
+   */
+  private async finish(ref: RunRef): Promise<void> {
+    const run: EscapeRun = {
+      ...ref.run,
+      phase: 'finished',
+      clock: endClock(ref.run.clock, Date.now()),
+    };
+    await this.store.saveRun(ref.id, run);
+    this.ticker.stop(ref.id);
+    const next = { ...ref, run };
+    await this.broadcast(next, await this.viewOf(next));
   }
 
   /**
@@ -533,14 +687,14 @@ export class EscapeEngine {
   /**
    * U5: one team changed. With updates, its phones get their new state, the
    * team room and the host the updates, and the board is scheduled; the host
-   * always gets the team's detail. `announce` banners the screens.
+   * always gets the team's detail. `announce` banners the screens and the host.
    */
   private async teamChanged(
     ref: RunRef,
     v: RunView,
     teamId: string,
     updates: EscapeTeamUpdate[],
-    announce?: EscapeAnnounce['kind'],
+    announce: EscapeAnnounce['kind'][] = [],
   ): Promise<void> {
     const rec = v.teams.find((r) => r.team.id === teamId);
     if (!rec) return;
@@ -556,10 +710,10 @@ export class EscapeEngine {
       for (const u of updates) to.emit('escape:team-update', u);
     }
     this.server.to(host).emit('escape:host-team', hostTeamOf(v, rec));
-    if (announce) {
+    for (const kind of announce) {
       this.server
         .to([escapeRooms.board(ref.pin), host])
-        .emit('escape:announce', announceOf(announce, rec.team));
+        .emit('escape:announce', announceOf(kind, rec.team));
     }
     if (updates.length) this.toBoard(ref, v);
   }

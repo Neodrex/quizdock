@@ -16,7 +16,7 @@ import {
   stateWhere,
   submitAs,
 } from './escape-harness';
-import { receivedLeaks } from './leaks';
+import { leaksIn, receivedLeaks } from './leaks';
 
 /** Submissions: outcomes, events, the wrong-answer limit and concurrent submits (Task 3.10). */
 export function playTests(ctx: EscapeContext): void {
@@ -147,6 +147,7 @@ export function playTests(ctx: EscapeContext): void {
         { ok: false, reason: 'already-solved' },
       ]),
     );
+    expect(leaksIn(acks, ctx.vault)).toEqual([]);
     const t = await hostTeam;
     expect(Object.values(t.solvesBy).reduce((n, v) => n + v, 0)).toBe(1);
   });

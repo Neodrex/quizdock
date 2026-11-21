@@ -9,13 +9,16 @@ import {
   WsException,
 } from '@nestjs/websockets';
 import {
+  escapeAskHintSchema,
   escapeChooseTeamSchema,
   escapeCreateSchema,
+  escapeHintSchema,
   escapeMoveSchema,
   escapeOpenSchema,
   escapePinSchema,
   escapeSubmitSchema,
   escapeTeamsSchema,
+  type EscapeAskHintAck,
   type EscapeSubmitAck,
 } from '@quiz-dock/contracts';
 import type { User } from '@prisma/client';
@@ -134,6 +137,26 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     @MessageBody() payload: unknown,
   ): Promise<EscapeSubmitAck> {
     return this.engine.submit(socket, parse(escapeSubmitSchema, payload));
+  }
+
+  /** H1: refusals are in the ack, as for submit. */
+  @SubscribeMessage('escape:ask-hint')
+  async askHint(
+    @ConnectedSocket() socket: EscapeSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<EscapeAskHintAck> {
+    return this.engine.askHint(socket, parse(escapeAskHintSchema, payload));
+  }
+
+  /** H2: the host releases the next hint to one team, or to every team still playing. */
+  @SubscribeMessage('escape:hint')
+  async hint(
+    @ConnectedSocket() socket: EscapeSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<Ok & { released: number }> {
+    const hostId = this.requireHostId(socket);
+    const dto = parse(escapeHintSchema, payload);
+    return { ok: true, released: await this.engine.hostHint(dto.pin, hostId, dto.teamId) };
   }
 
   /** A player gone: the host and the screens see it. Role moves come with presence (Task 3.14). */
