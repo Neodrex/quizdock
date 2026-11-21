@@ -4,6 +4,7 @@ import type {
   EscapeHostTeam,
   EscapeTeamUpdate,
 } from '@quiz-dock/contracts';
+import type { Socket } from 'socket.io-client';
 import { nextEvent, settle } from '../game-harness';
 import {
   type EscapeContext,
@@ -225,6 +226,82 @@ export function playTests(ctx: EscapeContext): void {
     expect(await submitAs(a, pin, 'lobby-door', 12 as never)).toMatchObject({
       ok: false,
       error: { code: 'validation' },
+    });
+  });
+
+  describe('host unlock (K1)', () => {
+    const unlock = (host: Socket, pin: string, teamId: string, lockId: string) =>
+      host.emitWithAck('escape:unlock', { pin, teamId, lockId });
+
+    it('opens a lock for a team, paused or not: nobody is credited, the host sees it', async () => {
+      const { pin, teams, players, screen, host } = await runningRoom(ctx, {
+        players: 2,
+        teams: 1,
+      });
+      const seen = [...players.map((p) => record(p.socket)), record(screen)];
+      const [a] = teams.t1;
+      await host.emitWithAck('escape:pause', { pin, paused: true });
+      const update = teamUpdate(a, (u) => u.kind === 'lock-solved');
+      const hostTeam = nextEvent<EscapeHostTeam>(host, 'escape:host-team', {
+        where: (t) => t.hostUnlocks.length > 0,
+      });
+      const state = stateWhere(
+        a.socket,
+        (s) => !!s.view?.locks.find((l) => l.id === 'lobby-door')?.solved,
+      );
+      expect(await unlock(host, pin, 't1', 'lobby-door')).toEqual({ ok: true });
+      expect(await update).toEqual({
+        teamId: 't1',
+        kind: 'lock-solved',
+        lockId: 'lobby-door',
+        by: null,
+      });
+      expect(await hostTeam).toMatchObject({
+        hostUnlocks: ['lobby-door'],
+        solvesBy: {},
+        solved: ['lobby-door'],
+      });
+      await state;
+      expect(receivedLeaks(seen.flat(), ctx.vault)).toEqual([]);
+    });
+
+    it('unlocking the last lock clears the stage; the last stage escapes the team and ends the run', async () => {
+      const { pin, teams, screen, host } = await runningRoom(ctx, { players: 1, teams: 1 });
+      const [a] = teams.t1;
+      const cleared = teamUpdate(a, (u) => u.kind === 'stage-cleared');
+      const announce = nextEvent<EscapeAnnounce>(screen, 'escape:announce', {
+        where: (x) => x.kind === 'stage-cleared',
+      });
+      expect(await unlock(host, pin, 't1', 'lobby-door')).toEqual({ ok: true });
+      expect(await unlock(host, pin, 't1', 'lobby-badge')).toEqual({ ok: true });
+      expect(await cleared).toMatchObject({ kind: 'stage-cleared', stageIndex: 0, by: null });
+      expect(await announce).toMatchObject({ teamId: 't1', stageIndex: 0 });
+      const escaped = teamUpdate(a, (u) => u.kind === 'escaped');
+      const finished = stateWhere(a.socket, (s) => s.phase === 'finished');
+      for (const stage of ctx.vault.stages.slice(1)) {
+        for (const lock of stage.locks) {
+          expect(await unlock(host, pin, 't1', lock.id)).toEqual({ ok: true });
+        }
+      }
+      expect(await escaped).toMatchObject({ by: null });
+      expect((await finished).team?.escaped).toBe(true);
+    });
+
+    it('refuses a solved lock, a lock of another stage and an unknown team', async () => {
+      const { pin, host } = await runningRoom(ctx, { players: 1, teams: 1 });
+      expect(await unlock(host, pin, 't1', 'lobby-door')).toEqual({ ok: true });
+      expect(await unlock(host, pin, 't1', 'lobby-door')).toMatchObject({
+        ok: false,
+        error: { code: 'escape.already-solved' },
+      });
+      expect(await unlock(host, pin, 't1', 'vault-keypad')).toMatchObject({
+        ok: false,
+        error: { code: 'escape.unknown-lock' },
+      });
+      expect(await unlock(host, pin, 'zz', 'lobby-badge')).toMatchObject({
+        ok: false,
+        error: { code: 'escape.team_not_found' },
+      });
     });
   });
 }

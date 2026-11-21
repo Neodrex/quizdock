@@ -20,6 +20,7 @@ import {
   escapePinSchema,
   escapeSubmitSchema,
   escapeTeamsSchema,
+  escapeUnlockSchema,
   type EscapeAskHintAck,
   type EscapeSubmitAck,
 } from '@quiz-dock/contracts';
@@ -182,6 +183,18 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     const hostId = this.requireHostId(socket);
     const dto = parse(escapeAdjustTimeSchema, payload);
     await this.engine.adjustTime(dto.pin, hostId, dto);
+    return OK;
+  }
+
+  /** K1: the host opens a lock of a team's current stage; nobody is credited. */
+  @SubscribeMessage('escape:unlock')
+  async unlock(
+    @ConnectedSocket() socket: EscapeSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<Ok> {
+    const hostId = this.requireHostId(socket);
+    const dto = parse(escapeUnlockSchema, payload);
+    await this.engine.unlock(dto.pin, hostId, dto);
     return OK;
   }
 

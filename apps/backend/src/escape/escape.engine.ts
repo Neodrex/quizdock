@@ -20,6 +20,7 @@ import {
   type EscapeSubmitAck,
   type EscapeTeams,
   type EscapeTeamUpdate,
+  type EscapeUnlock,
   GameState,
   type ServerToClientEvents,
 } from '@quiz-dock/contracts';
@@ -45,7 +46,7 @@ import {
   submitUpdateOf,
   timeUpOf,
 } from './escape-payloads';
-import { adjustTime, newTeam, nextHint, submit, useHint } from './escape-rules';
+import { adjustTime, hostUnlock, newTeam, nextHint, submit, useHint } from './escape-rules';
 import { allDone, tickTeam } from './escape-tick';
 import { EscapeTicker } from './escape-ticker';
 import { validateTemplate } from './escape-template';
@@ -490,6 +491,42 @@ export class EscapeEngine implements OnModuleDestroy {
       for (const rec of changed) {
         const update: EscapeTeamUpdate = { teamId: rec.team.id, kind: 'time', deltaMs };
         await this.teamChanged(ref, v, rec.team.id, [update]);
+      }
+    });
+  }
+
+  // ── Host unlock (K1) ──
+
+  /**
+   * K1: the host opens a lock of the team's current stage, paused or not.
+   * Nobody is credited; `hostUnlocks` keeps it for the results. It counts as
+   * progress, and may clear the stage or escape the team. A timed-out team
+   * gets time first (escape.time-up).
+   */
+  async unlock(pin: string, hostUserId: string, dto: EscapeUnlock): Promise<void> {
+    await this.mutate(pin, hostUserId, async (ref) => {
+      if (ref.run.phase !== 'running') throw new BadRequestException('escape.wrong_phase');
+      const rec = ref.run.teamIds.includes(dto.teamId)
+        ? await this.store.team(ref.id, dto.teamId)
+        : null;
+      if (!rec) throw new NotFoundException('escape.team_not_found');
+      const elapsed = runElapsed(ref.run.clock, Date.now());
+      if (rec.timedOut || isTimedOut(ref.run.clock, rec.team, elapsed)) {
+        throw new BadRequestException('escape.time-up');
+      }
+      const tpl = ref.snap.template;
+      const { team, result } = hostUnlock(tpl, rec.team, dto.lockId, elapsed);
+      if (result.outcome === 'refused') throw new BadRequestException(`escape.${result.reason}`);
+      await this.store.save(ref.id, {
+        teams: [{ ...rec, team, lastProgressAt: elapsed, stuck: false }],
+      });
+      const update = submitUpdateOf(tpl, team.id, result, null);
+      const announce =
+        result.outcome === 'stage-cleared' || result.outcome === 'escaped' ? [result.outcome] : [];
+      const v = await this.viewOf(ref);
+      await this.teamChanged(ref, v, team.id, update ? [update] : [], announce);
+      if (result.outcome === 'escaped' && allDone(ref.run.clock, v.teams, elapsed)) {
+        await this.finish(ref);
       }
     });
   }
