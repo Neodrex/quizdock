@@ -18,11 +18,12 @@ import type {
   EscapePlayerState,
   EscapeTeamClock,
   EscapeTeamSummary,
+  EscapeTeamUpdate,
 } from '@quiz-dock/contracts';
 import { deadlineAt, remainingMs, runElapsed, stageOpenedAt } from './escape-clock';
 import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
 import { awards, nextHint, playerView, rankTeams } from './escape-rules';
-import type { EscapeTemplate, Lock, Stage, TeamState } from './escape.types';
+import type { EscapeTemplate, Lock, Stage, SubmitResult, TeamState } from './escape.types';
 
 /** A player of the room, as the engine sees it (R1 decides `connected`). */
 export interface RoomPlayer {
@@ -170,6 +171,59 @@ export function announceOf(kind: EscapeAnnounce['kind'], team: TeamState): Escap
     // The team has moved on when it cleared a stage: announce the stage it cleared.
     stageIndex: kind === 'stage-cleared' ? team.stageIndex - 1 : team.stageIndex,
   };
+}
+
+/**
+ * What a submit (or a host unlock, `by` null) did, for the team's phones and
+ * the host; null when refused. Wrong answers and parts only ever come from a
+ * player, so their `by` is a player id.
+ */
+export function submitUpdateOf(
+  tpl: EscapeTemplate,
+  teamId: string,
+  result: SubmitResult,
+  by: string | null,
+  roleId?: string,
+): EscapeTeamUpdate | null {
+  switch (result.outcome) {
+    case 'wrong':
+      return { teamId, kind: 'wrong', by: by ?? '' };
+    case 'part-accepted':
+      return {
+        teamId,
+        kind: 'part-accepted',
+        lockId: result.lockId,
+        roleId: roleId ?? '',
+        by: by ?? '',
+      };
+    case 'lock-solved':
+      return { teamId, kind: 'lock-solved', lockId: result.lockId, by };
+    case 'stage-cleared':
+      return {
+        teamId,
+        kind: 'stage-cleared',
+        stageIndex: result.stageIndex,
+        unlockText: tpl.stages[result.stageIndex].unlockText,
+        by,
+      };
+    case 'escaped':
+      return { teamId, kind: 'escaped', unlockText: tpl.stages.at(-1)!.unlockText, by };
+    case 'refused':
+      return null;
+  }
+}
+
+/** A hint released: its id only, the text goes in the team's `view.hints`. */
+export function hintUpdateOf(
+  teamId: string,
+  hintId: string,
+  source: 'request' | 'timer' | 'host',
+): EscapeTeamUpdate {
+  return { teamId, kind: 'hint', hintId, source };
+}
+
+export function timeUpOf(teamId: string): EscapeTeamUpdate {
+  return { teamId, kind: 'time-up' };
 }
 
 const copyRecord = (rec: Record<string, string[]>): Record<string, string[]> =>

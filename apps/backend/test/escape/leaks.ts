@@ -4,7 +4,7 @@
  * may name answers by design ("Key 1 word: FALCON").
  */
 
-import { normalizeAnswer } from '@quiz-dock/contracts';
+import { type EscapePlayerState, normalizeAnswer } from '@quiz-dock/contracts';
 import { normalizeCode } from '../../src/escape/escape-rules';
 import type { EscapeTemplate } from '../../src/escape/escape.types';
 
@@ -81,4 +81,23 @@ export function stringsIn(value: unknown): string[] {
   if (Array.isArray(value)) return value.flatMap(stringsIn);
   if (value && typeof value === 'object') return Object.values(value).flatMap(stringsIn);
   return [];
+}
+
+/**
+ * Leaks in what a phone or a screen `record()`ed: a state is checked against
+ * its own roles, and hint texts against the hints its team was told of
+ * (`escape:team-update {hint}`); screens are told of none.
+ */
+export function receivedLeaks(seen: [string, unknown][], tpl: EscapeTemplate): string[] {
+  const released = new Set<string>();
+  for (const [event, p] of seen) {
+    const u = p as { kind?: string; hintId?: string };
+    if (event === 'escape:team-update' && u.kind === 'hint' && u.hintId) released.add(u.hintId);
+  }
+  return seen.flatMap(([event, p]) =>
+    leaksIn(p, tpl, {
+      released,
+      roles: event === 'escape:state' ? ((p as EscapePlayerState).view?.roles ?? []) : [],
+    }).map((line) => `${event} ${line}`),
+  );
 }

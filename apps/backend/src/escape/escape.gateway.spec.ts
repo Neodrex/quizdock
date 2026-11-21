@@ -6,6 +6,7 @@ import {
   seedTemplate,
 } from '../../test/escape/escape-harness';
 import { lobbyTests } from '../../test/escape/lobby';
+import { playTests } from '../../test/escape/play';
 import { vaultHeist } from './samples';
 
 /**
@@ -31,4 +32,5 @@ describe('EscapeGateway (socket integration)', () => {
   });
 
   describe('lobby', () => lobbyTests(ctx));
+  describe('play', () => playTests(ctx));
 });

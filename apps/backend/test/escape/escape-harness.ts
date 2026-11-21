@@ -1,4 +1,8 @@
-import type { EscapePlayerState, EscapeTemplateContent } from '@quiz-dock/contracts';
+import type {
+  EscapePlayerState,
+  EscapeSubmitAck,
+  EscapeTemplateContent,
+} from '@quiz-dock/contracts';
 import type { Socket } from 'socket.io-client';
 import { EscapeTimings } from '../../src/escape/escape-timings';
 import type { EscapeTemplate } from '../../src/escape/escape.types';
@@ -126,4 +130,62 @@ export async function eventually<T>(fn: () => Promise<T>, timeoutMs = 3_000): Pr
       await settle(50);
     }
   }
+}
+
+/** A started run: the host console, the phones by team, and a synced screen. */
+export interface RunningRoom {
+  host: Socket;
+  pin: string;
+  players: SyncedPlayer[];
+  /** Phones by team id, in join order. */
+  teams: Record<string, SyncedPlayer[]>;
+  screen: Socket;
+}
+
+/**
+ * A run of `templateId` (Vault Heist by default) with `players` phones dealt in
+ * `teams` auto teams and started; every phone has its running state.
+ * `beforeStart` runs once the teams exist.
+ */
+export async function runningRoom(
+  ctx: EscapeContext,
+  opts: {
+    players: number;
+    teams: number;
+    templateId?: string;
+    beforeStart?: (pin: string) => Promise<void>;
+  },
+): Promise<RunningRoom> {
+  const host = ctx.h.connectHost();
+  const pin = await createEscape(host, opts.templateId ?? ctx.templateId);
+  await ok(host.emitWithAck('escape:sync', { pin }), 'host sync');
+  const players: SyncedPlayer[] = [];
+  for (let i = 0; i < opts.players; i++) players.push(await joinAndSync(ctx.h, pin, `P${i}`));
+  const screen = ctx.h.connect();
+  await screen.emitWithAck('spectator:join', { pin });
+  await ok(screen.emitWithAck('escape:sync', { pin }), 'screen sync');
+  await ok(host.emitWithAck('escape:teams', { pin, mode: 'auto', count: opts.teams }), 'teams');
+  await opts.beforeStart?.(pin);
+  const running = players.map((p) => stateWhere(p.socket, (s) => s.phase === 'running'));
+  await ok(host.emitWithAck('escape:start', { pin }), 'start');
+  await Promise.all(running);
+  const teams: Record<string, SyncedPlayer[]> = {};
+  for (const p of players) (teams[p.last().team!.id] ??= []).push(p);
+  return { host, pin, players, teams, screen };
+}
+
+async function ok(ack: Promise<unknown>, what: string): Promise<void> {
+  const res = (await ack) as { ok?: boolean };
+  if (!res.ok) throw new Error(`${what} refused: ${JSON.stringify(res)}`);
+}
+
+/** A player's submit, acked. */
+export function submitAs(
+  p: SyncedPlayer,
+  pin: string,
+  lockId: string,
+  input: string | string[],
+  roleId?: string,
+): Promise<EscapeSubmitAck> {
+  return p.socket.emitWithAck('escape:submit', { pin, lockId, input, roleId });
 }

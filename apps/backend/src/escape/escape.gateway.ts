@@ -14,7 +14,9 @@ import {
   escapeMoveSchema,
   escapeOpenSchema,
   escapePinSchema,
+  escapeSubmitSchema,
   escapeTeamsSchema,
+  type EscapeSubmitAck,
 } from '@quiz-dock/contracts';
 import type { User } from '@prisma/client';
 import type { z } from 'zod';
@@ -123,6 +125,15 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     const dto = parse(escapeChooseTeamSchema, payload);
     await this.engine.chooseTeam(socket, dto.pin, dto.teamId);
     return OK;
+  }
+
+  /** U1–U5: refusals are in the ack (`{ ok: false, reason }`), not errors. */
+  @SubscribeMessage('escape:submit')
+  async submit(
+    @ConnectedSocket() socket: EscapeSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<EscapeSubmitAck> {
+    return this.engine.submit(socket, parse(escapeSubmitSchema, payload));
   }
 
   /** A player gone: the host and the screens see it. Role moves come with presence (Task 3.14). */

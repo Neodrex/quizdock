@@ -7,10 +7,15 @@ import {
 } from '@nestjs/common';
 import {
   type ClientToServerEvents,
+  type EscapeAnnounce,
   type EscapeCreate,
   type EscapeMove,
   type EscapeOpen,
+  type EscapeRefusal,
+  type EscapeSubmit,
+  type EscapeSubmitAck,
   type EscapeTeams,
+  type EscapeTeamUpdate,
   GameState,
   type ServerToClientEvents,
 } from '@quiz-dock/contracts';
@@ -21,9 +26,20 @@ import { gameKeys, type GameId } from '../game/game.keys';
 import { GameService } from '../game/game.service';
 import type { GameMeta } from '../game/game.types';
 import { RedisService } from '../redis/redis.service';
+import { EscapeAttempts } from './escape-attempts';
+import { isTimedOut, runElapsed } from './escape-clock';
 import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
-import { boardOf, hostStateOf, outlineOf, playerStateOf, type RunView } from './escape-payloads';
-import { newTeam } from './escape-rules';
+import {
+  announceOf,
+  boardOf,
+  hostStateOf,
+  hostTeamOf,
+  outlineOf,
+  playerStateOf,
+  type RunView,
+  submitUpdateOf,
+} from './escape-payloads';
+import { newTeam, submit } from './escape-rules';
 import { validateTemplate } from './escape-template';
 import { EscapeTemplatesService } from './escape-templates.service';
 import { dealPlayers, makeTeams, moveMember, rolesFor, smallestTeam, teamOf } from './escape-teams';
@@ -90,6 +106,7 @@ export class EscapeEngine {
     private readonly templates: EscapeTemplatesService,
     private readonly timings: EscapeTimings,
     private readonly redis: RedisService,
+    private readonly attempts: EscapeAttempts,
   ) {}
 
   bindServer(server: EscapeServer): void {
@@ -301,6 +318,68 @@ export class EscapeEngine {
     });
   }
 
+  // ── Play (U1–U5) ──
+
+  /** A player's answer to a lock of their team's stage. */
+  async submit(socket: EscapeSocket, dto: EscapeSubmit): Promise<EscapeSubmitAck> {
+    const me = playerOf(socket, dto.pin);
+    if (!me) return { ok: false, reason: 'not-joined' };
+    return this.mutate(dto.pin, undefined, async (ref): Promise<EscapeSubmitAck> => {
+      const at = await this.playing(ref, me.playerId);
+      if (typeof at === 'string') return { ok: false, reason: at };
+      const { rec, elapsed } = at;
+      // U2: a blocked team waits; its answer is not checked, right or wrong.
+      const retryAfterMs = await this.attempts.blocked(ref.id, rec.team.id);
+      if (retryAfterMs > 0) return { ok: false, reason: 'rate-limited', retryAfterMs };
+      const tpl = ref.snap.template;
+      const { team, result } = submit(
+        tpl,
+        rec.team,
+        { playerId: me.playerId, lockId: dto.lockId, roleId: dto.roleId, input: dto.input },
+        elapsed,
+      );
+      if (result.outcome === 'refused') return { ok: false, reason: result.reason };
+      const next: TeamRecord =
+        result.outcome === 'wrong'
+          ? { ...rec, team }
+          : { ...rec, team, lastProgressAt: elapsed, stuck: false };
+      await this.store.save(ref.id, { teams: [next] });
+      if (result.outcome === 'wrong') await this.attempts.count(ref.id, rec.team.id);
+      const update = submitUpdateOf(tpl, team.id, result, me.playerId, dto.roleId);
+      const announce =
+        result.outcome === 'stage-cleared' || result.outcome === 'escaped'
+          ? result.outcome
+          : undefined;
+      await this.teamChanged(
+        ref,
+        await this.viewOf(ref),
+        team.id,
+        update ? [update] : [],
+        announce,
+      );
+      return { ok: true, outcome: result.outcome };
+    });
+  }
+
+  /**
+   * U1: the player's team record and the run time, when the player may play
+   * now; otherwise why not. The deadline decides time-up, before a tick has
+   * flagged it.
+   */
+  private async playing(
+    ref: RunRef,
+    playerId: string,
+  ): Promise<{ rec: TeamRecord; elapsed: number } | EscapeRefusal> {
+    if (ref.run.phase !== 'running') return 'not-running';
+    if (ref.run.clock.pausedAt) return 'paused';
+    const teamId = await this.store.teamOfPlayer(ref.id, playerId);
+    const rec = teamId ? await this.store.team(ref.id, teamId) : null;
+    if (!rec) return 'no-team';
+    const elapsed = runElapsed(ref.run.clock, Date.now());
+    if (rec.timedOut || isTimedOut(ref.run.clock, rec.team, elapsed)) return 'time-up';
+    return { rec, elapsed };
+  }
+
   // ── Guards ──
 
   /**
@@ -449,6 +528,40 @@ export class EscapeEngine {
     }
     this.toHost(ref, v);
     this.toBoard(ref, v);
+  }
+
+  /**
+   * U5: one team changed. With updates, its phones get their new state, the
+   * team room and the host the updates, and the board is scheduled; the host
+   * always gets the team's detail. `announce` banners the screens.
+   */
+  private async teamChanged(
+    ref: RunRef,
+    v: RunView,
+    teamId: string,
+    updates: EscapeTeamUpdate[],
+    announce?: EscapeAnnounce['kind'],
+  ): Promise<void> {
+    const rec = v.teams.find((r) => r.team.id === teamId);
+    if (!rec) return;
+    const host = escapeRooms.host(ref.pin);
+    if (updates.length) {
+      for (const s of await this.server.in(ref.pin).fetchSockets()) {
+        const { playerId } = s.data;
+        if (s.data.pin !== ref.pin || !playerId || !rec.team.members.includes(playerId)) continue;
+        this.placeInTeamRoom(s, ref.id, v, playerId);
+        s.emit('escape:state', playerStateOf(v, playerId));
+      }
+      const to = this.server.to([escapeRooms.team(ref.id, teamId), host]);
+      for (const u of updates) to.emit('escape:team-update', u);
+    }
+    this.server.to(host).emit('escape:host-team', hostTeamOf(v, rec));
+    if (announce) {
+      this.server
+        .to([escapeRooms.board(ref.pin), host])
+        .emit('escape:announce', announceOf(announce, rec.team));
+    }
+    if (updates.length) this.toBoard(ref, v);
   }
 
   private toHost(ref: RunRef, v: RunView): void {

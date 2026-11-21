@@ -4,12 +4,15 @@ import {
   announceOf,
   boardOf,
   finaleOf,
+  hintUpdateOf,
   hostStateOf,
   hostTeamOf,
   outlineOf,
   playerStateOf,
   type RoomPlayer,
   type RunView,
+  submitUpdateOf,
+  timeUpOf,
 } from './escape-payloads';
 import { awards, newTeam, nextHint, rankTeams, submit, useHint } from './escape-rules';
 import type { EscapeTemplate, TeamState } from './escape.types';
@@ -333,5 +336,56 @@ describe('finaleOf', () => {
     t = useHint(tpl, t, nextHint(tpl, t)!.id);
     const finale = finaleOf({ ...view(), teams: [rec(t)] });
     expect(finale.ranking[0]).toMatchObject({ hintsUsed: 2, paidHints: 1, hintPenaltyS: 60 });
+  });
+});
+
+describe('team updates', () => {
+  it('maps each submit outcome to its update, with the cleared stage’s unlock text', () => {
+    expect(submitUpdateOf(tpl, 'a', { outcome: 'wrong' }, 'p1')).toEqual({
+      teamId: 'a',
+      kind: 'wrong',
+      by: 'p1',
+    });
+    expect(
+      submitUpdateOf(
+        tpl,
+        'a',
+        { outcome: 'part-accepted', lockId: 'security-switch' },
+        'p1',
+        'hacker',
+      ),
+    ).toEqual({
+      teamId: 'a',
+      kind: 'part-accepted',
+      lockId: 'security-switch',
+      roleId: 'hacker',
+      by: 'p1',
+    });
+    expect(
+      submitUpdateOf(tpl, 'a', { outcome: 'lock-solved', lockId: 'lobby-door' }, null),
+    ).toEqual({ teamId: 'a', kind: 'lock-solved', lockId: 'lobby-door', by: null });
+    expect(submitUpdateOf(tpl, 'a', { outcome: 'stage-cleared', stageIndex: 1 }, 'p2')).toEqual({
+      teamId: 'a',
+      kind: 'stage-cleared',
+      stageIndex: 1,
+      unlockText: tpl.stages[1].unlockText,
+      by: 'p2',
+    });
+    expect(submitUpdateOf(tpl, 'a', { outcome: 'escaped' }, 'p2')).toEqual({
+      teamId: 'a',
+      kind: 'escaped',
+      unlockText: tpl.stages[3].unlockText,
+      by: 'p2',
+    });
+    expect(
+      submitUpdateOf(tpl, 'a', { outcome: 'refused', reason: 'already-solved' }, 'p1'),
+    ).toBeNull();
+  });
+
+  it('hint and time-up updates carry ids only', () => {
+    const hint = hintUpdateOf('a', 'lobby-h1', 'timer');
+    expect(hint).toEqual({ teamId: 'a', kind: 'hint', hintId: 'lobby-h1', source: 'timer' });
+    expect(leaksIn(hint, tpl)).toEqual([]);
+    expect(timeUpOf('a')).toEqual({ teamId: 'a', kind: 'time-up' });
   });
 });
