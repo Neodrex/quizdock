@@ -62,6 +62,15 @@ export const escapeSubmitSchema = z.object({
 });
 /** The hint the phone was offered (`nextHint.id`): a double tap releases one hint, not two. */
 export const escapeAskHintSchema = z.object({ pin, hintId: id });
+/**
+ * A finished run's results (`EscapeFinale.gameId`), readable after the room ended,
+ * by whoever was in the room: a socket of that room (phone, screen, host console),
+ * or a phone back with the session token it joined with.
+ */
+export const escapeResultsSchema = z.object({
+  gameId: z.string().regex(/^[0-9a-f]{32}$/),
+  sessionToken: z.string().min(1).max(200).optional(),
+});
 
 export type EscapeCreate = z.infer<typeof escapeCreateSchema>;
 export type EscapeOpen = z.infer<typeof escapeOpenSchema>;
@@ -75,6 +84,7 @@ export type EscapeUnlock = z.infer<typeof escapeUnlockSchema>;
 export type EscapeChooseTeam = z.infer<typeof escapeChooseTeamSchema>;
 export type EscapeSubmit = z.infer<typeof escapeSubmitSchema>;
 export type EscapeAskHint = z.infer<typeof escapeAskHintSchema>;
+export type EscapeResults = z.infer<typeof escapeResultsSchema>;
 
 // ── Server → client ──
 
@@ -251,6 +261,8 @@ export interface EscapeOutline {
 }
 
 export interface EscapeFinale {
+  /** The run's game id: the key `escape:results` reads them back by. */
+  gameId: string;
   title: string;
   finale: string;
   ranking: {
@@ -337,6 +349,11 @@ export interface EscapeClientToServerEvents {
   'escape:submit': (p: EscapeSubmit, ack: (res: EscapeSubmitAck) => void) => void;
   /** Player: asks for the hint it was offered. */
   'escape:ask-hint': (p: EscapeAskHint, ack: (res: EscapeAskHintAck) => void) => void;
+  /** Anyone who was in the room: a finished run's stored finale, the room ended or not. */
+  'escape:results': (
+    p: EscapeResults,
+    ack: (res: EscapeAck<{ finale: EscapeFinale }>) => void,
+  ) => void;
 }
 
 export interface EscapeServerToClientEvents {

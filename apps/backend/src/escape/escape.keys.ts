@@ -15,6 +15,8 @@ export const escapeKeys = {
   members: (id: GameId) => `game:${id}:escape:members`,
   /** A team's wrong answers in the current window (SET NX EX + INCR, as pin-attempts). */
   wrong: (id: GameId, teamId: string) => `game:${id}:escape:wrong:${teamId}`,
+  /** The PIN of the room the run was played in: who may read its results after the end. */
+  room: (id: GameId) => `game:${id}:escape:room`,
   /** Final ranking and awards (JSON EscapeFinale), kept for M5's export. */
   results: (id: GameId) => `game:${id}:escape:results`,
 };

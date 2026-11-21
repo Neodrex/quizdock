@@ -62,6 +62,7 @@ const teamRecordSchema = z.object({
   timedOut: z.boolean(),
 });
 const finaleSchema = z.object({
+  gameId: z.string(),
   title: z.string(),
   finale: z.string(),
   ranking: z.array(
@@ -135,9 +136,15 @@ export class EscapeStore {
 
   constructor(private readonly redis: RedisService) {}
 
-  /** A run opens: its frozen template and its first run record. */
-  async writeOpen(id: GameId, snapshot: EscapeSnapshot, run: EscapeRun): Promise<void> {
+  /** A run opens in room `pin`: its frozen template and its first run record. */
+  async writeOpen(
+    id: GameId,
+    pin: string,
+    snapshot: EscapeSnapshot,
+    run: EscapeRun,
+  ): Promise<void> {
     const pipe = this.redis.multi();
+    pipe.set(escapeKeys.room(id), pin, 'EX', ESCAPE_TTL_S);
     pipe.set(escapeKeys.template(id), JSON.stringify(snapshot), 'EX', ESCAPE_TTL_S);
     pipe.set(escapeKeys.run(id), JSON.stringify(run), 'EX', ESCAPE_TTL_S);
     await pipe.exec();
@@ -150,6 +157,11 @@ export class EscapeStore {
     if (cached) return cached;
     const snapshot = parseJson(snapshotSchema, await this.redis.get(escapeKeys.template(id)));
     return snapshot ? this.remember(id, snapshot) : null;
+  }
+
+  /** The PIN of the room the run was opened in (null when gone or expired). */
+  roomOf(id: GameId): Promise<string | null> {
+    return this.redis.get(escapeKeys.room(id));
   }
 
   async run(id: GameId): Promise<EscapeRun | null> {

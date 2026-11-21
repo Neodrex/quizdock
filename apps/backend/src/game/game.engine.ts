@@ -208,6 +208,11 @@ export class GameEngine {
    * a resume would otherwise write over the time just added. One process only.
    */
   private readonly clockCommands = new Map<string, Promise<unknown>>();
+  /**
+   * Set by EscapeEngine: awaited before an escape game's room ends (`host:end`,
+   * the host window), so the run's finale goes out before `game:ended`.
+   */
+  beforeEnd?: (ref: { pin: string; id: GameId }, meta: GameMeta) => Promise<void>;
   /** Per room, when the answer count last went out, and whether one waits (`countAnswers`). */
   private readonly answerCounts = new Map<string, { at: number; waiting: boolean }>();
 
@@ -1625,6 +1630,7 @@ export class GameEngine {
       );
       return;
     }
+    await this.runBeforeEnd(ref, meta);
     // Fin subie : on archive ce qui a été joué, marqué « interrompu » (§7.3). Best-effort —
     // l'hôte est absent, un échec ne doit pas bloquer la fin (journalisé, avalé).
     await this.archive.archive(pin, meta, { interrupted: true, bestEffort: true });
@@ -1708,10 +1714,19 @@ export class GameEngine {
     }).length;
   }
 
+  /** `beforeEnd` for an escape game, best effort: a failure never stops the end. */
+  private async runBeforeEnd(ref: GameRef, meta: GameMeta): Promise<void> {
+    if (meta.kind !== 'escape' || !this.beforeEnd) return;
+    await this.beforeEnd(ref, meta).catch((err: Error) =>
+      this.log.warn(`beforeEnd ${ref.pin}: ${err.message}`),
+    );
+  }
+
   /** `host:end` : termine la partie (tout état → ENDED) et invalide le PIN (§7). */
   async end(pin: string, hostUserId: string, archive = false): Promise<void> {
     const meta = await this.requireHost(pin, hostUserId);
     if (meta.state === GameState.Ended) return; // déjà terminée (ré-entrée / double-clic) → pas de double archive
+    await this.runBeforeEnd(refOf(pin, meta), meta);
     // A lobby with no quiz has nothing to archive.
     if (archive && meta.quizId) await this.archiveAsked(pin, meta);
     this.timers.cancelAll(pin);

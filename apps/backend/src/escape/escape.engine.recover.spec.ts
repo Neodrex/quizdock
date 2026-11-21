@@ -1,3 +1,4 @@
+import type { ModuleRef } from '@nestjs/core';
 import type { GameService } from '../game/game.service';
 import type { GameMeta } from '../game/game.types';
 import type { RedisService } from '../redis/redis.service';
@@ -46,6 +47,7 @@ describe('EscapeEngine.recover (bindServer)', () => {
       new EscapeTimings(),
       redis as unknown as RedisService,
       {} as EscapeAttempts,
+      { get: () => ({}) } as unknown as ModuleRef,
     );
     const ticker = (engine as unknown as { ticker: { start: (...a: unknown[]) => void } }).ticker;
     const start = jest.spyOn(ticker, 'start').mockImplementation(() => undefined);

@@ -330,12 +330,14 @@ export function outlineOf(snap: EscapeSnapshot): EscapeOutline {
 }
 
 /** Ranking and awards of every team; members by nickname. */
-export function finaleOf(v: RunView): EscapeFinale {
+/** `gameId`: the run's, for `escape:results`. */
+export function finaleOf(v: RunView, gameId: string): EscapeFinale {
   const tpl = v.snap.template;
   const teams = v.teams.map((r) => r.team);
   const names = new Map(v.players.map((p) => [p.playerId, p.nickname]));
   const a = awards(teams);
   return {
+    gameId,
     title: tpl.title,
     finale: tpl.finale,
     ranking: rankTeams(teams).map(({ team, place, scoreMs }) => ({

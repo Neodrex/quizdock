@@ -309,7 +309,8 @@ describe('finaleOf', () => {
       run: { ...running, phase: 'finale' },
       teams: [rec(slow), rec(fast)],
     };
-    const finale = finaleOf(v);
+    const finale = finaleOf(v, 'g1');
+    expect(finale.gameId).toBe('g1');
     const ranked = rankTeams([slow, fast]);
     expect(finale.ranking.map((r) => r.teamId)).toEqual(ranked.map((r) => r.team.id));
     expect(finale.ranking.map((r) => r.place)).toEqual([1, 2]);
@@ -334,7 +335,7 @@ describe('finaleOf', () => {
   it('counts free and paid hints apart', () => {
     let t = useHint(tpl, teamA, 'lobby-h1', { free: true });
     t = useHint(tpl, t, nextHint(tpl, t)!.id);
-    const finale = finaleOf({ ...view(), teams: [rec(t)] });
+    const finale = finaleOf({ ...view(), teams: [rec(t)] }, 'g1');
     expect(finale.ranking[0]).toMatchObject({ hintsUsed: 2, paidHints: 1, hintPenaltyS: 60 });
   });
 });

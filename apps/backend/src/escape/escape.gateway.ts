@@ -19,9 +19,11 @@ import {
   escapePauseSchema,
   escapePinSchema,
   escapeSubmitSchema,
+  escapeResultsSchema,
   escapeTeamsSchema,
   escapeUnlockSchema,
   type EscapeAskHintAck,
+  type EscapeFinale,
   type EscapeSubmitAck,
 } from '@quiz-dock/contracts';
 import type { User } from '@prisma/client';
@@ -217,6 +219,16 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     const dto = parse(escapePinSchema, payload);
     await this.engine.showFinale(dto.pin, hostId);
     return OK;
+  }
+
+  /** A finished run's stored finale, for someone who was in its room (even once it ended). */
+  @SubscribeMessage('escape:results')
+  async results(
+    @ConnectedSocket() socket: EscapeSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<{ ok: true; finale: EscapeFinale }> {
+    const dto = parse(escapeResultsSchema, payload);
+    return { ok: true, finale: await this.engine.results(socket, dto) };
   }
 
   /** R2: a player's socket left; a stale one (the player is back on another) changes nothing. */

@@ -30,6 +30,7 @@ describe('EscapeStore (Redis)', () => {
     timedOut: false,
   });
   const finale: EscapeFinale = {
+    gameId: 'g1',
     title: 'Vault',
     finale: 'Out!',
     ranking: [
@@ -52,6 +53,7 @@ describe('EscapeStore (Redis)', () => {
     awards: { fastest: 't1', fewestHints: 't1', teamwork: null, photoFinish: null },
   };
   const allKeys = () => [
+    escapeKeys.room(id),
     escapeKeys.template(id),
     escapeKeys.run(id),
     escapeKeys.teams(id),
@@ -81,7 +83,7 @@ describe('EscapeStore (Redis)', () => {
   });
 
   it('round-trips every record', async () => {
-    await store.writeOpen(id, snapshot, run);
+    await store.writeOpen(id, '123456', snapshot, run);
     await store.save(id, {
       teams: [record('t1', ['p1', 'p2']), record('t2', ['p3'])],
       members: { set: { p1: 't1', p2: 't1', p3: 't2' } },
@@ -90,6 +92,7 @@ describe('EscapeStore (Redis)', () => {
 
     expect(await new EscapeStore(redis).snapshot(id)).toEqual(snapshot);
     expect(await store.run(id)).toEqual(run);
+    expect(await store.roomOf(id)).toBe('123456');
     const teams = await store.teams(id);
     expect([...teams.keys()].sort()).toEqual(['t1', 't2']);
     expect(teams.get('t1')).toEqual(record('t1', ['p1', 'p2']));
@@ -119,7 +122,7 @@ describe('EscapeStore (Redis)', () => {
   });
 
   it('gives every key it writes the game TTL', async () => {
-    await store.writeOpen(id, snapshot, run);
+    await store.writeOpen(id, '123456', snapshot, run);
     await store.save(id, {
       run,
       teams: [record('t1', ['p1'])],
@@ -134,7 +137,7 @@ describe('EscapeStore (Redis)', () => {
   });
 
   it('moves a player in one MULTI: both teams and the members index', async () => {
-    await store.writeOpen(id, snapshot, run);
+    await store.writeOpen(id, '123456', snapshot, run);
     await store.save(id, {
       teams: [record('t1', ['p1', 'p2']), record('t2', [])],
       members: { set: { p1: 't1', p2: 't1' } },
@@ -153,7 +156,7 @@ describe('EscapeStore (Redis)', () => {
   });
 
   it('replaces every team and the whole members index in one MULTI', async () => {
-    await store.writeOpen(id, snapshot, run);
+    await store.writeOpen(id, '123456', snapshot, run);
     await store.save(id, {
       teams: [record('t1', ['p1']), record('t2', ['p2'])],
       members: { set: { p1: 't1', p2: 't2' } },
@@ -174,7 +177,7 @@ describe('EscapeStore (Redis)', () => {
   });
 
   it('keeps the snapshot it read: no second GET', async () => {
-    await store.writeOpen(id, snapshot, run);
+    await store.writeOpen(id, '123456', snapshot, run);
     const fresh = new EscapeStore(redis);
     const get = jest.spyOn(redis, 'get');
     await fresh.snapshot(id);

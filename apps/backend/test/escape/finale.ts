@@ -125,23 +125,64 @@ export function finaleTests(ctx: EscapeContext): void {
     expect((await finale).ranking).toHaveLength(2);
   });
 
-  it('E3: host:end mid-run sends the finale (best effort) after game:ended; the ticker stops', async () => {
+  it('E3: host:end mid-run sends the finale (best effort) before game:ended; the ticker stops', async () => {
     const { pin, host, screen, players } = await runningRoom(ctx, { players: 2, teams: 2 });
     const id = await gameId(pin);
     expect(inProcess(id, pin).ticking).toBe(true);
+    const seen = record(players[0].socket);
     const ended = nextEvent(players[0].socket, 'game:ended');
     const finale = finaleOn(players[0].socket);
     const onScreen = finaleOn(screen);
     host.emit('host:end', { pin });
     await ended;
-    expect((await finale).ranking).toHaveLength(2);
+    const f = await finale;
+    expect(f.ranking).toHaveLength(2);
+    expect(f.gameId).toBe(id);
     await onScreen;
-    expect(await ctx.h.app.get(EscapeStore).results(id)).not.toBeNull();
+    const order = seen.map(([e]) => e).filter((e) => e === 'escape:finale' || e === 'game:ended');
+    expect(order).toEqual(['escape:finale', 'game:ended']);
+    expect(await ctx.h.app.get(EscapeStore).results(id)).toEqual(f);
     await eventually(async () =>
       expect(inProcess(id, pin)).toEqual({ ticking: false, gone: false, board: false }),
     );
     // The room stays ended: the finale does not put it back on a podium.
     expect((await ctx.h.app.get(GameService).getMeta(pin))!.state).toBe(GameState.Ended);
+  });
+
+  it('escape:results: the stored finale, after the room ended, to those who were in it', async () => {
+    const { pin, host, players, screen } = await runningRoom(ctx, { players: 1, teams: 1 });
+    const id = await gameId(pin);
+    const [a] = players;
+    const finale = finaleOn(a.socket);
+    const ended = nextEvent(a.socket, 'game:ended');
+    host.emit('host:end', { pin });
+    const f = await finale;
+    await ended;
+    // Still connected: the phone, the screen and the host console.
+    for (const s of [a.socket, screen, host]) {
+      expect(await s.emitWithAck('escape:results', { gameId: id })).toEqual({
+        ok: true,
+        finale: f,
+      });
+    }
+    // A phone back after a reload: its session token says it was there.
+    const back = ctx.h.connect();
+    expect(
+      await back.emitWithAck('escape:results', { gameId: id, sessionToken: a.sessionToken }),
+    ).toEqual({ ok: true, finale: f });
+    // Anyone else is refused, and an unknown game has no results.
+    const stranger = ctx.h.connect();
+    expect(await stranger.emitWithAck('escape:results', { gameId: id })).toMatchObject({
+      ok: false,
+      error: { code: 'escape.not_in_room' },
+    });
+    expect(
+      await stranger.emitWithAck('escape:results', { gameId: id, sessionToken: 'nope' }),
+    ).toMatchObject({ ok: false, error: { code: 'escape.not_in_room' } });
+    expect(await a.socket.emitWithAck('escape:results', { gameId: 'f'.repeat(32) })).toMatchObject({
+      ok: false,
+      error: { code: 'escape.not_found' },
+    });
   });
 
   it('host gone: the host window never cuts a run short; it closes the room once the run is over', async () => {

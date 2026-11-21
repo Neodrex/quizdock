@@ -6,6 +6,7 @@ import {
   NotFoundException,
   type OnModuleDestroy,
 } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import {
   type ClientToServerEvents,
   type EscapeAdjustTime,
@@ -17,6 +18,7 @@ import {
   type EscapeMove,
   type EscapeOpen,
   type EscapeRefusal,
+  type EscapeResults,
   type EscapeSubmit,
   type EscapeSubmitAck,
   type EscapeTeams,
@@ -26,6 +28,7 @@ import {
   type ServerToClientEvents,
 } from '@quiz-dock/contracts';
 import type { Server, Socket } from 'socket.io';
+import { GameEngine } from '../game/game.engine';
 import { playerOf, type GameSocketData } from '../game/game.gateway';
 import { gameHash } from '../game/game-hash';
 import { ROOM_HASH_KEY, gameKeys, type GameId } from '../game/game.keys';
@@ -141,10 +144,14 @@ export class EscapeEngine implements OnModuleDestroy {
     private readonly timings: EscapeTimings,
     private readonly redis: RedisService,
     private readonly attempts: EscapeAttempts,
+    private readonly modules: ModuleRef,
   ) {}
 
   bindServer(server: EscapeServer): void {
     this.server = server;
+    // E3: before a room ends under its run (host:end, the host window), the finale goes out.
+    this.modules.get(GameEngine, { strict: false }).beforeEnd = (ref) =>
+      this.closing(ref.pin, ref.id);
     this.recover().catch((err: Error) => this.log.error(`recover: ${err.message}`));
   }
 
@@ -193,7 +200,7 @@ export class EscapeEngine implements OnModuleDestroy {
     );
     const meta = await this.game.getMeta(pin);
     if (!meta) throw new NotFoundException('session.not_found');
-    await this.openOn(meta.id, snap, dto.durationMin);
+    await this.openOn(pin, meta.id, snap, dto.durationMin);
     return pin;
   }
 
@@ -207,7 +214,7 @@ export class EscapeEngine implements OnModuleDestroy {
       }
       const snap = await this.freeze(hostUserId, dto.templateId);
       const id = await this.game.openGameWith(pin, null);
-      await this.openOn(id, snap, dto.durationMin);
+      await this.openOn(pin, id, snap, dto.durationMin);
       this.server
         .to(pin)
         .emit('game:state', { state: GameState.Lobby, questionIndex: -1, totalQuestions: 0 });
@@ -608,15 +615,12 @@ export class EscapeEngine implements OnModuleDestroy {
         this.forget(id);
         return;
       }
-      const ref: RunRef = { pin, id, meta, snap, run };
-      // E3: the room closed under the run (host:end, or the host window ran out).
+      // E3 sent the finale before the room ended (`closing`); nothing is left to tick.
       if (meta.state === GameState.Ended) {
-        await this.finale(ref, true).catch((err: Error) => {
-          this.forget(id);
-          this.log.warn(`finale of closed room ${pin}: ${err.message}`);
-        });
+        this.forget(id);
         return;
       }
+      const ref: RunRef = { pin, id, meta, snap, run };
       // R2: roles move off members gone past the grace, paused or not.
       if (snap.template.mode === 'roles' && this.gone.has(id)) {
         await this.reconcileRoles(ref, await this.viewOf(ref));
@@ -682,13 +686,42 @@ export class EscapeEngine implements OnModuleDestroy {
   }
 
   /**
+   * E3: the room is about to end under the run (GameEngine.beforeEnd, awaited by
+   * host:end and the host window before game:ended). A running run gets its
+   * finale, in its queue; any other has nothing to send.
+   */
+  private async closing(pin: string, id: GameId): Promise<void> {
+    await this.queue.run(id, async () => {
+      const ref = await this.requireRun(pin).catch(() => null);
+      if (ref?.id !== id || ref.run.phase !== 'running') return;
+      await this.finale(ref, true);
+    });
+  }
+
+  /**
+   * A finished run's stored finale, the room ended or not. Only for someone who
+   * was in the room: a socket whose PIN is the run's (phone, screen, host
+   * console), or a phone with the session token it joined that room with.
+   */
+  async results(socket: EscapeSocket, dto: EscapeResults): Promise<EscapeFinale> {
+    const id = dto.gameId as GameId;
+    const [pin, finale] = await Promise.all([this.store.roomOf(id), this.store.results(id)]);
+    if (!pin || !finale) throw new NotFoundException('escape.not_found');
+    const session = dto.sessionToken ? await this.game.resolveSession(dto.sessionToken) : null;
+    if (socket.data.pin !== pin && session?.pin !== pin) {
+      throw new ForbiddenException('escape.not_in_room');
+    }
+    return finale;
+  }
+
+  /**
    * E2/T4: the run is over. Clocks freeze, teams past their deadline count as
    * timed out, the ranking and awards are kept in `results`, the room goes to
    * its podium, and everyone in it gets the finale (no answers: names, counts
    * and times). The host console also gets its full view.
    *
-   * `closed` (E3): the room ended under the run. Best effort: the results and
-   * the finale still go out, the room stays ENDED and is not kept alive.
+   * `closed` (E3): the room is ending under the run (`closing`): the results
+   * and the finale go out, the state is left to GameEngine, which ends the room.
    * Without its host (HOST_DISCONNECTED, owner decision 1) the podium is where
    * the room resumes when the host is back.
    */
@@ -707,7 +740,7 @@ export class EscapeEngine implements OnModuleDestroy {
       return out;
     });
     const final = { ...v, run, teams };
-    const finale = finaleOf(final);
+    const finale = finaleOf(final, ref.id);
     await this.store.save(ref.id, { run, teams: late });
     await this.store.saveResults(ref.id, finale);
     this.forget(ref.id);
@@ -811,7 +844,12 @@ export class EscapeEngine implements OnModuleDestroy {
   }
 
   /** Marks game `id` as this escape run and writes its first records. */
-  private async openOn(id: GameId, snap: EscapeSnapshot, durationMin?: number): Promise<void> {
+  private async openOn(
+    pin: string,
+    id: GameId,
+    snap: EscapeSnapshot,
+    durationMin?: number,
+  ): Promise<void> {
     const run: EscapeRun = {
       phase: 'forming',
       formation: 'auto',
@@ -829,7 +867,7 @@ export class EscapeEngine implements OnModuleDestroy {
       gameKeys.game(id),
       gameHash({ kind: 'escape', title: snap.template.title }),
     );
-    await this.store.writeOpen(id, snap, run);
+    await this.store.writeOpen(id, pin, snap, run);
   }
 
   /** Everything a payload is built from, read once. R1: connected = a live socket in the room. */
