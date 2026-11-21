@@ -175,13 +175,14 @@ model User {
   updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt     DateTime?  @map("deleted_at") @db.Timestamptz(6)
 
-  quizzes        Quiz[]
-  mediaAssets    MediaAsset[]
-  themes         Theme[]
-  selections     Selection[]
-  hostedSessions GameSessionLog[]
-  playerResults  PlayerResultLog[]
-  hostSeat       HostSeat?
+  quizzes         Quiz[]
+  mediaAssets     MediaAsset[]
+  themes          Theme[]
+  selections      Selection[]
+  hostedSessions  GameSessionLog[]
+  playerResults   PlayerResultLog[]
+  hostSeat        HostSeat?
+  escapeTemplates EscapeTemplate[]
 
   @@map("user")
 }
@@ -256,6 +257,30 @@ model Quiz {
 
   @@index([ownerId, status])
   @@map("quiz")
+}
+
+enum EscapeTemplateStatus {
+  draft
+  published
+  archived
+}
+
+/// A live escape room's content (docs/plans/2026-11-21-live-escape-design.md).
+model EscapeTemplate {
+  id        String               @id @default(ulid()) @db.Char(26)
+  ownerId   String               @map("owner_id") @db.Char(26)
+  title     String
+  status    EscapeTemplateStatus @default(draft)
+  /// EscapeTemplateContent (contracts/escape.ts), validated on write.
+  content   Json
+  /// Bumped on every publish; a running session keeps the version it started with.
+  version   Int                  @default(0)
+  createdAt DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  owner     User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@map("escape_templates")
 }
 
 /// §2.3 — question.
