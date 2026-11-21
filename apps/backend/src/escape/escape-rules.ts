@@ -295,3 +295,76 @@ export function playerView(tpl: EscapeTemplate, team: TeamState, playerId: strin
     escaped: team.escapedAt !== null,
   };
 }
+
+export interface Ranked {
+  team: TeamState;
+  place: number;
+  /** Escaped: time in ms including hint penalties. */
+  scoreMs: number | null;
+}
+
+const scoreMs = (t: TeamState) =>
+  t.escapedAt === null ? null : t.escapedAt + t.hintPenaltyS * 1000;
+
+const byId = (a: TeamState, b: TeamState) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
+/**
+ * Escaped teams first by time plus hint penalties; the rest by stage reached,
+ * then by when they cleared their last stage. Equal teams by id, so stable.
+ */
+export function rankTeams(teams: TeamState[]): Ranked[] {
+  const sorted = [...teams].sort((a, b) => {
+    const sa = scoreMs(a);
+    const sb = scoreMs(b);
+    if (sa !== null || sb !== null) {
+      if (sa === null) return 1;
+      if (sb === null) return -1;
+      return sa - sb || byId(a, b);
+    }
+    if (a.stageIndex !== b.stageIndex) return b.stageIndex - a.stageIndex;
+    const la = a.stageClearedAt.at(-1) ?? Infinity;
+    const lb = b.stageClearedAt.at(-1) ?? Infinity;
+    return la === lb ? byId(a, b) : la - lb;
+  });
+  return sorted.map((team, i) => ({ team, place: i + 1, scoreMs: scoreMs(team) }));
+}
+
+/** Evenness of contribution: 1 when every member solved as much, 0 when one did all. */
+function evenness(t: TeamState): number {
+  const counts = t.members.map((m) => t.solvesBy[m] ?? 0);
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (!total || counts.length < 2) return 0;
+  return 1 - (Math.max(...counts) - Math.min(...counts)) / total;
+}
+
+export interface Awards {
+  fastest: string | null;
+  fewestHints: string | null;
+  /** Most even contribution; null when no team has any spread. */
+  teamwork: string | null;
+  /** The two escaped teams with the smallest gap between them. */
+  photoFinish: [string, string] | null;
+}
+
+export function awards(teams: TeamState[]): Awards {
+  const escaped = rankTeams(teams).filter((r) => r.scoreMs !== null);
+  const fastest = escaped[0]?.team.id ?? null;
+  // Stable sort over the ranking: equal hint counts go to the better place.
+  const fewestHints =
+    [...escaped].sort((a, b) => a.team.hintsUsed.length - b.team.hintsUsed.length)[0]?.team.id ??
+    null;
+  const best = [...teams]
+    .map((team) => ({ team, e: evenness(team) }))
+    .sort((a, b) => b.e - a.e || byId(a.team, b.team))[0];
+  const teamwork = best && best.e > 0 ? best.team.id : null;
+  let photoFinish: [string, string] | null = null;
+  let bestGap = Infinity;
+  for (let i = 1; i < escaped.length; i++) {
+    const gap = escaped[i].scoreMs! - escaped[i - 1].scoreMs!;
+    if (gap < bestGap) {
+      bestGap = gap;
+      photoFinish = [escaped[i - 1].team.id, escaped[i].team.id];
+    }
+  }
+  return { fastest, fewestHints, teamwork, photoFinish };
+}

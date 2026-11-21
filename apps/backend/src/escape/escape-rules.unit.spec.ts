@@ -4,15 +4,18 @@ import type {
   EscapeTemplate,
   PhraseLock,
   SequenceLock,
+  TeamState,
 } from './escape.types';
 import {
   assignRoles,
+  awards,
   checkAnswer,
   hostUnlock,
   newTeam,
   nextHint,
   normalizeCode,
   playerView,
+  rankTeams,
   submit,
   useHint,
 } from './escape-rules';
@@ -474,6 +477,96 @@ describe('playerView', () => {
     expect(v.locks.find((l) => l.id === 'duo')).toMatchObject({
       kind: 'combined',
       myParts: ['dec'],
+    });
+  });
+});
+
+const t = (over: Partial<TeamState>): TeamState => ({ ...team(), ...over });
+
+describe('rankTeams', () => {
+  it('escaped teams first by time plus hint penalty, then by stages and time', () => {
+    const fast = t({
+      id: 'fast',
+      escapedAt: 600_000,
+      hintPenaltyS: 120,
+      stageClearedAt: [1, 600_000],
+    }); // 12 min with penalty
+    const clean = t({
+      id: 'clean',
+      escapedAt: 660_000,
+      hintPenaltyS: 0,
+      stageClearedAt: [1, 660_000],
+    }); // 11 min
+    const stuck = t({ id: 'stuck', stageIndex: 1, stageClearedAt: [300_000] });
+    const slow = t({ id: 'slow', stageIndex: 1, stageClearedAt: [400_000] });
+    const none = t({ id: 'none' });
+    expect(rankTeams([none, slow, fast, stuck, clean]).map((r) => r.team.id)).toEqual([
+      'clean',
+      'fast',
+      'stuck',
+      'slow',
+      'none',
+    ]);
+  });
+
+  it('breaks ties by team id, whatever the input order', () => {
+    const x = t({ id: 'x', escapedAt: 500_000 });
+    const y = t({ id: 'y', escapedAt: 440_000, hintPenaltyS: 60 });
+    const p = t({ id: 'p' });
+    const q = t({ id: 'q' });
+    const ids = (teams: TeamState[]) => rankTeams(teams).map((r) => r.team.id);
+    expect(ids([y, q, x, p])).toEqual(['x', 'y', 'p', 'q']);
+    expect(ids([p, x, q, y])).toEqual(['x', 'y', 'p', 'q']);
+    expect(rankTeams([y, x]).map((r) => [r.place, r.scoreMs])).toEqual([
+      [1, 500_000],
+      [2, 500_000],
+    ]);
+  });
+});
+
+describe('awards', () => {
+  it('names fastest, fewest hints, teamwork and photo finish', () => {
+    const a = t({ id: 'a', escapedAt: 500_000, hintsUsed: ['h1'], solvesBy: { p1: 4, p2: 0 } });
+    const b = t({ id: 'b', escapedAt: 503_000, hintsUsed: [], solvesBy: { p1: 2, p2: 2 } });
+    expect(awards([a, b])).toEqual({
+      fastest: 'a',
+      fewestHints: 'b',
+      teamwork: 'b',
+      photoFinish: ['a', 'b'],
+    });
+  });
+
+  it('photo finish is the closest consecutive pair', () => {
+    const a = t({ id: 'a', escapedAt: 100_000 });
+    const b = t({ id: 'b', escapedAt: 200_000 });
+    const c = t({ id: 'c', escapedAt: 205_000 });
+    const d = t({ id: 'd', escapedAt: 300_000 });
+    expect(awards([d, c, b, a]).photoFinish).toEqual(['b', 'c']);
+  });
+
+  it('teamwork: one member or no solves never beats genuine spread; ties by id', () => {
+    const solo = t({ id: 'a', members: ['p1'], solvesBy: { p1: 5 } });
+    const idle = t({ id: 'b', solvesBy: {} });
+    const spread = t({ id: 'z', solvesBy: { p1: 3, p2: 1 } });
+    expect(awards([solo, idle, spread]).teamwork).toBe('z');
+    const even1 = t({ id: 'm', solvesBy: { p1: 1, p2: 1 } });
+    const even2 = t({ id: 'k', solvesBy: { p1: 2, p2: 2 } });
+    expect(awards([even1, even2]).teamwork).toBe('k');
+    expect(awards([even2, even1]).teamwork).toBe('k');
+  });
+
+  it('null fields when nobody escaped or nobody solved anything', () => {
+    expect(awards([t({ id: 'a' }), t({ id: 'b' })])).toEqual({
+      fastest: null,
+      fewestHints: null,
+      teamwork: null,
+      photoFinish: null,
+    });
+    expect(awards([])).toEqual({
+      fastest: null,
+      fewestHints: null,
+      teamwork: null,
+      photoFinish: null,
     });
   });
 });
