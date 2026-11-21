@@ -28,5 +28,9 @@ module.exports = {
   // copied per worker, with a Redis database per worker: 15 at most (see the setup).
   globalSetup: '<rootDir>/../test/jest.global-setup.ts',
   setupFiles: ['<rootDir>/../test/jest.worker-env.ts'],
-  maxWorkers: Math.min(Math.max(availableParallelism() - 1, 1), 15),
+  // JEST_MAX_WORKERS caps it on slow disks, where socket tests time out under load.
+  maxWorkers: Math.min(
+    Number(process.env.JEST_MAX_WORKERS) || Math.max(availableParallelism() - 1, 1),
+    15,
+  ),
 };
