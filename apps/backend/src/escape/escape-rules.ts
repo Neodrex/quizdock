@@ -215,18 +215,15 @@ function fnv1a(text: string): number {
 }
 
 /**
- * Sequence items in an order that is stable per team (same on every reconnect)
- * and never the answer, since authors often name items in answer order. The
- * engine need not shuffle again.
+ * Per-team hash order: stable across reconnects, independent of the authored
+ * order. It may equal the answer by chance, like any shuffle; never force it
+ * away from the answer, since that would leak.
  */
 function shuffledItems(lock: SequenceLock, teamId: string): { id: string; label: string }[] {
-  const items = lock.items
+  return lock.items
     .map(({ id, label }) => ({ id, label, h: fnv1a(`${teamId}:${id}`) }))
     .sort((a, b) => a.h - b.h || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
     .map(({ id, label }) => ({ id, label }));
-  const isAnswer =
-    items.length === lock.order.length && items.every((it, i) => it.id === lock.order[i]);
-  return items.length > 1 && isAnswer ? [...items.slice(1), items[0]] : items;
 }
 
 export interface PlayerLockView {
@@ -235,7 +232,7 @@ export interface PlayerLockView {
   kind: Lock['kind'];
   solved: boolean;
   options?: { id: string; label: string; image: string | null }[];
-  /** Sequence items in a stable per-team order that is never the answer. */
+  /** Sequence items in a stable per-team hash order (see shuffledItems). */
   items?: { id: string; label: string }[];
   /** Combined: the role ids this player may enter, and which parts are already in. */
   myParts?: string[];

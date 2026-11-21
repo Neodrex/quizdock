@@ -419,7 +419,7 @@ describe('playerView', () => {
     expect(v.locks.find((l) => l.id === 'pick')?.options?.map((o) => o.id)).toEqual(['o1', 'o2']);
   });
   describe('sequence items', () => {
-    const withSeq = (ids: string[]): EscapeTemplate => ({
+    const withSeq = (ids: string[], order: string[] = ids): EscapeTemplate => ({
       ...tpl,
       stages: [
         {
@@ -430,26 +430,17 @@ describe('playerView', () => {
               label: 'Seq',
               kind: 'sequence',
               items: ids.map((id) => ({ id, label: id.toUpperCase() })),
-              order: ids,
+              order,
             },
           ],
         },
       ],
     });
     const shown = (t: EscapeTemplate, teamId: string) =>
-      playerView(t, { ...newTeam(t, teamId, teamId, ['p1']) }, 'p1').locks[0].items?.map(
-        (i) => i.id,
-      );
+      playerView(t, newTeam(t, teamId, teamId, ['p1']), 'p1').locks[0].items?.map((i) => i.id);
     const ids = ['a', 'b', 'c', 'd'];
     const teamIds = Array.from({ length: 20 }, (_, i) => `team-${i}`);
 
-    it('never shows the answer order, even when ids are authored in it', () => {
-      for (const id of teamIds) {
-        const order = shown(withSeq(ids), id);
-        expect(order).toHaveLength(4);
-        expect(order).not.toEqual(ids);
-      }
-    });
     it('is stable for a team', () => {
       expect(shown(withSeq(ids), 'team-x')).toEqual(shown(withSeq(ids), 'team-x'));
     });
@@ -457,8 +448,16 @@ describe('playerView', () => {
       const orders = new Set(teamIds.map((id) => JSON.stringify(shown(withSeq(ids), id))));
       expect(orders.size).toBeGreaterThan(1);
     });
-    it('two items are never shown in answer order', () => {
-      for (const id of teamIds) expect(shown(withSeq(['x', 'y']), id)).toEqual(['y', 'x']);
+    it('does not depend on the authored order', () => {
+      for (const id of teamIds) {
+        expect(shown(withSeq(['d', 'b', 'a', 'c'], ids), id)).toEqual(shown(withSeq(ids), id));
+      }
+    });
+    it('is not forced away from the answer (that would leak it)', () => {
+      for (const id of teamIds) {
+        const hashed = shown(withSeq(ids, ['z']), id) ?? [];
+        expect(shown(withSeq(ids, hashed), id)).toEqual(hashed);
+      }
     });
   });
   it('copies only known fields, so stray authored data cannot leak', () => {
