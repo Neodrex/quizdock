@@ -11,6 +11,7 @@ import { hintTests } from '../../test/escape/hints';
 import { lobbyTests } from '../../test/escape/lobby';
 import { playTests } from '../../test/escape/play';
 import { presenceTests } from '../../test/escape/presence';
+import { vaultHeistRunTests } from '../../test/escape/vault-heist-run';
 import { vaultHeist } from './samples';
 
 /**
@@ -41,4 +42,5 @@ describe('EscapeGateway (socket integration)', () => {
   describe('clock', () => clockTests(ctx));
   describe('presence', () => presenceTests(ctx));
   describe('finale', () => finaleTests(ctx));
+  describe('vault heist', () => vaultHeistRunTests(ctx));
 });
