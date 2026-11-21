@@ -13,6 +13,8 @@ module.exports = {
   transformIgnorePatterns: ['/node_modules/(?!(\\.pnpm/jose@[^/]+/node_modules/)?jose/)'],
   rootDir: 'src',
   testRegex: '.*\\.spec\\.ts$',
+  // Pure unit specs run without databases through jest.unit.config.js.
+  testPathIgnorePatterns: ['/node_modules/', '\\.unit\\.spec\\.ts$'],
   moduleNameMapper: {
     '^@quiz-dock/contracts$': '<rootDir>/../../../packages/contracts/src/index.ts',
   },
