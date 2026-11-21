@@ -1,14 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ANSWER_COUNT_EVERY_MS } from '../game/game.keys';
 
-/** An escape room waits this long for a host who left (owner decision 1). */
-export const ESCAPE_HOST_WINDOW_MS = 15 * 60_000;
-
 /**
  * Escape run timings (M3 plan §1.5). Not in SETTINGS: the backend reads
  * the environment only in the settings module, and new entries would touch the
  * upstream registry. Public and mutable so tests can speed them up through
  * `app.get(EscapeTimings)`. Move to SETTINGS if operators need to tune them.
+ * The host window is GameEngine's: ESCAPE_HOST_WINDOW_MS in game.keys.
  */
 @Injectable()
 export class EscapeTimings {
@@ -23,6 +21,4 @@ export class EscapeTimings {
   wrongWindowS = 60;
   /** The big-screen board, at most this often. */
   boardEveryMs = ANSWER_COUNT_EVERY_MS;
-  /** An escape room waits this long for a host who left: read by GameEngine. */
-  readonly hostWindowMs = ESCAPE_HOST_WINDOW_MS;
 }

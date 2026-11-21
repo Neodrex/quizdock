@@ -40,6 +40,7 @@ import { GameService, oneLine } from './game.service';
 import {
   ANSWER_COUNT_EVERY_MS,
   CHRONO_FLOOR_MS,
+  ESCAPE_HOST_WINDOW_MS,
   GAME_TTL_S,
   GRACE_MS,
   MEDIA_LEAD_MS,
@@ -104,7 +105,6 @@ import {
   waitedStep,
 } from './steps';
 import { settings } from '../admin/settings/settings.service';
-import { ESCAPE_HOST_WINDOW_MS } from '../escape/escape-timings';
 
 type GameServer = Server<Record<string, never>, ServerToClientEvents>;
 
@@ -1600,6 +1600,14 @@ export class GameEngine {
     const { pin } = ref;
     const meta = await this.currentMeta(ref);
     if (!meta || meta.state !== GameState.HostDisconnected) return; // repris entre-temps
+    // Owner decision 1: an escape run still playing is never cut short; the window
+    // waits again. Its finale (time limit or last team out) leaves PODIUM to resume.
+    if (meta.kind === 'escape' && meta.prevState === GameState.Escape) {
+      this.timers.arm('hostWindow', pin, ESCAPE_HOST_WINDOW_MS, () =>
+        this.endOrphaned(ref, hostUserId),
+      );
+      return;
+    }
     // Fin subie : on archive ce qui a été joué, marqué « interrompu » (§7.3). Best-effort —
     // l'hôte est absent, un échec ne doit pas bloquer la fin (journalisé, avalé).
     await this.archive.archive(pin, meta, { interrupted: true, bestEffort: true });

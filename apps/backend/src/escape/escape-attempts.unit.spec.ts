@@ -89,7 +89,6 @@ describe('EscapeTimings', () => {
       wrongMax: 6,
       wrongWindowS: 60,
       boardEveryMs: 100,
-      hostWindowMs: 15 * 60_000,
     });
   });
 });

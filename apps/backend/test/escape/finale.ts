@@ -144,7 +144,7 @@ export function finaleTests(ctx: EscapeContext): void {
     expect((await ctx.h.app.get(GameService).getMeta(pin))!.state).toBe(GameState.Ended);
   });
 
-  it('host gone: teams keep playing; when the host window ends the room, the finale goes out', async () => {
+  it('host gone: the host window never cuts a run short; it closes the room once the run is over', async () => {
     const room = await runningRoom(ctx, { players: 2, teams: 2 });
     const { pin, host, teams } = room;
     const [a] = teams.t1;
@@ -158,18 +158,42 @@ export function finaleTests(ctx: EscapeContext): void {
       ok: true,
       outcome: 'lock-solved',
     });
-    // The 15-minute window, run now (as its timer would).
     const meta = (await ctx.h.app.get(GameService).getMeta(pin))!;
-    const ended = nextEvent(a.socket, 'game:ended');
-    const finale = finaleOn(a.socket);
+    // GameEngine.endOrphaned: the 15-minute host window, run now (as its timer would).
     const engine = ctx.h.app.get(GameEngine) as unknown as {
       endOrphaned(ref: { pin: string; id: GameId }, hostUserId: string): Promise<void>;
     };
-    await engine.endOrphaned({ pin, id: meta.id }, meta.hostUserId);
-    await ended;
+    const windowEnds = () => engine.endOrphaned({ pin, id: meta.id }, meta.hostUserId);
+    let ended = 0;
+    a.socket.on('game:ended', () => ended++);
+    // Twice while the run plays: the room stays open, the window is armed again.
+    await windowEnds();
+    await windowEnds();
+    await settle(100);
+    expect(ended).toBe(0);
+    const still = (await ctx.h.app.get(GameService).getMeta(pin))!;
+    expect(still.state).toBe(GameState.HostDisconnected);
+    expect(still.prevState).toBe(GameState.Escape);
+    expect((await ctx.h.app.get(EscapeStore).run(meta.id))!.phase).toBe('running');
+
+    // The run reaches its time limit: the finale, the room on its podium for the host.
+    const finale = finaleOn(a.socket);
+    const store = ctx.h.app.get(EscapeStore);
+    const run = (await store.run(meta.id))!;
+    await store.saveRun(meta.id, { ...run, clock: { ...run.clock, limitMs: 1 } });
     const f = await finale;
-    expect(f.ranking.find((r) => r.teamId === 't1')).toMatchObject({ stagesCleared: 0 });
-    expect(await ctx.h.app.get(EscapeStore).results(meta.id)).toEqual(f);
+    expect(f.ranking.find((r) => r.teamId === 't1')).toMatchObject({ escaped: false });
+    const over = (await ctx.h.app.get(GameService).getMeta(pin))!;
+    expect(over.state).toBe(GameState.HostDisconnected);
+    expect(over.prevState).toBe(GameState.Podium);
+    expect(ended).toBe(0);
+
+    // The next expiry closes the room.
+    const gameEnded = nextEvent(a.socket, 'game:ended');
+    await windowEnds();
+    await gameEnded;
+    expect((await ctx.h.app.get(GameService).getMeta(pin))!.state).toBe(GameState.Ended);
+    expect(await store.results(meta.id)).toEqual(f);
   });
 
   it('host gone: a run that ends on its own keeps its podium when the host comes back', async () => {

@@ -21,6 +21,9 @@ export const ANSWER_COUNT_EVERY_MS = 100;
  */
 export const MEDIA_LEAD_MS = 1_600;
 
+/** An escape room waits this long for a host who left (owner decision 1). */
+export const ESCAPE_HOST_WINDOW_MS = 15 * 60_000;
+
 /** Tolérance serveur : réponses reçues après `endsAt + grace` rejetées (§6). */
 export const GRACE_MS = 300;
 
