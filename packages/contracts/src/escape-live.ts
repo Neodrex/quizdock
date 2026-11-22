@@ -12,14 +12,75 @@ const id = z.string().min(1).max(64);
 const lockInput = z.union([z.string().max(200), z.array(id).max(12)]);
 const durationMin = z.number().int().min(5).max(180);
 
+// ── Session types (M7 §1.1) ──
+
+/** Group play (public), race (channel), hosted event (corporate, licensed). */
+export const ESCAPE_SESSION_TYPES = ['group', 'race', 'hosted'] as const;
+export type EscapeSessionType = (typeof ESCAPE_SESSION_TYPES)[number];
+
+/** A host action the session type may allow. */
+export const ESCAPE_TOOLS = [
+  'teams',
+  'move',
+  'start',
+  'pause',
+  'adjust-all',
+  'adjust-team',
+  'hint-team',
+  'hint-all',
+  'unlock',
+  'end',
+  'finale',
+  'csv',
+] as const;
+export type EscapeTool = (typeof ESCAPE_TOOLS)[number];
+
+const SESSION_TOOLS: Record<EscapeSessionType, readonly EscapeTool[]> = {
+  group: [
+    'teams',
+    'move',
+    'start',
+    'pause',
+    'adjust-all',
+    'adjust-team',
+    'hint-team',
+    'hint-all',
+    'end',
+    'finale',
+  ],
+  race: ['start', 'pause', 'adjust-all', 'hint-all', 'end', 'finale', 'csv'],
+  hosted: ESCAPE_TOOLS,
+};
+
+/** The host tools a session type allows: the console and the engine read the same table. */
+export function toolsOf(type: EscapeSessionType): readonly EscapeTool[] {
+  return SESSION_TOOLS[type];
+}
+
 // ── Host → server ──
-export const escapeCreateSchema = z.object({
-  templateId: id,
-  durationMin: durationMin.optional(),
-  pickOwnName: z.boolean().optional(),
-  personalTracking: z.boolean().optional(),
-  participantAccess: z.enum(['account', 'open']).optional(),
-});
+export const escapeCreateSchema = z
+  .object({
+    templateId: id,
+    durationMin: durationMin.optional(),
+    pickOwnName: z.boolean().optional(),
+    personalTracking: z.boolean().optional(),
+    participantAccess: z.enum(['account', 'open']).optional(),
+    /** Absent: a hosted event (a legacy create). */
+    sessionType: z.enum(ESCAPE_SESSION_TYPES).optional(),
+    /** Hosted only; absent: the host's only usable licence. */
+    licenceId: id.optional(),
+    /** Required for a race, refused otherwise. `startsAt` (ms epoch) is checked against server time. */
+    race: z
+      .object({
+        format: z.enum(['solo', 'teams']),
+        startsAt: z.number().int().positive().optional(),
+      })
+      .optional(),
+  })
+  .refine((d) => (d.sessionType === 'race') === (d.race !== undefined), {
+    message: 'race data goes with a race, and only with one',
+    path: ['race'],
+  });
 export const escapeOpenSchema = z.object({
   pin,
   templateId: id,

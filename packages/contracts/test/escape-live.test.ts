@@ -14,6 +14,10 @@ import {
   escapeSubmitSchema,
   escapeTeamsSchema,
   escapeUnlockSchema,
+  ESCAPE_TOOLS,
+  toolsOf,
+  type EscapeSessionType,
+  type EscapeTool,
   type EscapeHostLock,
   type EscapeHostOutline,
   type EscapeHostTeam,
@@ -81,6 +85,61 @@ describe('escape live schemas', () => {
 
   it('refuses zero teams', () => {
     expect(escapeTeamsSchema.safeParse({ pin, mode: 'self', count: 0 }).success).toBe(false);
+  });
+});
+
+describe('session types (M7 §1.1)', () => {
+  const create = (extra: Record<string, unknown>) =>
+    escapeCreateSchema.safeParse({ templateId: 't1', ...extra });
+
+  it('a create with no session type still parses (legacy: hosted)', () => {
+    const r = create({});
+    expect(r.success).toBe(true);
+    expect(r.data?.sessionType).toBeUndefined();
+  });
+
+  it('a race needs its race data, and only a race takes it', () => {
+    expect(create({ sessionType: 'race' }).success).toBe(false);
+    expect(create({ sessionType: 'race', race: { format: 'solo' } }).success).toBe(true);
+    expect(
+      create({ sessionType: 'race', race: { format: 'teams', startsAt: 1_900_000_000_000 } })
+        .success,
+    ).toBe(true);
+    expect(create({ sessionType: 'group', race: { format: 'solo' } }).success).toBe(false);
+    expect(create({ sessionType: 'hosted', race: { format: 'solo' } }).success).toBe(false);
+    expect(create({ race: { format: 'solo' } }).success).toBe(false);
+    expect(create({ sessionType: 'race', race: { format: 'pairs' } }).success).toBe(false);
+  });
+
+  it('takes a licence id and refuses an unknown type', () => {
+    expect(create({ sessionType: 'hosted', licenceId: 'lic-1' }).success).toBe(true);
+    expect(create({ sessionType: 'party' }).success).toBe(false);
+    expect(create({ licenceId: '' }).success).toBe(false);
+  });
+
+  // §1.1, row by row: [tool, group, race, hosted].
+  const table: [EscapeTool, boolean, boolean, boolean][] = [
+    ['teams', true, false, true],
+    ['move', true, false, true],
+    ['start', true, true, true],
+    ['pause', true, true, true],
+    ['adjust-all', true, true, true],
+    ['adjust-team', true, false, true],
+    ['hint-team', true, false, true],
+    ['hint-all', true, true, true],
+    ['unlock', false, false, true],
+    ['end', true, true, true],
+    ['finale', true, true, true],
+    ['csv', false, true, true],
+  ];
+
+  it('the table names every tool once', () => {
+    expect(table.map(([t]) => t).sort()).toEqual([...ESCAPE_TOOLS].sort());
+  });
+
+  it.each(table)('%s: group %s, race %s, hosted %s', (tool, group, race, hosted) => {
+    const has = (type: EscapeSessionType) => toolsOf(type).includes(tool);
+    expect([has('group'), has('race'), has('hosted')]).toEqual([group, race, hosted]);
   });
 });
 
