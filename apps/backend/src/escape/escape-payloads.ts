@@ -1,7 +1,8 @@
 /**
  * Outbound escape payloads (M3 plan §2). The leak boundary: phones get
  * EscapePlayerState, whose `view` always comes from playerView; screens get
- * counts, names and stage titles; the host's outline has no answer either (M5).
+ * counts, names and stage titles, and a finale without host columns (M6); the
+ * host's outline has no answer either (M5).
  * Fields are copied one by one: no template object is ever spread.
  */
 
@@ -17,6 +18,7 @@ import type {
   EscapeHostTeam,
   EscapeMember,
   EscapePlayerState,
+  EscapeScreenFinale,
   EscapeTeamClock,
   EscapeTeamSummary,
   EscapeTeamUpdate,
@@ -347,6 +349,44 @@ export function finaleOf(v: RunView, gameId: string): EscapeFinale {
       adjustMs: team.adjustMs,
       hostUnlocks: team.hostUnlocks.length,
       members: team.members.map((id) => names.get(id) ?? ''),
+    })),
+    awards: {
+      fastest: a.fastest,
+      fewestHints: a.fewestHints,
+      teamwork: a.teamwork,
+      photoFinish: a.photoFinish && [a.photoFinish[0], a.photoFinish[1]],
+    },
+  };
+}
+
+/**
+ * The finale for a screen (M6 §1.4), from the stored finale and the run: field
+ * by field, without the host columns (`adjustMs`, `hostUnlocks`, `paidHints`)
+ * and without any player id. Members stay nicknames (owner answer 1). Adds
+ * what the split-time replay needs: every stage title, the run limit and
+ * which teams timed out.
+ */
+export function screenFinaleOf(finale: EscapeFinale, v: RunView): EscapeScreenFinale {
+  const timedOut = new Set(v.teams.filter((r) => r.timedOut).map((r) => r.team.id));
+  const { awards: a } = finale;
+  return {
+    gameId: finale.gameId,
+    title: finale.title,
+    finale: finale.finale,
+    limitMs: v.run.clock.limitMs,
+    stages: v.snap.template.stages.map((s) => ({ title: s.title })),
+    ranking: finale.ranking.map((r) => ({
+      teamId: r.teamId,
+      name: r.name,
+      place: r.place,
+      scoreMs: r.scoreMs,
+      escaped: r.escaped,
+      timedOut: timedOut.has(r.teamId),
+      stagesCleared: r.stagesCleared,
+      stageClearedAt: [...r.stageClearedAt],
+      hintsUsed: r.hintsUsed,
+      hintPenaltyS: r.hintPenaltyS,
+      members: r.members.map(String),
     })),
     awards: {
       fastest: a.fastest,

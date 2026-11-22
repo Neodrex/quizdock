@@ -12,6 +12,7 @@ import { lobbyTests } from '../../test/escape/lobby';
 import { playTests } from '../../test/escape/play';
 import { presenceTests } from '../../test/escape/presence';
 import { raceTests } from '../../test/escape/races';
+import { screenTests } from '../../test/escape/screen';
 import { vaultHeistRunTests } from '../../test/escape/vault-heist-run';
 import { vaultHeist } from './samples';
 
@@ -44,5 +45,6 @@ describe('EscapeGateway (socket integration)', () => {
   describe('presence', () => presenceTests(ctx));
   describe('finale', () => finaleTests(ctx));
   describe('races', () => raceTests(ctx));
+  describe('screen', () => screenTests(ctx));
   describe('vault heist', () => vaultHeistRunTests(ctx));
 });

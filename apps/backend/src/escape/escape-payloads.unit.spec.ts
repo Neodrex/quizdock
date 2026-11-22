@@ -1,4 +1,5 @@
 import { leaksIn, stringsIn } from '../../test/escape/leaks';
+import type { EscapeFinale } from '@quiz-dock/contracts';
 import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
 import {
   announceOf,
@@ -11,10 +12,21 @@ import {
   playerStateOf,
   type RoomPlayer,
   type RunView,
+  screenFinaleOf,
   submitUpdateOf,
   timeUpOf,
 } from './escape-payloads';
-import { awards, hashOrder, newTeam, nextHint, rankTeams, submit, useHint } from './escape-rules';
+import {
+  adjustTime,
+  awards,
+  hashOrder,
+  hostUnlock,
+  newTeam,
+  nextHint,
+  rankTeams,
+  submit,
+  useHint,
+} from './escape-rules';
 import type { EscapeTemplate, Same, TeamState } from './escape.types';
 import { lostLibrary, vaultHeist } from './samples';
 
@@ -508,6 +520,117 @@ describe('finaleOf', () => {
     t = useHint(tpl, t, nextHint(tpl, t)!.id);
     const finale = finaleOf({ ...view(), teams: [rec(t)] }, 'g1');
     expect(finale.ranking[0]).toMatchObject({ hintsUsed: 2, paidHints: 1, hintPenaltyS: 60 });
+  });
+});
+
+/** Every key of `value`, at any depth. */
+function keysIn(value: unknown): string[] {
+  if (Array.isArray(value)) return value.flatMap(keysIn);
+  if (value && typeof value === 'object') {
+    return Object.entries(value).flatMap(([k, v]) => [k, ...keysIn(v)]);
+  }
+  return [];
+}
+
+describe('screenFinaleOf (M6 §1.4: no host columns on a screen)', () => {
+  /** b escaped with a paid hint, a host unlock and extra time; a timed out. */
+  const finaleView = (): RunView => {
+    let fast = useHint(tpl, teamB, 'lobby-h1');
+    fast = adjustTime(hostUnlock(tpl, fast, tpl.stages[0].locks[0].id, 1_000).team, 60_000);
+    fast = { ...fast, escapedAt: 900_000, stageIndex: 3, stageClearedAt: [1, 2, 3, 900_000] };
+    const slow = { ...teamA, stageIndex: 2, stageClearedAt: [10, 20] };
+    return {
+      ...view(),
+      run: { ...running, phase: 'finale' },
+      teams: [rec(slow, { timedOut: true }), rec(fast)],
+    };
+  };
+
+  it('copies the ranking, split times, hints and nicknames, and adds what the replay needs', () => {
+    const v = finaleView();
+    const finale = finaleOf(v, 'g1');
+    const screen = screenFinaleOf(finale, v);
+    expect(screen.gameId).toBe('g1');
+    expect(screen.title).toBe('Vault Heist');
+    expect(screen.finale).toBe(tpl.finale);
+    expect(screen.limitMs).toBe(2_400_000);
+    expect(screen.stages).toEqual(tpl.stages.map((s) => ({ title: s.title })));
+    expect(screen.awards).toEqual(finale.awards);
+    expect(screen.ranking).toEqual(
+      finale.ranking.map((r) => ({
+        teamId: r.teamId,
+        name: r.name,
+        place: r.place,
+        scoreMs: r.scoreMs,
+        escaped: r.escaped,
+        timedOut: r.teamId === 'a',
+        stagesCleared: r.stagesCleared,
+        stageClearedAt: r.stageClearedAt,
+        hintsUsed: r.hintsUsed,
+        hintPenaltyS: r.hintPenaltyS,
+        members: r.members,
+      })),
+    );
+    expect(screen.ranking[0]).toMatchObject({ teamId: 'b', members: ['Dee'], hintPenaltyS: 30 });
+    expect(screen.ranking[1]).toMatchObject({ members: ['Ann', 'Bob', 'Cy'], timedOut: true });
+    expect(screen.ranking[0].stageClearedAt).not.toBe(finale.ranking[0].stageClearedAt);
+    expect(screen.ranking[0].members).not.toBe(finale.ranking[0].members);
+    expect(leaksIn(screen, tpl)).toEqual([]);
+  });
+
+  it('has no host column and no player id, at any depth', () => {
+    const v = finaleView();
+    const finale = finaleOf(v, 'g1');
+    expect(finale.ranking[0]).toMatchObject({ paidHints: 1, hostUnlocks: 1, adjustMs: 60_000 });
+    const keys = keysIn(JSON.parse(JSON.stringify(screenFinaleOf(finale, v))));
+    for (const k of ['adjustMs', 'hostUnlocks', 'paidHints', 'playerId', 'unlockText']) {
+      expect(keys).not.toContain(k);
+    }
+    expect(stringsIn(screenFinaleOf(finale, v))).not.toContain(tpl.stages[0].unlockText);
+  });
+
+  it('drops extra keys a stored finale may carry', () => {
+    const v = finaleView();
+    const finale = finaleOf(v, 'g1');
+    const extra = {
+      ...finale,
+      secret: 'x',
+      ranking: finale.ranking.map((r) => ({ ...r, playerIds: ['p1'] })),
+    } as EscapeFinale;
+    const out = screenFinaleOf(extra, v);
+    expect(stringsIn(out)).not.toContain('x');
+    expect(keysIn(out)).not.toContain('playerIds');
+  });
+
+  it('has exactly the screen finale type', () => {
+    interface Expected {
+      gameId: string;
+      title: string;
+      finale: string;
+      limitMs: number;
+      stages: { title: string }[];
+      ranking: {
+        teamId: string;
+        name: string;
+        place: number;
+        scoreMs: number | null;
+        escaped: boolean;
+        timedOut: boolean;
+        stagesCleared: number;
+        stageClearedAt: number[];
+        hintsUsed: number;
+        hintPenaltyS: number;
+        members: string[];
+      }[];
+      awards: {
+        fastest: string | null;
+        fewestHints: string | null;
+        teamwork: string | null;
+        photoFinish: [string, string] | null;
+      };
+    }
+    const same: Same<ReturnType<typeof screenFinaleOf>, Expected> = true;
+    expect(same).toBe(true);
   });
 });
 

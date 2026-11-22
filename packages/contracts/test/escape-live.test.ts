@@ -18,6 +18,7 @@ import {
   type EscapeHostOutline,
   type EscapeHostTeam,
   type EscapePlayerState,
+  type EscapeScreenFinale,
   type EscapeServerToClientEvents,
 } from '../src/escape-live';
 
@@ -113,5 +114,30 @@ describe('EscapeHostOutline (M5 owner question 1)', () => {
 describe('EscapeHostTeam', () => {
   it('tells the paid hints from the free ones, so a reload still shows the cost', () => {
     expectTypeOf<EscapeHostTeam['paidHintIds']>().toEqualTypeOf<string[]>();
+  });
+});
+
+describe('EscapeScreenFinale (M6 §1.4)', () => {
+  it('is what escape:screen-finale carries', () => {
+    expectTypeOf<
+      Parameters<EscapeServerToClientEvents['escape:screen-finale']>[0]
+    >().toEqualTypeOf<EscapeScreenFinale>();
+  });
+
+  it('has no host column and no player id', () => {
+    expectTypeOf<keyof EscapeScreenFinale['ranking'][number]>().toEqualTypeOf<
+      | 'teamId'
+      | 'name'
+      | 'place'
+      | 'scoreMs'
+      | 'escaped'
+      | 'timedOut'
+      | 'stagesCleared'
+      | 'stageClearedAt'
+      | 'hintsUsed'
+      | 'hintPenaltyS'
+      | 'members'
+    >();
+    expectTypeOf<EscapeScreenFinale['ranking'][number]['members']>().toEqualTypeOf<string[]>();
   });
 });

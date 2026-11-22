@@ -48,6 +48,7 @@ import {
   hostOutlineOf,
   playerStateOf,
   type RunView,
+  screenFinaleOf,
   submitUpdateOf,
   timeUpOf,
 } from './escape-payloads';
@@ -280,7 +281,11 @@ export class EscapeEngine implements OnModuleDestroy {
       }
       if (!socket.rooms.has(pin)) throw new ForbiddenException('escape.not_in_room');
       await socket.join(escapeRooms.board(pin));
-      socket.emit('escape:board', boardOf(await this.viewOf(ref)));
+      const v = await this.viewOf(ref);
+      socket.emit('escape:board', boardOf(v));
+      // M6 §1.6: a screen back in the finale gets the screen finale, never the full one.
+      const stored = ref.run.phase === 'finale' ? await this.store.results(ref.id) : null;
+      if (stored) socket.emit('escape:screen-finale', screenFinaleOf(stored, v));
     });
   }
 
@@ -725,7 +730,7 @@ export class EscapeEngine implements OnModuleDestroy {
     await this.mutate(pin, hostUserId, async (ref) => {
       if (ref.run.phase === 'forming') throw new BadRequestException('escape.wrong_phase');
       const stored = ref.run.phase === 'finale' ? await this.store.results(ref.id) : null;
-      if (stored) this.server.to(pin).emit('escape:finale', stored);
+      if (stored) await this.sendFinale(ref, stored, await this.viewOf(ref));
       else await this.finale(ref);
     });
   }
@@ -750,9 +755,10 @@ export class EscapeEngine implements OnModuleDestroy {
    *   run's and its player was in a team of the run. A socket that is a player
    *   must take this path; its PIN alone never passes;
    * - the run's host (no player, not a screen), by its signed-in user, live room or not (M5);
-   * - a host console or screen (no player), by its live room, while the PIN's
+   * - a host console (no player, not a screen), by its live room, while the PIN's
    *   current game is still this run. A recycled PIN or a room that moved on to
    *   another game has another id.
+   * A screen never reads it (M6 §1.4): it gets the screen finale from escape:sync.
    */
   async results(socket: EscapeSocket, dto: EscapeResults): Promise<EscapeFinale> {
     const id = dto.gameId as GameId;
@@ -775,12 +781,12 @@ export class EscapeEngine implements OnModuleDestroy {
       return session.pin === pin && (await this.store.teamOfPlayer(id, session.playerId)) !== null;
     }
     if (socket.data.playerId) return false;
+    // Never a screen (spectator:join sets `projection`), even one signed in as the
+    // host: a screen gets the screen finale from escape:sync instead (M6 §1.4).
+    if (socket.data.projection !== undefined) return false;
     // The run's host, signed in, live room or not (M5 §1.5: a console back after the room closed).
-    // Never a screen (spectator:join sets `projection`), even one signed in as the host:
-    // a screen reads by its live room only.
     const user = socket.data.user?.id;
-    const screen = socket.data.projection !== undefined;
-    if (!screen && user && user === (await this.store.hostOf(id))) return true;
+    if (user && user === (await this.store.hostOf(id))) return true;
     if (socket.data.pin !== pin) return false;
     return (await this.game.getMeta(pin))?.id === id;
   }
@@ -789,7 +795,8 @@ export class EscapeEngine implements OnModuleDestroy {
    * E2/T4: the run is over. Clocks freeze, teams past their deadline count as
    * timed out, the ranking and awards are kept in `results`, the room goes to
    * its podium, and everyone in it gets the finale (no answers: names, counts
-   * and times). The host console also gets its full view.
+   * and times; screens without host columns, `sendFinale`). The host console
+   * also gets its full view.
    *
    * `closed` (E3): the room is ending under the run (`closing`): the results
    * and the finale go out, the state is left to GameEngine, which ends the room.
@@ -832,8 +839,29 @@ export class EscapeEngine implements OnModuleDestroy {
         .to([escapeRooms.team(ref.id, rec.team.id), escapeRooms.host(ref.pin)])
         .emit('escape:team-update', timeUpOf(rec.team.id));
     }
-    this.server.to(ref.pin).emit('escape:finale', finale);
+    await this.sendFinale(ref, finale, final);
     return finale;
+  }
+
+  /**
+   * M6 §1.4: the full finale to the room's phones and its host console; every
+   * other socket of the PIN room (a paired screen, an unpaired copy, a
+   * participant's follow copy) gets the screen finale, without host columns.
+   * A host console that also joined as a spectator counts as a screen.
+   */
+  private async sendFinale(ref: RunRef, finale: EscapeFinale, v: RunView): Promise<void> {
+    const screen = screenFinaleOf(finale, v);
+    for (const s of await this.server.in(ref.pin).fetchSockets()) {
+      const d = s.data;
+      const phone = d.pin === ref.pin && !!d.playerId;
+      const hostConsole =
+        d.isHostControl === true &&
+        d.pin === ref.pin &&
+        d.projection === undefined &&
+        d.user?.id === ref.meta.hostUserId;
+      if (phone || hostConsole) s.emit('escape:finale', finale);
+      else s.emit('escape:screen-finale', screen);
+    }
   }
 
   /** The room's keys and the run's get their TTL again. */

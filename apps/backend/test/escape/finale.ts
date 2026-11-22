@@ -1,4 +1,4 @@
-import { type EscapeFinale, GameState } from '@quiz-dock/contracts';
+import { type EscapeFinale, type EscapeScreenFinale, GameState } from '@quiz-dock/contracts';
 import type { Socket } from 'socket.io-client';
 import { GameEngine } from '../../src/game/game.engine';
 import { type GameId, gameKeys } from '../../src/game/game.keys';
@@ -35,17 +35,21 @@ export function finaleTests(ctx: EscapeContext): void {
   }
 
   const finaleOn = (socket: Socket) => nextEvent<EscapeFinale>(socket, 'escape:finale');
+  /** M6: screens get the screen finale instead (test/escape/screen.ts). */
+  const screenFinaleOn = (socket: Socket) =>
+    nextEvent<EscapeScreenFinale>(socket, 'escape:screen-finale');
   const gameId = async (pin: string) => (await ctx.h.app.get(GameService).getMeta(pin))!.id;
   const inProcess = (id: GameId, pin: string) => ctx.h.app.get(EscapeEngine).inProcess(id, pin);
 
-  it('E1/E2: escape:end freezes the clocks and sends the finale to every socket; the room is on its podium', async () => {
+  it('E1/E2: escape:end freezes the clocks and sends the finale to the phones and the host (the screen its own); the room is on its podium', async () => {
     const room = await runningRoom(ctx, { players: 2, teams: 2 });
     const { pin, host, screen, teams, players } = room;
     const seen = players.map((p) => record(p.socket));
     const screenSeen = record(screen);
     await escapeTeam(room, 't1');
     const id = await gameId(pin);
-    const finales = [...players.map((p) => finaleOn(p.socket)), finaleOn(screen), finaleOn(host)];
+    const finales = [...players.map((p) => finaleOn(p.socket)), finaleOn(host)];
+    const onScreen = screenFinaleOn(screen);
     const podium = nextEvent<{ state: string }>(screen, 'game:state', {
       where: (s) => s.state === GameState.Podium,
     });
@@ -53,6 +57,9 @@ export function finaleTests(ctx: EscapeContext): void {
     expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
     const [first, ...rest] = await Promise.all(finales);
     for (const f of rest) expect(f).toEqual(first);
+    expect((await onScreen).ranking.map((r) => r.teamId)).toEqual(
+      first.ranking.map((r) => r.teamId),
+    );
     await podium;
 
     const stored = await ctx.h.app.get(EscapeStore).teams(id);
@@ -87,7 +94,7 @@ export function finaleTests(ctx: EscapeContext): void {
     expect((await again).clock.elapsedMs).toBe(frozen);
 
     // A second finale re-sends the same results.
-    const resent = finaleOn(screen);
+    const resent = finaleOn(host);
     expect(await host.emitWithAck('escape:finale', { pin })).toEqual({ ok: true });
     expect(await resent).toEqual(first);
     expect(inProcess(id, pin)).toEqual({ ticking: false, gone: false, board: false });
@@ -123,7 +130,7 @@ export function finaleTests(ctx: EscapeContext): void {
 
   it('T4: the last team out starts the finale on its own', async () => {
     const room = await runningRoom(ctx, { players: 1, teams: 1 });
-    const finale = finaleOn(room.screen);
+    const finale = screenFinaleOn(room.screen);
     const state = stateWhere(room.players[0].socket, (s) => s.phase === 'finale');
     await escapeTeam(room, 't1');
     expect((await finale).ranking).toMatchObject([{ teamId: 't1', place: 1, escaped: true }]);
@@ -144,9 +151,11 @@ export function finaleTests(ctx: EscapeContext): void {
 
   it('escape:finale from a running run ends it first', async () => {
     const { pin, host, screen } = await runningRoom(ctx, { players: 2, teams: 2 });
-    const finale = finaleOn(screen);
+    const finale = finaleOn(host);
+    const onScreen = screenFinaleOn(screen);
     expect(await host.emitWithAck('escape:finale', { pin })).toEqual({ ok: true });
     expect((await finale).ranking).toHaveLength(2);
+    expect((await onScreen).ranking).toHaveLength(2);
   });
 
   it('E3: host:end mid-run sends the finale (best effort) before game:ended; the ticker stops', async () => {
@@ -156,7 +165,7 @@ export function finaleTests(ctx: EscapeContext): void {
     const seen = record(players[0].socket);
     const ended = nextEvent(players[0].socket, 'game:ended');
     const finale = finaleOn(players[0].socket);
-    const onScreen = finaleOn(screen);
+    const onScreen = screenFinaleOn(screen);
     host.emit('host:end', { pin });
     await ended;
     const f = await finale;
@@ -182,16 +191,19 @@ export function finaleTests(ctx: EscapeContext): void {
     host.emit('host:end', { pin });
     const f = await finale;
     await ended;
-    // Still connected: the phone (with its token), the screen and the host console.
+    // Still connected: the phone (with its token) and the host console; a screen
+    // never reads the full finale (M6 §1.4).
     expect(
       await a.socket.emitWithAck('escape:results', { gameId: id, sessionToken: a.sessionToken }),
     ).toEqual({ ok: true, finale: f });
-    for (const s of [screen, host]) {
-      expect(await s.emitWithAck('escape:results', { gameId: id })).toEqual({
-        ok: true,
-        finale: f,
-      });
-    }
+    expect(await host.emitWithAck('escape:results', { gameId: id })).toEqual({
+      ok: true,
+      finale: f,
+    });
+    expect(await screen.emitWithAck('escape:results', { gameId: id })).toMatchObject({
+      ok: false,
+      error: { code: 'escape.not_in_room' },
+    });
     // A phone back after a reload: its session token says it was there.
     const back = ctx.h.connect();
     expect(
@@ -318,13 +330,13 @@ export function finaleTests(ctx: EscapeContext): void {
     // A phone of the run, still connected: its socket's PIN alone is not enough.
     expect(await ask(a.socket)).toMatchObject(refused);
     expect(await ask(a.socket, a.sessionToken)).toEqual({ ok: true, finale: f });
-    // The host console and the screens, while the room is still on this run; one
-    // screen is the host's own window (signed in as the host).
+    // The host console, while the room is still on this run. The screens never
+    // (M6 §1.4), the host's own window (signed in as the host) included.
     const hostScreen = ctx.h.connectHost();
     await hostScreen.emitWithAck('spectator:join', { pin });
     expect(await ask(host)).toEqual({ ok: true, finale: f });
-    expect(await ask(screen)).toEqual({ ok: true, finale: f });
-    expect(await ask(hostScreen)).toEqual({ ok: true, finale: f });
+    expect(await ask(screen)).toMatchObject(refused);
+    expect(await ask(hostScreen)).toMatchObject(refused);
 
     // The room moves on to a new run under the same PIN.
     expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
@@ -436,6 +448,7 @@ export function finaleTests(ctx: EscapeContext): void {
     const id = await gameId(pin);
     let finales = 0;
     screen.on('escape:finale', () => finales++);
+    screen.on('escape:screen-finale', () => finales++);
     players[0].socket.on('escape:finale', () => finales++);
     expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
     expect(await submitAs(players[0], pin, 'lobby-door', '0417')).toMatchObject({

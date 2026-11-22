@@ -342,6 +342,38 @@ export interface EscapeFinale {
   };
 }
 
+/**
+ * The finale for a screen (M6 §1.4): every socket of the room that is not a
+ * phone or the host console. No host column (extra time, host unlocks, paid
+ * hints) and no player id; members by nickname (owner answer 1). The stage
+ * titles, the run limit and `timedOut` are for the split-time replay.
+ */
+export interface EscapeScreenFinale {
+  gameId: string;
+  title: string;
+  /** The template's closing text. */
+  finale: string;
+  limitMs: number;
+  /** Every stage title: the run is over. */
+  stages: { title: string }[];
+  ranking: {
+    teamId: string;
+    name: string;
+    place: number;
+    scoreMs: number | null;
+    escaped: boolean;
+    timedOut: boolean;
+    stagesCleared: number;
+    /** Run time (ms) at each stage clear, pauses excluded, no penalties. */
+    stageClearedAt: number[];
+    hintsUsed: number;
+    hintPenaltyS: number;
+    /** Nicknames only. */
+    members: string[];
+  }[];
+  awards: EscapeFinale['awards'];
+}
+
 /** Rules refusals (M1) plus the live ones. */
 export type EscapeRefusal =
   | 'escaped'
@@ -422,6 +454,8 @@ export interface EscapeServerToClientEvents {
   'escape:host-team': (p: EscapeHostTeam) => void;
   /** To the host room only, on sync: the run's template, without its answers. */
   'escape:outline': (p: EscapeHostOutline) => void;
-  /** To the whole PIN room. */
+  /** To the phones and the host console of the PIN room. */
   'escape:finale': (p: EscapeFinale) => void;
+  /** To every other socket of the PIN room (screens, copies), and to a screen's sync in the finale. */
+  'escape:screen-finale': (p: EscapeScreenFinale) => void;
 }

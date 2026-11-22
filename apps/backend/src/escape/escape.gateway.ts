@@ -210,7 +210,7 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     return OK;
   }
 
-  /** E2: the finale to the whole room (ends a running run first; again from the finale). */
+  /** E2: the finale to the whole room, screens their own (ends a running run first; again from the finale). */
   @SubscribeMessage('escape:finale')
   async finale(
     @ConnectedSocket() socket: EscapeSocket,
@@ -222,7 +222,7 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     return OK;
   }
 
-  /** A finished run's stored finale, for someone who was in its room (even once it ended). */
+  /** A finished run's stored finale, for a phone or the host who was in its run (never a screen). */
   @SubscribeMessage('escape:results')
   async results(
     @ConnectedSocket() socket: EscapeSocket,

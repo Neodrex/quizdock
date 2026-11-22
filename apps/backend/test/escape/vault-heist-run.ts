@@ -3,6 +3,7 @@ import {
   type EscapeFinale,
   type EscapeHostState,
   type EscapePlayerState,
+  type EscapeScreenFinale,
   type EscapeTeamUpdate,
   GameState,
 } from '@quiz-dock/contracts';
@@ -291,7 +292,8 @@ export function vaultHeistRunTests(ctx: EscapeContext): void {
 
   it('11. B escapes, its locks in other orders; the last team out starts the finale', async () => {
     const finales = [...A, ...B].map((p) => nextEvent<EscapeFinale>(p.socket, 'escape:finale'));
-    finales.push(nextEvent<EscapeFinale>(room.screen, 'escape:finale'));
+    // M6: the screen gets the screen finale, not this one.
+    const onScreen = nextEvent<EscapeScreenFinale>(room.screen, 'escape:screen-finale');
     const podium = nextEvent<{ state: string }>(room.screen, 'game:state', {
       where: (s) => s.state === GameState.Podium,
     });
@@ -326,6 +328,9 @@ export function vaultHeistRunTests(ctx: EscapeContext): void {
     const [first, ...rest] = await Promise.all(finales);
     for (const f of rest) expect(f).toEqual(first);
     finale = first;
+    expect((await onScreen).ranking.map((r) => r.teamId)).toEqual(
+      first.ranking.map((r) => r.teamId),
+    );
     await podium;
   });
 
@@ -385,8 +390,11 @@ export function vaultHeistRunTests(ctx: EscapeContext): void {
       for (const e of ['escape:outline', 'escape:host', 'escape:host-team']) {
         expect(events.has(e)).toBe(false);
       }
-      // Every socket still in the room saw the finale (the lookout's first one had left).
-      expect(events.has('escape:finale')).toBe(socket.connected);
+      // Every socket still in the room saw the finale (the lookout's first one had
+      // left): the phones the full one, the screen its own only (M6).
+      const phone = who !== null;
+      expect(events.has('escape:finale')).toBe(phone && socket.connected);
+      expect(events.has('escape:screen-finale')).toBe(!phone && socket.connected);
     }
     // The host console got its outline and every frame of the run, but no answer.
     expect(hostSeen.some(([e]) => e === 'escape:outline')).toBe(true);
