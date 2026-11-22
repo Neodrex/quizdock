@@ -19,8 +19,8 @@ import { gradientCss } from '../../surface';
  * The big screen's colours (M6 §1.8): read from the back of a room, so every text
  * reaches 7:1 on what it sits on, twice the usual 4.5:1. The theme's background is
  * drawn when the screen's text, muted and warning colours reach 7:1 on all of it
- * (`backgroundExtremes`, `worstContrast`); a picture never does (it may hold any
- * colour), nor a background too mid-grey for either tone. Such a theme falls back
+ * (`backgroundExtremes`, `worstContrast`): a picture only under a strong veil (it may
+ * hold any colour), never a background too mid-grey for either tone. Such a theme falls back
  * to the screen's own plain tokens, in the theme's tone. The accent keeps its hue,
  * its lightness moved until the text on it reads at 7:1 and it stands out (3:1).
  */
@@ -73,8 +73,8 @@ export const OWN_TOKENS: Record<ScreenTone, Omit<ScreenTokens, 'primary' | 'prim
   },
 };
 
-/** The screen's accent when the theme gives none. */
-const OWN_ACCENT: Record<ScreenTone, string> = { light: '#1e40af', dark: '#7cc4ff' };
+/** The screen's accent when the theme gives none (or one no lightness makes readable). */
+export const OWN_ACCENT: Record<ScreenTone, string> = { light: '#1e40af', dark: '#7cc4ff' };
 
 export interface ScreenPalette {
   /** `theme`: the theme's background is drawn; `screen`: the screen's own plain one. */
@@ -140,7 +140,9 @@ function readsOn(color: Rgb, extremes: [Rgb, Rgb], surfaces: Rgb[]): boolean {
  * grey and its text that still reads; the warning moves its lightness the same way.
  */
 function themed(theme: ThemeValues, tone: ScreenTone): ScreenTokens | null {
-  if (theme.background.image) return null;
+  // A picture may hold any colour: only under a veil whose extremes still read.
+  const { image, mode, veil } = theme.background;
+  if (image && !(mode === 'cover' && veil)) return null;
   const own = OWN_TOKENS[tone];
   const extremes = backgroundExtremes(theme.background);
   const fg = parseHex(own.foreground);
@@ -175,7 +177,7 @@ export function screenPaletteOf(theme: ThemeValues | null | undefined): ScreenPa
   const tone = toneOf(theme);
   const fromTheme = theme ? themed(theme, tone) : null;
   const tokens = fromTheme ?? ownTokens(theme, tone);
-  const gradient = fromTheme && theme?.background.gradient;
+  const bg = fromTheme ? theme?.background : undefined;
   const style: Record<string, string> = {
     colorScheme: tone,
     '--background': tokens.background,
@@ -197,7 +199,14 @@ export function screenPaletteOf(theme: ThemeValues | null | undefined): ScreenPa
     '--primary-foreground': tokens.primaryForeground,
     '--ring': tokens.primary,
   };
-  if (gradient) style.backgroundImage = gradientCss(gradient);
+  if (bg?.image && bg.veil) {
+    // The veil as the extremes count it: its colour at its opacity over the picture.
+    const [r, g, b] = parseHex(bg.veil.color).map((v) => Math.round(v * 255));
+    const veil = `rgb(${r} ${g} ${b} / ${bg.veil.opacity})`;
+    style.backgroundImage = `linear-gradient(${veil}, ${veil}), url(${JSON.stringify(bg.image)})`;
+    style.backgroundSize = 'cover';
+    style.backgroundPosition = 'center';
+  } else if (bg?.gradient) style.backgroundImage = gradientCss(bg.gradient);
   return {
     source: fromTheme ? 'theme' : 'screen',
     tone,

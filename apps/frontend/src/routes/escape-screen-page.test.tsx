@@ -11,6 +11,7 @@ import {
   screenFinaleOf,
   summaryOf,
 } from '../game/escape/screen/screen-fixtures';
+import { OWN_TOKENS } from '../game/escape/screen/screen-palette';
 import { initialScreenUi, type EscapeScreenUi } from '../game/escape/screen/screen-reducer';
 import type { EscapeScreenSession } from '../game/escape/screen/use-escape-screen';
 import { drawEn } from '../game/escape/test-fixtures';
@@ -235,7 +236,9 @@ describe('the big screen colours (7:1 from the back of the room)', () => {
     draw({ board: running() }, { view: { theme: BUILTIN_THEME_VALUES.night } });
     expect(frame()).toHaveAttribute('data-palette', 'theme');
     expect(frame()).toHaveAttribute('data-tone', 'dark');
-    expect(frame().style.getPropertyValue('--background')).toBe('#0f172a');
+    expect(frame().style.getPropertyValue('--background')).toBe(
+      BUILTIN_THEME_VALUES.night.background.color,
+    );
     expect(frame().style.getPropertyValue('--muted-foreground')).not.toBe('');
   });
 
@@ -243,13 +246,13 @@ describe('the big screen colours (7:1 from the back of the room)', () => {
     draw({ board: running() }, { view: { theme: BUILTIN_THEME_VALUES.halloween } });
     expect(frame()).toHaveAttribute('data-palette', 'screen');
     expect(frame()).toHaveAttribute('data-tone', 'dark');
-    expect(frame().style.getPropertyValue('--background')).toBe('#0a0a0a');
+    expect(frame().style.getPropertyValue('--background')).toBe(OWN_TOKENS.dark.background);
   });
 
   it("no theme yet: the screen's own light tokens", () => {
     draw({ board: running() });
     expect(frame()).toHaveAttribute('data-palette', 'screen');
-    expect(frame().style.getPropertyValue('--foreground')).toBe('#0a0a0a');
+    expect(frame().style.getPropertyValue('--foreground')).toBe(OWN_TOKENS.light.foreground);
   });
 });
 

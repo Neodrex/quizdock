@@ -3,11 +3,13 @@ import {
   type ThemeValues,
   backgroundExtremes,
   contrast,
+  oklch,
   parseHex,
   worstContrast,
 } from '@quiz-dock/contracts';
 import { describe, expect, it } from 'vitest';
 import {
+  OWN_ACCENT,
   OWN_TOKENS,
   SCREEN_GRAPHIC_CONTRAST,
   SCREEN_TEXT_CONTRAST,
@@ -75,7 +77,7 @@ describe('screenPaletteOf', () => {
   it('draws a plain or gradient theme background that reads, never a picture', () => {
     expect(screenPaletteOf(BUILTIN_THEME_VALUES.night).source).toBe('theme');
     expect(screenPaletteOf(BUILTIN_THEME_VALUES.night).style).toMatchObject({
-      '--background': '#0f172a',
+      '--background': BUILTIN_THEME_VALUES.night.background.color,
     });
     const kids = screenPaletteOf(BUILTIN_THEME_VALUES.kids);
     expect(kids.source).toBe('theme');
@@ -96,11 +98,44 @@ describe('screenPaletteOf', () => {
   });
 
   it('keeps an accent that reads, moves the lightness of one that does not', () => {
-    expect(screenPaletteOf(BUILTIN_THEME_VALUES['high-contrast']).tokens.primary).toBe('#ffe14d');
-    // Classic's blue under white text is 5.2:1: darkened, same hue.
-    const classic = screenPaletteOf(BUILTIN_THEME_VALUES.classic).tokens;
-    expect(classic.primary).not.toBe(BUILTIN_THEME_VALUES.classic.accent);
-    expect(classic.primaryForeground).toBe('#ffffff');
+    // An accent that reads already is kept as it is.
+    const readable = { ...BUILTIN_THEME_VALUES.night, accent: '#ffe14d' };
+    expect(screenPaletteOf(readable).tokens.primary).toBe('#ffe14d');
+    // A mid blue under white text is about 5:1: darkened until 7:1, same hue.
+    const mid = screenPaletteOf({ ...BUILTIN_THEME_VALUES.classic, accent: '#2b62ef' }).tokens;
+    expect(mid.primary).not.toBe('#2b62ef');
+    expect(mid.primaryForeground).toBe('#ffffff');
+    expect(Math.abs(oklch(hex(mid.primary))[2] - oklch(hex('#2b62ef'))[2])).toBeLessThan(3);
+  });
+
+  it.each(['light', 'dark'] as const)(
+    "the screen's own accent (%s) passes the accent's checks itself",
+    (tone) => {
+      const own = OWN_TOKENS[tone];
+      const accent = hex(OWN_ACCENT[tone]);
+      const text = tone === 'light' ? hex('#ffffff') : hex('#000000');
+      expect(contrast(text, accent)).toBeGreaterThanOrEqual(SCREEN_TEXT_CONTRAST);
+      for (const on of [own.background, own.card, own.muted])
+        expect(contrast(accent, hex(on))).toBeGreaterThanOrEqual(SCREEN_GRAPHIC_CONTRAST);
+    },
+  );
+
+  it('a picture under a strong veil keeps the theme; under a light one it does not', () => {
+    const picture = (opacity: number): ThemeValues => ({
+      ...BUILTIN_THEME_VALUES.night,
+      background: {
+        color: '#000000',
+        textTone: 'light',
+        image: '/themes/x.svg',
+        mode: 'cover',
+        veil: { color: '#000000', opacity },
+      },
+    });
+    const strong = screenPaletteOf(picture(0.9));
+    expect(strong.source).toBe('theme');
+    expect(strong.style.backgroundImage).toContain('url("/themes/x.svg")');
+    expectReadable(strong, backgroundExtremes(picture(0.9).background));
+    expect(screenPaletteOf(picture(0.35)).source).toBe('screen');
   });
 
   it('without a theme: the screen’s own light tokens', () => {

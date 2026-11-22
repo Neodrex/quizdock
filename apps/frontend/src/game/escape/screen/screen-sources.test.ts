@@ -16,15 +16,16 @@ const FORBIDDEN: [string, RegExp][] = [
   ],
   [
     'events not for a screen',
-    /['"]escape:(state|host|host-team|outline|finale|team-update|results)['"]/,
+    /['"`]escape:(state|host|host-team|outline|finale|team-update|results)['"`]/,
   ],
   ['story lines or player ids', /\b(unlockText|playerId)\b/],
-  ['the console code', /(from\s+|import\(\s*|require\(\s*)['"][^'"]*\/host\//],
+  // In any quote, the folder itself (`'../host'`, its index) included.
+  ['the console code', /(from\s+|import\(\s*|require\(\s*)['"`][^'"`]*\/host(\/[^'"`]*)?['"`]/],
   [
     // The phone's modules hold a player's view: clues, hints, unlock texts, the full
     // finale. The screen may share its sync, announcer, reducer types and clocks only.
     "the phone's state or panels",
-    /['"][^'"]*\/escape\/(use-escape-session|escape-record|escape-finale|escape-lobby|clue-list|hint-panel|role-card|unlock-moment|use-team-clock|locks\/)[^'"]*['"]|['"]\.\.\/(use-escape-session|escape-record|escape-finale|escape-lobby|clue-list|hint-panel|role-card|unlock-moment|use-team-clock|locks\/)[^'"]*['"]/,
+    /['"`][^'"`]*\/(use-escape-session|escape-record|escape-finale|escape-lobby|clue-list|hint-panel|role-card|unlock-moment|use-team-clock|locks)(\.[jt]sx?)?(\/[^'"`]*)?['"`]/,
   ],
 ];
 
@@ -37,7 +38,8 @@ function screenSourceFindings(text: string): string[] {
 
 describe('the big screen never names the phone, host or answer payloads', () => {
   const scanned = [
-    ...readdirSync(dir)
+    // Subfolders too: a screen file moved one level down is still a screen file.
+    ...readdirSync(dir, { recursive: true, encoding: 'utf8' })
       // Tests and their fixtures ship nothing.
       .filter((n) => /\.tsx?$/.test(n) && !/\.test\.tsx?$|-fixtures\.tsx?$/.test(n))
       .map((n) => join(dir, n)),
@@ -66,6 +68,18 @@ describe('the big screen never names the phone, host or answer payloads', () => 
     expect(screenSourceFindings("await import('../host/host-client')")).toEqual([
       'the console code',
     ]);
+    expect(screenSourceFindings("import { boardOf } from '../host'")).toEqual(['the console code']);
+    expect(screenSourceFindings('const m = await import(`../host/${name}`)')).toEqual([
+      'the console code',
+    ]);
+    expect(screenSourceFindings('on(`escape:host-team`, f)')).toEqual(['events not for a screen']);
+    expect(screenSourceFindings("import { x } from '../../use-escape-session.ts'")).toEqual([
+      "the phone's state or panels",
+    ]);
+    // Names that only look alike pass.
+    expect(
+      screenSourceFindings("import { a } from './screen-finale'; const hostName = ''"),
+    ).toEqual([]);
     expect(
       screenSourceFindings("import { useEscapeSession } from '../use-escape-session'"),
     ).toEqual(["the phone's state or panels"]);
@@ -98,7 +112,7 @@ describe('the big screen never names the phone, host or answer payloads', () => 
  */
 describe('the big screen texts exist in every shipped language', () => {
   const screenFiles = [
-    ...readdirSync(dir)
+    ...readdirSync(dir, { recursive: true, encoding: 'utf8' })
       .filter((n) => /\.tsx?$/.test(n) && !/\.test\.tsx?$|-fixtures\.tsx?$/.test(n))
       .map((n) => join(dir, n)),
     resolve(src, 'routes/escape-screen-page.tsx'),
