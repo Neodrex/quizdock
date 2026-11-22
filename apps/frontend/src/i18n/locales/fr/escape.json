@@ -284,7 +284,7 @@
         "timer": "Gratuit (à l’heure)",
         "request": "Demandé par l’équipe : +{{seconds}} s",
         "host": "Donné par vous : +{{seconds}} s",
-        "unknown": "Donné"
+        "paid": "Payé : +{{seconds}} s"
       },
       "penalty": "Pénalité d’indices jusqu’ici : {{time}}",
       "nextHint": "Prochain indice (ajoute {{seconds}} s à leur score)",

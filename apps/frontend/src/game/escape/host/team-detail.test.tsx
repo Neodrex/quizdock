@@ -19,6 +19,7 @@ const lobby = hostTeamOf({
   hostUnlocks: ['lobby-badge'],
   wrong: 3,
   hintIds: ['lobby-h1'],
+  paidHintIds: ['lobby-h1'],
   hintPenaltyS: 30,
   members: [
     ...hostTeamOf().members,
@@ -88,7 +89,7 @@ describe('TeamDetail', () => {
   });
 
   it('released hints in order with their source and cost; the penalty so far', () => {
-    draw(hostTeamOf({ ...lobby, hintIds: ['lobby-h1', 'lobby-h2'], hintPenaltyS: 30 }), {
+    draw(hostTeamOf({ ...lobby, hintIds: ['lobby-h1', 'lobby-h2'], paidHintIds: ['lobby-h1'] }), {
       hintSources: { 'lobby-h1': 'host', 'lobby-h2': 'timer' },
     });
     const hints = screen.getByRole('region', { name: 'Hints released' });
@@ -100,9 +101,20 @@ describe('TeamDetail', () => {
     expect(hints).toHaveTextContent('Hint penalty so far: +0:30');
   });
 
-  it('a hint heard of before a reload says only that it was released', () => {
-    draw();
-    expect(screen.getByRole('region', { name: 'Hints released' })).toHaveTextContent('Released');
+  it('after a reload (no update heard) a paid hint still shows its cost, a timed one is free', () => {
+    draw(hostTeamOf({ ...lobby, hintIds: ['lobby-h1', 'lobby-h2'], paidHintIds: ['lobby-h1'] }));
+    const items = within(screen.getByRole('region', { name: 'Hints released' })).getAllByRole(
+      'listitem',
+    );
+    expect(items[0]).toHaveTextContent('Paid: +30 s');
+    expect(items[1]).toHaveTextContent('Free (on time)');
+  });
+
+  it('a hint asked by the team says so, with its cost', () => {
+    draw(lobby, { hintSources: { 'lobby-h1': 'request' } });
+    expect(screen.getByRole('region', { name: 'Hints released' })).toHaveTextContent(
+      'Asked by the team: +30 s',
+    );
   });
 
   it('the next hint, its text and cost, or "No hints left"', () => {

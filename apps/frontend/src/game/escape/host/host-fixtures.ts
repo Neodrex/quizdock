@@ -124,6 +124,7 @@ export const hostTeamOf = (over: Partial<EscapeHostTeam> = {}): EscapeHostTeam =
   partsDone: {},
   wrong: 0,
   hintIds: [],
+  paidHintIds: [],
   hintPenaltyS: 0,
   adjustMs: 0,
   hostUnlocks: [],

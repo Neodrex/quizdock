@@ -278,7 +278,7 @@
         "timer": "Free (on time)",
         "request": "Asked by the team: +{{seconds}} s",
         "host": "Given by you: +{{seconds}} s",
-        "unknown": "Released"
+        "paid": "Paid: +{{seconds}} s"
       },
       "penalty": "Hint penalty so far: {{time}}",
       "nextHint": "Next hint (adds {{seconds}} s to their score)",

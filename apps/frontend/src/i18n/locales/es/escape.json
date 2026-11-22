@@ -284,7 +284,7 @@
         "timer": "Gratis (por tiempo)",
         "request": "Pedida por el equipo: +{{seconds}} s",
         "host": "Dada por ti: +{{seconds}} s",
-        "unknown": "Dada"
+        "paid": "De pago: +{{seconds}} s"
       },
       "penalty": "Penalización por pistas hasta ahora: {{time}}",
       "nextHint": "Siguiente pista (suma {{seconds}} s a su puntuación)",

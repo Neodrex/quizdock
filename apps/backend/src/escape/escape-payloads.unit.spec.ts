@@ -262,11 +262,19 @@ describe('boardOf', () => {
 
 describe('host payloads', () => {
   it('gives the host the team detail', () => {
-    const team = { ...teamA, stageIndex: 1, stageClearedAt: [60_000], hintsUsed: ['lobby-h1'] };
+    const team = {
+      ...teamA,
+      stageIndex: 1,
+      stageClearedAt: [60_000],
+      hintsUsed: ['lobby-h1', 'lobby-h2'],
+      paidHints: ['lobby-h2'],
+    };
     const host = hostTeamOf(view(team), rec(team, { lastProgressAt: 60_000, stuck: true }));
     expect(host).toMatchObject({
       id: 'a',
-      hintIds: ['lobby-h1'],
+      hintIds: ['lobby-h1', 'lobby-h2'],
+      // Which hints cost their penalty, so the console shows it after a reload.
+      paidHintIds: ['lobby-h2'],
       lastProgressAt: 60_000,
       stuck: true,
       timeOnStageMs: 60_000,

@@ -16,6 +16,7 @@ import {
   escapeUnlockSchema,
   type EscapeHostLock,
   type EscapeHostOutline,
+  type EscapeHostTeam,
   type EscapePlayerState,
   type EscapeServerToClientEvents,
 } from '../src/escape-live';
@@ -101,5 +102,11 @@ describe('EscapeHostOutline (M5 owner question 1)', () => {
     expectTypeOf<keyof EscapeHostLock>().toEqualTypeOf<
       'id' | 'label' | 'kind' | 'partRoles' | 'options' | 'items'
     >();
+  });
+});
+
+describe('EscapeHostTeam', () => {
+  it('tells the paid hints from the free ones, so a reload still shows the cost', () => {
+    expectTypeOf<EscapeHostTeam['paidHintIds']>().toEqualTypeOf<string[]>();
   });
 });

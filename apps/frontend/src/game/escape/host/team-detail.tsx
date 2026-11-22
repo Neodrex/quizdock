@@ -110,16 +110,21 @@ function ClueBody({ kind, body }: { kind: string; body: string }) {
   );
 }
 
-/** Where a released hint came from, and what it cost. */
+/**
+ * Where a released hint came from, and what it cost. Free or paid comes with the
+ * team (`paidHintIds`, so it holds after a reload); asked or given is only known
+ * from the update heard (`hintSources`).
+ */
 function sourceText(
   t: (k: string, o?: Record<string, unknown>) => string,
+  paid: boolean,
   source: HintSource | undefined,
   seconds: number,
 ): string {
-  if (source === 'timer') return t('host.detail.source.timer');
+  if (!paid) return t('host.detail.source.timer');
   if (source === 'request') return t('host.detail.source.request', { seconds });
   if (source === 'host') return t('host.detail.source.host', { seconds });
-  return t('host.detail.source.unknown');
+  return t('host.detail.source.paid', { seconds });
 }
 
 export function TeamDetail({
@@ -189,7 +194,7 @@ export function TeamDetail({
               <li key={h.id} className="rounded-md border p-2">
                 <p>{h.text}</p>
                 <p className="text-muted-foreground text-xs">
-                  {sourceText(t, hintSources?.[h.id], h.penaltyS)}
+                  {sourceText(t, team.paidHintIds.includes(h.id), hintSources?.[h.id], h.penaltyS)}
                 </p>
               </li>
             ))}

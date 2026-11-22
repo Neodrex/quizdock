@@ -240,7 +240,10 @@ export interface EscapeHostTeam extends EscapeTeamSummary {
   /** Combined locks: role ids entered, per lock id. */
   partsDone: Record<string, string[]>;
   wrong: number;
+  /** Every hint released to the team, in order. */
   hintIds: string[];
+  /** The ones of `hintIds` that cost their penalty (asked or given by the host); timed hints are free. */
+  paidHintIds: string[];
   hintPenaltyS: number;
   /** Extra time the host gave (deadline only). */
   adjustMs: number;

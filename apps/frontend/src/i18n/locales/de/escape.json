@@ -278,7 +278,7 @@
         "timer": "Gratis (nach Zeit)",
         "request": "Vom Team erbeten: +{{seconds}} s",
         "host": "Von dir gegeben: +{{seconds}} s",
-        "unknown": "Freigegeben"
+        "paid": "Kostenpflichtig: +{{seconds}} s"
       },
       "penalty": "Hinweisstrafe bisher: {{time}}",
       "nextHint": "Nächster Hinweis (fügt ihrem Ergebnis {{seconds}} s hinzu)",

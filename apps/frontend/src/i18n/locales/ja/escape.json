@@ -272,7 +272,7 @@
         "timer": "無料（時間経過）",
         "request": "チームが要求：+{{seconds}} 秒",
         "host": "あなたが付与：+{{seconds}} 秒",
-        "unknown": "付与済み"
+        "paid": "有料：+{{seconds}} 秒"
       },
       "penalty": "これまでのヒントペナルティ：{{time}}",
       "nextHint": "次のヒント（スコアに {{seconds}} 秒加算）",

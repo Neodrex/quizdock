@@ -272,7 +272,7 @@
         "timer": "免費（按時）",
         "request": "隊伍請求：+{{seconds}} 秒",
         "host": "你給出：+{{seconds}} 秒",
-        "unknown": "已發出"
+        "paid": "付費：+{{seconds}} 秒"
       },
       "penalty": "目前提示罰時：{{time}}",
       "nextHint": "下一則提示（成績加 {{seconds}} 秒）",

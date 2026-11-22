@@ -290,7 +290,7 @@
         "timer": "Darmowa (z czasem)",
         "request": "Poproszona przez drużynę: +{{seconds}} s",
         "host": "Dana przez ciebie: +{{seconds}} s",
-        "unknown": "Wydana"
+        "paid": "Płatna: +{{seconds}} s"
       },
       "penalty": "Kara za podpowiedzi do tej pory: {{time}}",
       "nextHint": "Następna podpowiedź (dodaje {{seconds}} s do ich wyniku)",

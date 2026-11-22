@@ -243,6 +243,7 @@ export function hostTeamOf(v: RunView, rec: TeamRecord): EscapeHostTeam {
     partsDone: copyRecord(team.parts),
     wrong: team.wrong,
     hintIds: [...team.hintsUsed],
+    paidHintIds: [...team.paidHints],
     hintPenaltyS: team.hintPenaltyS,
     adjustMs: team.adjustMs,
     hostUnlocks: [...team.hostUnlocks],

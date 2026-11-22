@@ -278,7 +278,7 @@
         "timer": "Ücretsiz (süreyle)",
         "request": "Takım istedi: +{{seconds}} sn",
         "host": "Sen verdin: +{{seconds}} sn",
-        "unknown": "Verildi"
+        "paid": "Ücretli: +{{seconds}} sn"
       },
       "penalty": "Şimdiye kadarki ipucu cezası: {{time}}",
       "nextHint": "Sonraki ipucu (puanlarına {{seconds}} sn ekler)",
