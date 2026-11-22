@@ -94,6 +94,27 @@ describe('EscapeTemplatesService', () => {
     expect(JSON.stringify(items)).not.toContain('answer');
   });
 
+  it('a stored row that no longer fits the schema keeps its place, with null picker fields', async () => {
+    const updatedAt = new Date();
+    const broken = row({ id: 'bad', updatedAt, content: { ...valid, mode: 'chaos' } });
+    const good = row({ id: 'ok', updatedAt });
+    prisma.escapeTemplate.findMany.mockResolvedValue([broken, good]);
+    const items = await service.list(OWNER);
+    expect(items[0]).toEqual({
+      id: 'bad',
+      title: valid.title,
+      status: 'draft',
+      version: 0,
+      updatedAt,
+      mode: null,
+      difficulty: null,
+      targetMinutes: null,
+      stageCount: null,
+    });
+    expect(items[1]).toMatchObject({ id: 'ok', mode: valid.mode, stageCount: valid.stages.length });
+    expect(JSON.stringify(items)).not.toContain('chaos');
+  });
+
   it('creates a draft titled after its content', async () => {
     const created = await service.create(OWNER, valid);
     expect(prisma.escapeTemplate.create).toHaveBeenCalledWith({

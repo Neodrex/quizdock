@@ -8726,25 +8726,31 @@
             "type": "string",
             "enum": [
               "roles",
-              "parallel"
-            ]
+              "parallel",
+              null
+            ],
+            "nullable": true
           },
           "difficulty": {
             "type": "string",
             "enum": [
               "standard",
-              "hard"
-            ]
+              "hard",
+              null
+            ],
+            "nullable": true
           },
           "targetMinutes": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "nullable": true
           },
           "stageCount": {
             "type": "integer",
             "minimum": -9007199254740991,
-            "maximum": 9007199254740991
+            "maximum": 9007199254740991,
+            "nullable": true
           }
         },
         "required": [

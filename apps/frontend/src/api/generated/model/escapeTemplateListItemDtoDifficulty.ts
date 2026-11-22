@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type EscapeTemplateListItemDtoDifficulty = typeof EscapeTemplateListItemDtoDifficulty[keyof typeof EscapeTemplateListItemDtoDifficulty];
+/**
+ * @nullable
+ */
+export type EscapeTemplateListItemDtoDifficulty = typeof EscapeTemplateListItemDtoDifficulty[keyof typeof EscapeTemplateListItemDtoDifficulty] | null;
 
 
 export const EscapeTemplateListItemDtoDifficulty = {

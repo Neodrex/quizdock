@@ -26,10 +26,11 @@ export interface EscapeTemplateListItem {
   status: EscapeTemplateStatus;
   version: number;
   updatedAt: Date;
-  mode: EscapeTemplateContent['mode'];
-  difficulty: EscapeTemplateContent['difficulty'];
-  targetMinutes: number;
-  stageCount: number;
+  /** Null (all four) when the stored content no longer fits the schema. */
+  mode: EscapeTemplateContent['mode'] | null;
+  difficulty: EscapeTemplateContent['difficulty'] | null;
+  targetMinutes: number | null;
+  stageCount: number | null;
 }
 
 /** A client's content, checked against the shared schema: a 400 with the zod issues. */
@@ -68,7 +69,7 @@ export class EscapeTemplatesService {
   /**
    * The owner's templates, most recently changed first; removed (archived) ones
    * left out. Each says what the picker shows (mode, difficulty, length, stage
-   * count), never its content.
+   * count), never its content; null when its stored content fails the schema.
    */
   async list(ownerId: string): Promise<EscapeTemplateListItem[]> {
     const rows = await this.prisma.escapeTemplate.findMany({
@@ -84,17 +85,20 @@ export class EscapeTemplatesService {
       orderBy: { updatedAt: 'desc' },
     });
     return rows.map((row) => {
-      const c = escapeTemplateContentSchema.parse(row.content);
+      // A row the schema no longer accepts keeps its place without picker fields,
+      // rather than failing the whole list.
+      const parsed = escapeTemplateContentSchema.safeParse(row.content);
+      const c = parsed.success ? parsed.data : null;
       return {
         id: row.id,
         title: row.title,
         status: row.status,
         version: row.version,
         updatedAt: row.updatedAt,
-        mode: c.mode,
-        difficulty: c.difficulty,
-        targetMinutes: c.targetMinutes,
-        stageCount: c.stages.length,
+        mode: c?.mode ?? null,
+        difficulty: c?.difficulty ?? null,
+        targetMinutes: c?.targetMinutes ?? null,
+        stageCount: c ? c.stages.length : null,
       };
     });
   }

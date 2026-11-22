@@ -15,12 +15,17 @@ const templateRowSchema = z.object({
   updatedAt: z.string(),
 });
 
-/** A list item: the row and what the picker shows, no content. */
+const content = escapeTemplateContentSchema.shape;
+
+/**
+ * A list item: the row and what the picker shows, no content. The picker fields
+ * are null for a stored row whose content no longer fits the schema.
+ */
 export const escapeTemplateListItemSchema = templateRowSchema.extend({
-  mode: z.enum(['roles', 'parallel']),
-  difficulty: z.enum(['standard', 'hard']),
-  targetMinutes: z.number().int(),
-  stageCount: z.number().int(),
+  mode: content.mode.nullable(),
+  difficulty: content.difficulty.nullable(),
+  targetMinutes: z.number().int().nullable(),
+  stageCount: z.number().int().nullable(),
 });
 
 export class EscapeTemplateListItemDto extends createZodDto(escapeTemplateListItemSchema) {}

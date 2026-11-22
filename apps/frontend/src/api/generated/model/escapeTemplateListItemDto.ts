@@ -19,16 +19,20 @@ export interface EscapeTemplateListItemDto {
      */
   version: number;
   updatedAt: string;
+  /** @nullable */
   mode: EscapeTemplateListItemDtoMode;
+  /** @nullable */
   difficulty: EscapeTemplateListItemDtoDifficulty;
   /**
      * @minimum -9007199254740991
      * @maximum 9007199254740991
+     * @nullable
      */
-  targetMinutes: number;
+  targetMinutes: number | null;
   /**
      * @minimum -9007199254740991
      * @maximum 9007199254740991
+     * @nullable
      */
-  stageCount: number;
+  stageCount: number | null;
 }

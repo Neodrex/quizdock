@@ -264,8 +264,9 @@ type EscapeStageContent = EscapeTemplateContent['stages'][number];
 
 /**
  * A lock as the host console sees it: what it is, never what opens it. Choice
- * options and sequence items are labels only, items in template order; a
- * combined lock lists the role of each part.
+ * options and sequence items are labels only, items in a per-run hash order
+ * (never template order, which may be the solution); a combined lock lists the
+ * role of each part.
  */
 export interface EscapeHostLock {
   id: string;

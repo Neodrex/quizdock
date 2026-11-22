@@ -250,7 +250,7 @@ export class EscapeEngine implements OnModuleDestroy {
       if (data.isHostControl && data.pin === pin && data.user?.id === ref.meta.hostUserId) {
         await socket.join(escapeRooms.host(pin));
         const v = await this.viewOf(ref);
-        socket.emit('escape:outline', hostOutlineOf(ref.snap));
+        socket.emit('escape:outline', hostOutlineOf(ref.snap, ref.id));
         socket.emit('escape:host', hostStateOf(v));
         socket.emit('escape:board', boardOf(v));
         return;
@@ -729,7 +729,7 @@ export class EscapeEngine implements OnModuleDestroy {
    * - a phone, by the session token it joined with: the token's room is the
    *   run's and its player was in a team of the run. A socket that is a player
    *   must take this path; its PIN alone never passes;
-   * - the run's host (no player), by its signed-in user, live room or not (M5);
+   * - the run's host (no player, not a screen), by its signed-in user, live room or not (M5);
    * - a host console or screen (no player), by its live room, while the PIN's
    *   current game is still this run. A recycled PIN or a room that moved on to
    *   another game has another id.
@@ -756,8 +756,11 @@ export class EscapeEngine implements OnModuleDestroy {
     }
     if (socket.data.playerId) return false;
     // The run's host, signed in, live room or not (M5 §1.5: a console back after the room closed).
+    // Never a screen (spectator:join sets `projection`), even one signed in as the host:
+    // a screen reads by its live room only.
     const user = socket.data.user?.id;
-    if (user && user === (await this.store.hostOf(id))) return true;
+    const screen = socket.data.projection !== undefined;
+    if (!screen && user && user === (await this.store.hostOf(id))) return true;
     if (socket.data.pin !== pin) return false;
     return (await this.game.getMeta(pin))?.id === id;
   }

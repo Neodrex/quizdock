@@ -1,7 +1,7 @@
 import { type EscapeFinale, GameState } from '@quiz-dock/contracts';
 import type { Socket } from 'socket.io-client';
 import { GameEngine } from '../../src/game/game.engine';
-import type { GameId } from '../../src/game/game.keys';
+import { type GameId, gameKeys } from '../../src/game/game.keys';
 import { GameService } from '../../src/game/game.service';
 import { EscapeEngine } from '../../src/escape/escape.engine';
 import { EscapeStore } from '../../src/escape/escape.store';
@@ -232,6 +232,64 @@ export function finaleTests(ctx: EscapeContext): void {
     expect(await other.emitWithAck('escape:results', { gameId: id })).toMatchObject(refused);
   });
 
+  it('escape:results: a recycled PIN gives another host its own room, not the old run', async () => {
+    const { pin, host, players } = await runningRoom(ctx, { players: 1, teams: 1 });
+    const id = await gameId(pin);
+    const finale = finaleOn(players[0].socket);
+    const ended = nextEvent(players[0].socket, 'game:ended');
+    host.emit('host:end', { pin });
+    const f = await finale;
+    await ended;
+
+    // Another host gets the seat and, by chance, the same PIN for a room of their own.
+    const { prisma } = ctx.h;
+    const other = await prisma.user.upsert({
+      where: { oidcSubject: 'local:recycler' },
+      create: { oidcSubject: 'local:recycler', displayName: 'Recycler', roles: ['host'] },
+      update: { roles: ['host'] },
+    });
+    const template = await prisma.escapeTemplate.create({
+      data: {
+        ownerId: other.id,
+        title: ctx.vault.title,
+        status: 'published',
+        content: { ...ctx.vault, id: undefined } as object,
+        version: 1,
+      },
+    });
+    const service = ctx.h.app.get(GameService);
+    const redis = (service as unknown as { redis: { set(...a: unknown[]): Promise<unknown> } })
+      .redis;
+    const alloc = jest
+      .spyOn(service as unknown as { allocatePin(roomId: string): Promise<string> }, 'allocatePin')
+      .mockImplementationOnce(async (roomId: string) => {
+        await redis.set(gameKeys.pin(pin), roomId, 'EX', 3600, 'NX');
+        return pin;
+      });
+    await prisma.hostSeat.update({ where: { id: 1 }, data: { userId: other.id } });
+    try {
+      const recycler = ctx.h.connect({ localUser: 'Recycler' });
+      expect(await createEscape(recycler, template.id)).toBe(pin);
+      expect(await gameId(pin)).not.toBe(id);
+      // In the live room of that PIN, but not the old run's host: refused.
+      expect(await recycler.emitWithAck('escape:results', { gameId: id })).toMatchObject({
+        ok: false,
+        error: { code: 'escape.not_in_room' },
+      });
+      // The old run's host still reads them.
+      const back = ctx.h.connectHost();
+      expect(await back.emitWithAck('escape:results', { gameId: id })).toEqual({
+        ok: true,
+        finale: f,
+      });
+      recycler.emit('host:end', { pin });
+    } finally {
+      alloc.mockRestore();
+      await prisma.hostSeat.update({ where: { id: 1 }, data: { userId: ctx.h.hostUserId } });
+      await prisma.escapeTemplate.delete({ where: { id: template.id } }).catch(() => undefined);
+    }
+  });
+
   it("escape:results: a phone signed in as the host's user still needs its token", async () => {
     const { pin, host } = await runningRoom(ctx, { players: 1, teams: 1 });
     const id = await gameId(pin);
@@ -260,9 +318,13 @@ export function finaleTests(ctx: EscapeContext): void {
     // A phone of the run, still connected: its socket's PIN alone is not enough.
     expect(await ask(a.socket)).toMatchObject(refused);
     expect(await ask(a.socket, a.sessionToken)).toEqual({ ok: true, finale: f });
-    // The host console and the screen, while the room is still on this run.
+    // The host console and the screens, while the room is still on this run; one
+    // screen is the host's own window (signed in as the host).
+    const hostScreen = ctx.h.connectHost();
+    await hostScreen.emitWithAck('spectator:join', { pin });
     expect(await ask(host)).toEqual({ ok: true, finale: f });
     expect(await ask(screen)).toEqual({ ok: true, finale: f });
+    expect(await ask(hostScreen)).toEqual({ ok: true, finale: f });
 
     // The room moves on to a new run under the same PIN.
     expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
@@ -278,6 +340,8 @@ export function finaleTests(ctx: EscapeContext): void {
     // The screen is in the room of another game now; the host, the run's host, still reads it.
     expect(await ask(host)).toEqual({ ok: true, finale: f });
     expect(await ask(screen)).toMatchObject(refused);
+    // A screen signed in as the host is still a screen: its live room decides, not its user.
+    expect(await ask(hostScreen)).toMatchObject(refused);
     // The old run's player still gets its results with its token.
     expect(await ask(a.socket, a.sessionToken)).toEqual({ ok: true, finale: f });
   });

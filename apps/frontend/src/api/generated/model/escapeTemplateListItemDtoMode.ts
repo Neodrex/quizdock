@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type EscapeTemplateListItemDtoMode = typeof EscapeTemplateListItemDtoMode[keyof typeof EscapeTemplateListItemDtoMode];
+/**
+ * @nullable
+ */
+export type EscapeTemplateListItemDtoMode = typeof EscapeTemplateListItemDtoMode[keyof typeof EscapeTemplateListItemDtoMode] | null;
 
 
 export const EscapeTemplateListItemDtoMode = {
