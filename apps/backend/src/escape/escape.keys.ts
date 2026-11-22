@@ -17,6 +17,8 @@ export const escapeKeys = {
   wrong: (id: GameId, teamId: string) => `game:${id}:escape:wrong:${teamId}`,
   /** The PIN of the room the run was played in: who may read its results after the end. */
   room: (id: GameId) => `game:${id}:escape:room`,
+  /** The user id of the run's host: who may read its results once the room is gone (M5). */
+  host: (id: GameId) => `game:${id}:escape:host`,
   /** Final ranking and awards (JSON EscapeFinale), kept for M5's export. */
   results: (id: GameId) => `game:${id}:escape:results`,
 };

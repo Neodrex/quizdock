@@ -54,6 +54,7 @@ describe('EscapeStore (Redis)', () => {
   };
   const allKeys = () => [
     escapeKeys.room(id),
+    escapeKeys.host(id),
     escapeKeys.template(id),
     escapeKeys.run(id),
     escapeKeys.teams(id),
@@ -83,7 +84,7 @@ describe('EscapeStore (Redis)', () => {
   });
 
   it('round-trips every record', async () => {
-    await store.writeOpen(id, '123456', snapshot, run);
+    await store.writeOpen(id, '123456', 'host-1', snapshot, run);
     await store.save(id, {
       teams: [record('t1', ['p1', 'p2']), record('t2', ['p3'])],
       members: { set: { p1: 't1', p2: 't1', p3: 't2' } },
@@ -93,6 +94,7 @@ describe('EscapeStore (Redis)', () => {
     expect(await new EscapeStore(redis).snapshot(id)).toEqual(snapshot);
     expect(await store.run(id)).toEqual(run);
     expect(await store.roomOf(id)).toBe('123456');
+    expect(await store.hostOf(id)).toBe('host-1');
     const teams = await store.teams(id);
     expect([...teams.keys()].sort()).toEqual(['t1', 't2']);
     expect(teams.get('t1')).toEqual(record('t1', ['p1', 'p2']));
@@ -109,6 +111,7 @@ describe('EscapeStore (Redis)', () => {
 
   it('reads nothing for a game that has none', async () => {
     expect(await store.snapshot(id)).toBeNull();
+    expect(await store.hostOf(id)).toBeNull();
     expect(await store.run(id)).toBeNull();
     expect((await store.teams(id)).size).toBe(0);
     expect(await store.results(id)).toBeNull();
@@ -122,7 +125,7 @@ describe('EscapeStore (Redis)', () => {
   });
 
   it('gives every key it writes the game TTL', async () => {
-    await store.writeOpen(id, '123456', snapshot, run);
+    await store.writeOpen(id, '123456', 'host-1', snapshot, run);
     await store.save(id, {
       run,
       teams: [record('t1', ['p1'])],
@@ -137,7 +140,7 @@ describe('EscapeStore (Redis)', () => {
   });
 
   it('touch gives every key of the run the game TTL again, in one MULTI', async () => {
-    await store.writeOpen(id, '123456', snapshot, run);
+    await store.writeOpen(id, '123456', 'host-1', snapshot, run);
     await store.save(id, { teams: [record('t1', ['p1'])], members: { set: { p1: 't1' } } });
     await store.saveResults(id, finale);
     for (const key of allKeys()) await redis.expire(key, 5);
@@ -148,7 +151,7 @@ describe('EscapeStore (Redis)', () => {
   });
 
   it('moves a player in one MULTI: both teams and the members index', async () => {
-    await store.writeOpen(id, '123456', snapshot, run);
+    await store.writeOpen(id, '123456', 'host-1', snapshot, run);
     await store.save(id, {
       teams: [record('t1', ['p1', 'p2']), record('t2', [])],
       members: { set: { p1: 't1', p2: 't1' } },
@@ -167,7 +170,7 @@ describe('EscapeStore (Redis)', () => {
   });
 
   it('replaces every team and the whole members index in one MULTI', async () => {
-    await store.writeOpen(id, '123456', snapshot, run);
+    await store.writeOpen(id, '123456', 'host-1', snapshot, run);
     await store.save(id, {
       teams: [record('t1', ['p1']), record('t2', ['p2'])],
       members: { set: { p1: 't1', p2: 't2' } },
@@ -188,7 +191,7 @@ describe('EscapeStore (Redis)', () => {
   });
 
   it('keeps the snapshot it read: no second GET', async () => {
-    await store.writeOpen(id, '123456', snapshot, run);
+    await store.writeOpen(id, '123456', 'host-1', snapshot, run);
     const fresh = new EscapeStore(redis);
     const get = jest.spyOn(redis, 'get');
     await fresh.snapshot(id);

@@ -218,7 +218,7 @@ export class EscapeEngine implements OnModuleDestroy {
     );
     const meta = await this.game.getMeta(pin);
     if (!meta) throw new NotFoundException('session.not_found');
-    await this.openOn(pin, meta.id, snap, dto.durationMin);
+    await this.openOn(pin, meta.id, hostUserId, snap, dto.durationMin);
     return pin;
   }
 
@@ -232,7 +232,7 @@ export class EscapeEngine implements OnModuleDestroy {
       }
       const snap = await this.freeze(hostUserId, dto.templateId);
       const id = await this.game.openGameWith(pin, null);
-      await this.openOn(pin, id, snap, dto.durationMin);
+      await this.openOn(pin, id, hostUserId, snap, dto.durationMin);
       this.server
         .to(pin)
         .emit('game:state', { state: GameState.Lobby, questionIndex: -1, totalQuestions: 0 });
@@ -729,6 +729,7 @@ export class EscapeEngine implements OnModuleDestroy {
    * - a phone, by the session token it joined with: the token's room is the
    *   run's and its player was in a team of the run. A socket that is a player
    *   must take this path; its PIN alone never passes;
+   * - the run's host (no player), by its signed-in user, live room or not (M5);
    * - a host console or screen (no player), by its live room, while the PIN's
    *   current game is still this run. A recycled PIN or a room that moved on to
    *   another game has another id.
@@ -753,7 +754,11 @@ export class EscapeEngine implements OnModuleDestroy {
     if (session) {
       return session.pin === pin && (await this.store.teamOfPlayer(id, session.playerId)) !== null;
     }
-    if (socket.data.playerId || socket.data.pin !== pin) return false;
+    if (socket.data.playerId) return false;
+    // The run's host, signed in, live room or not (M5 §1.5: a console back after the room closed).
+    const user = socket.data.user?.id;
+    if (user && user === (await this.store.hostOf(id))) return true;
+    if (socket.data.pin !== pin) return false;
     return (await this.game.getMeta(pin))?.id === id;
   }
 
@@ -902,6 +907,7 @@ export class EscapeEngine implements OnModuleDestroy {
   private async openOn(
     pin: string,
     id: GameId,
+    hostUserId: string,
     snap: EscapeSnapshot,
     durationMin?: number,
   ): Promise<void> {
@@ -922,7 +928,7 @@ export class EscapeEngine implements OnModuleDestroy {
       gameKeys.game(id),
       gameHash({ kind: 'escape', title: snap.template.title }),
     );
-    await this.store.writeOpen(id, pin, snap, run);
+    await this.store.writeOpen(id, pin, hostUserId, snap, run);
   }
 
   /** Everything a payload is built from, read once. R1: connected = a live socket in the room. */

@@ -212,7 +212,41 @@ export function finaleTests(ctx: EscapeContext): void {
     });
   });
 
-  it('escape:results: a phone needs its token; a switched room refuses the old run to newcomers, host and screen', async () => {
+  it("escape:results: the run's host reads them on a new socket after the room closed; nobody else does", async () => {
+    const { pin, host, players } = await runningRoom(ctx, { players: 1, teams: 1 });
+    const id = await gameId(pin);
+    const finale = finaleOn(players[0].socket);
+    const ended = nextEvent(players[0].socket, 'game:ended');
+    host.emit('host:end', { pin });
+    const f = await finale;
+    await ended;
+    host.disconnect();
+    // A reload after the room closed: a new console socket, no room, the same user.
+    const back = ctx.h.connectHost();
+    expect(await back.emitWithAck('escape:results', { gameId: id })).toEqual({
+      ok: true,
+      finale: f,
+    });
+    const refused = { ok: false, error: { code: 'escape.not_in_room' } };
+    const other = ctx.h.connect({ localUser: 'Another host' });
+    expect(await other.emitWithAck('escape:results', { gameId: id })).toMatchObject(refused);
+  });
+
+  it("escape:results: a phone signed in as the host's user still needs its token", async () => {
+    const { pin, host } = await runningRoom(ctx, { players: 1, teams: 1 });
+    const id = await gameId(pin);
+    // In local mode a phone may carry the host's name: it is a player, so the token decides.
+    const phone = ctx.h.connectHost();
+    const joined = await phone.emitWithAck('player:join', { pin, nickname: 'Twin' });
+    expect(joined.playerId).toEqual(expect.any(String));
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    expect(await phone.emitWithAck('escape:results', { gameId: id })).toMatchObject({
+      ok: false,
+      error: { code: 'escape.not_in_room' },
+    });
+  });
+
+  it('escape:results: a phone needs its token; a switched room refuses the old run to newcomers and the screen', async () => {
     const { pin, host, players, screen } = await runningRoom(ctx, { players: 1, teams: 1 });
     const id = await gameId(pin);
     const [a] = players;
@@ -241,8 +275,8 @@ export function finaleTests(ctx: EscapeContext): void {
     // token, as it was in no team of the old run.
     expect(await ask(newcomer.socket)).toMatchObject(refused);
     expect(await ask(newcomer.socket, newcomer.sessionToken)).toMatchObject(refused);
-    // The host and the screen are in the room of another game now.
-    expect(await ask(host)).toMatchObject(refused);
+    // The screen is in the room of another game now; the host, the run's host, still reads it.
+    expect(await ask(host)).toEqual({ ok: true, finale: f });
     expect(await ask(screen)).toMatchObject(refused);
     // The old run's player still gets its results with its token.
     expect(await ask(a.socket, a.sessionToken)).toEqual({ ok: true, finale: f });

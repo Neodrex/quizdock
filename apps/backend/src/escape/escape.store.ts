@@ -136,15 +136,17 @@ export class EscapeStore {
 
   constructor(private readonly redis: RedisService) {}
 
-  /** A run opens in room `pin`: its frozen template and its first run record. */
+  /** A run opens in room `pin` for its host: its frozen template and its first run record. */
   async writeOpen(
     id: GameId,
     pin: string,
+    hostUserId: string,
     snapshot: EscapeSnapshot,
     run: EscapeRun,
   ): Promise<void> {
     const pipe = this.redis.multi();
     pipe.set(escapeKeys.room(id), pin, 'EX', ESCAPE_TTL_S);
+    pipe.set(escapeKeys.host(id), hostUserId, 'EX', ESCAPE_TTL_S);
     pipe.set(escapeKeys.template(id), JSON.stringify(snapshot), 'EX', ESCAPE_TTL_S);
     pipe.set(escapeKeys.run(id), JSON.stringify(run), 'EX', ESCAPE_TTL_S);
     await pipe.exec();
@@ -162,6 +164,11 @@ export class EscapeStore {
   /** The PIN of the room the run was opened in (null when gone or expired). */
   roomOf(id: GameId): Promise<string | null> {
     return this.redis.get(escapeKeys.room(id));
+  }
+
+  /** The user id of the run's host (null when gone or expired). */
+  hostOf(id: GameId): Promise<string | null> {
+    return this.redis.get(escapeKeys.host(id));
   }
 
   async run(id: GameId): Promise<EscapeRun | null> {
@@ -241,6 +248,7 @@ export class EscapeStore {
     const pipe = this.redis.multi();
     for (const key of [
       escapeKeys.room(id),
+      escapeKeys.host(id),
       escapeKeys.template(id),
       escapeKeys.run(id),
       escapeKeys.teams(id),
