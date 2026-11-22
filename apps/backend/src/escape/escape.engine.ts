@@ -514,6 +514,8 @@ export class EscapeEngine implements OnModuleDestroy {
       const released: { rec: TeamRecord; hintId: string }[] = [];
       for (const id of teamId === undefined ? ref.run.teamIds : [teamId]) {
         const rec = stored.get(id);
+        // One team asked for by id: a missing record is not found, not time up.
+        if (!rec && teamId !== undefined) throw new NotFoundException('escape.team_not_found');
         const timedOut = !rec || rec.timedOut || isTimedOut(ref.run.clock, rec.team, elapsed);
         // The confirmed hint for one team: say why it was not given, never `released: 0`.
         if (hintId !== undefined && timedOut) throw new BadRequestException('escape.time-up');

@@ -5,7 +5,10 @@ import type {
   EscapePlayerState,
   EscapeTeamUpdate,
 } from '@quiz-dock/contracts';
+import { escapeKeys } from '../../src/escape/escape.keys';
 import { vaultHeist } from '../../src/escape/samples';
+import { GameService } from '../../src/game/game.service';
+import { RedisService } from '../../src/redis/redis.service';
 import { nextEvent } from '../game-harness';
 import {
   type EscapeContext,
@@ -87,6 +90,19 @@ export function hintTests(ctx: EscapeContext): void {
       ok: false,
       error: { code: 'escape.team_not_found' },
     });
+  });
+
+  it('H2: a confirmed hint for an unknown team is refused as not found, never as time up', async () => {
+    const { pin, host } = await runningRoom(ctx, { players: 2, teams: 2 });
+    expect(
+      await host.emitWithAck('escape:hint', { pin, teamId: 'zz', hintId: lobbyH1.id }),
+    ).toMatchObject({ ok: false, error: { code: 'escape.team_not_found' } });
+    // A team of the run whose record is gone: not found too.
+    const id = (await ctx.h.app.get(GameService).getMeta(pin))!.id;
+    await ctx.h.app.get(RedisService).hdel(escapeKeys.teams(id), 't2');
+    expect(
+      await host.emitWithAck('escape:hint', { pin, teamId: 't2', hintId: lobbyH1.id }),
+    ).toMatchObject({ ok: false, error: { code: 'escape.team_not_found' } });
   });
 
   it('H2: the host names the hint it confirmed; another next hint is refused, unpaid', async () => {
