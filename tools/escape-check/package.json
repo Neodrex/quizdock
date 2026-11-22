@@ -2,10 +2,11 @@
   "name": "escape-check",
   "private": true,
   "type": "module",
-  "description": "Two phones play an escape run against the dev stack (two-phones.mjs) and the host console (host-console.mjs).",
+  "description": "Two phones play an escape run against the dev stack (two-phones.mjs), the host console (host-console.mjs) and the big screen (big-screen.mjs).",
   "scripts": {
     "check": "node two-phones.mjs",
-    "host": "node host-console.mjs"
+    "host": "node host-console.mjs",
+    "screen": "node big-screen.mjs"
   },
   "dependencies": {
     "playwright-core": "1.65.1",
