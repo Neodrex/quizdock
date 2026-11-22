@@ -322,6 +322,40 @@
       "endTitle": "現在為所有隊伍結束遊戲？",
       "endDescription": "每個隊伍停在目前位置，並顯示結果。",
       "endConfirm": "立即結束"
+    },
+    "results": {
+      "title": "結果",
+      "hostColumns": "你做的調整",
+      "col": {
+        "team": "隊伍",
+        "hints": "提示",
+        "penalty": "提示罰時",
+        "extra": "加時",
+        "unlocks": "你打開的鎖"
+      },
+      "hints": "{{total}}（{{paid}} 則付費）",
+      "extra": "{{delta}}（分數不變）",
+      "download": "下載 CSV",
+      "finaleAgain": "再次顯示結局",
+      "runAgain": "再玩一次",
+      "closed": "房間已關閉",
+      "pickAnother": "選擇另一個密室",
+      "csv": {
+        "place": "名次",
+        "team": "隊伍",
+        "escaped": "已逃脫",
+        "score": "成績",
+        "stagesCleared": "已通過關卡",
+        "stage": "第 {{n}} 關用時",
+        "hints": "提示",
+        "paidHints": "付費提示",
+        "penaltyS": "提示罰時（秒）",
+        "extraS": "加時（秒）",
+        "hostUnlocks": "主持人打開的鎖",
+        "members": "成員",
+        "yes": "是",
+        "no": "否"
+      }
     }
   }
 }

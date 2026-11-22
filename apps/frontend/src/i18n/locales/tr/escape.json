@@ -329,6 +329,40 @@
       "endTitle": "Oyun tüm takımlar için şimdi bitirilsin mi?",
       "endDescription": "Her takım olduğu yerde durur ve sonuçlar görünür.",
       "endConfirm": "Şimdi bitir"
+    },
+    "results": {
+      "title": "Sonuçlar",
+      "hostColumns": "Yaptığınız değişiklikler",
+      "col": {
+        "team": "Takım",
+        "hints": "İpuçları",
+        "penalty": "İpucu cezası",
+        "extra": "Ek süre",
+        "unlocks": "Sizin açtığınız kilitler"
+      },
+      "hints": "{{total}} ({{paid}} ücretli)",
+      "extra": "{{delta}} (puan değişmedi)",
+      "download": "CSV indir",
+      "finaleAgain": "Finali yeniden göster",
+      "runAgain": "Yeniden oynat",
+      "closed": "Oda kapandı",
+      "pickAnother": "Başka bir kaçış odası seçin",
+      "csv": {
+        "place": "Sıra",
+        "team": "Takım",
+        "escaped": "Kaçtı",
+        "score": "Puan",
+        "stagesCleared": "Geçilen aşamalar",
+        "stage": "{{n}}. aşama süresi",
+        "hints": "İpuçları",
+        "paidHints": "Ücretli ipuçları",
+        "penaltyS": "İpucu cezası (sn)",
+        "extraS": "Ek süre (sn)",
+        "hostUnlocks": "Sunucunun açtığı kilitler",
+        "members": "Üyeler",
+        "yes": "evet",
+        "no": "hayır"
+      }
     }
   }
 }

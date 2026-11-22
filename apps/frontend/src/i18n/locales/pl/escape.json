@@ -343,6 +343,40 @@
       "endTitle": "Zakończyć teraz grę dla wszystkich drużyn?",
       "endDescription": "Każda drużyna zatrzymuje się tam, gdzie jest, i pojawiają się wyniki.",
       "endConfirm": "Zakończ teraz"
+    },
+    "results": {
+      "title": "Wyniki",
+      "hostColumns": "Co zmieniłeś",
+      "col": {
+        "team": "Drużyna",
+        "hints": "Podpowiedzi",
+        "penalty": "Kara za podpowiedzi",
+        "extra": "Dodatkowy czas",
+        "unlocks": "Kłódki otwarte przez ciebie"
+      },
+      "hints": "{{total}} ({{paid}} płatnych)",
+      "extra": "{{delta}} (wynik bez zmian)",
+      "download": "Pobierz CSV",
+      "finaleAgain": "Pokaż finał ponownie",
+      "runAgain": "Zagraj ponownie",
+      "closed": "Pokój zamknięty",
+      "pickAnother": "Wybierz inny escape room",
+      "csv": {
+        "place": "Miejsce",
+        "team": "Drużyna",
+        "escaped": "Uciekła",
+        "score": "Wynik",
+        "stagesCleared": "Ukończone etapy",
+        "stage": "Czas etapu {{n}}",
+        "hints": "Podpowiedzi",
+        "paidHints": "Płatne podpowiedzi",
+        "penaltyS": "Kara za podpowiedzi (s)",
+        "extraS": "Dodatkowy czas (s)",
+        "hostUnlocks": "Kłódki otwarte przez prowadzącego",
+        "members": "Członkowie",
+        "yes": "tak",
+        "no": "nie"
+      }
     }
   }
 }

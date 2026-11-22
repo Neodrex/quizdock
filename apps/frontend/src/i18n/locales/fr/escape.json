@@ -336,6 +336,40 @@
       "endTitle": "Terminer la partie pour toutes les équipes maintenant ?",
       "endDescription": "Chaque équipe s’arrête où elle en est, et les résultats s’affichent.",
       "endConfirm": "Terminer maintenant"
+    },
+    "results": {
+      "title": "Résultats",
+      "hostColumns": "Ce que vous avez changé",
+      "col": {
+        "team": "Équipe",
+        "hints": "Indices",
+        "penalty": "Pénalité d’indices",
+        "extra": "Temps en plus",
+        "unlocks": "Cadenas ouverts par vous"
+      },
+      "hints": "{{total}} ({{paid}} payés)",
+      "extra": "{{delta}} (score inchangé)",
+      "download": "Télécharger le CSV",
+      "finaleAgain": "Remontrer le final",
+      "runAgain": "Relancer la salle",
+      "closed": "Salon fermé",
+      "pickAnother": "Choisir une autre salle d’évasion",
+      "csv": {
+        "place": "Place",
+        "team": "Équipe",
+        "escaped": "Évadée",
+        "score": "Score",
+        "stagesCleared": "Étapes franchies",
+        "stage": "Temps étape {{n}}",
+        "hints": "Indices",
+        "paidHints": "Indices payés",
+        "penaltyS": "Pénalité d’indices (s)",
+        "extraS": "Temps en plus (s)",
+        "hostUnlocks": "Cadenas ouverts par l’animateur",
+        "members": "Membres",
+        "yes": "oui",
+        "no": "non"
+      }
     }
   }
 }

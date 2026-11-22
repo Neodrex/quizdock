@@ -329,6 +329,40 @@
       "endTitle": "Das Spiel jetzt für alle Teams beenden?",
       "endDescription": "Jedes Team stoppt, wo es gerade ist, und die Ergebnisse erscheinen.",
       "endConfirm": "Jetzt beenden"
+    },
+    "results": {
+      "title": "Ergebnisse",
+      "hostColumns": "Was du geändert hast",
+      "col": {
+        "team": "Team",
+        "hints": "Hinweise",
+        "penalty": "Hinweisstrafe",
+        "extra": "Zusatzzeit",
+        "unlocks": "Von dir geöffnete Schlösser"
+      },
+      "hints": "{{total}} ({{paid}} bezahlt)",
+      "extra": "{{delta}} (Wertung unverändert)",
+      "download": "CSV herunterladen",
+      "finaleAgain": "Finale erneut zeigen",
+      "runAgain": "Noch einmal spielen",
+      "closed": "Raum geschlossen",
+      "pickAnother": "Anderen Escape-Room wählen",
+      "csv": {
+        "place": "Platz",
+        "team": "Team",
+        "escaped": "Entkommen",
+        "score": "Wertung",
+        "stagesCleared": "Geschaffte Etappen",
+        "stage": "Zeit Etappe {{n}}",
+        "hints": "Hinweise",
+        "paidHints": "Bezahlte Hinweise",
+        "penaltyS": "Hinweisstrafe (s)",
+        "extraS": "Zusatzzeit (s)",
+        "hostUnlocks": "Von der Spielleitung geöffnete Schlösser",
+        "members": "Mitglieder",
+        "yes": "ja",
+        "no": "nein"
+      }
     }
   }
 }

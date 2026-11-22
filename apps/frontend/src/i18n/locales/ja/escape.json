@@ -322,6 +322,40 @@
       "endTitle": "全チームのゲームを今すぐ終了しますか？",
       "endDescription": "各チームは今の位置で止まり、結果が表示されます。",
       "endConfirm": "今すぐ終了"
+    },
+    "results": {
+      "title": "結果",
+      "hostColumns": "あなたが変更したこと",
+      "col": {
+        "team": "チーム",
+        "hints": "ヒント",
+        "penalty": "ヒントのペナルティ",
+        "extra": "追加時間",
+        "unlocks": "あなたが開けたロック"
+      },
+      "hints": "{{total}}（有料 {{paid}}）",
+      "extra": "{{delta}}（スコアは変わりません）",
+      "download": "CSV をダウンロード",
+      "finaleAgain": "フィナーレをもう一度表示",
+      "runAgain": "もう一度プレイ",
+      "closed": "ルームは終了しました",
+      "pickAnother": "別の脱出ゲームを選ぶ",
+      "csv": {
+        "place": "順位",
+        "team": "チーム",
+        "escaped": "脱出",
+        "score": "スコア",
+        "stagesCleared": "クリアしたステージ",
+        "stage": "ステージ {{n}} の時間",
+        "hints": "ヒント",
+        "paidHints": "有料ヒント",
+        "penaltyS": "ヒントのペナルティ（秒）",
+        "extraS": "追加時間（秒）",
+        "hostUnlocks": "ホストが開けたロック",
+        "members": "メンバー",
+        "yes": "はい",
+        "no": "いいえ"
+      }
     }
   }
 }

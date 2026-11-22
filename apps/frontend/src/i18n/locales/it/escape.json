@@ -336,6 +336,40 @@
       "endTitle": "Terminare ora la partita per tutte le squadre?",
       "endDescription": "Ogni squadra si ferma dov’è e compaiono i risultati.",
       "endConfirm": "Termina ora"
+    },
+    "results": {
+      "title": "Risultati",
+      "hostColumns": "Cosa hai cambiato",
+      "col": {
+        "team": "Squadra",
+        "hints": "Indizi",
+        "penalty": "Penalità indizi",
+        "extra": "Tempo extra",
+        "unlocks": "Lucchetti aperti da te"
+      },
+      "hints": "{{total}} ({{paid}} a pagamento)",
+      "extra": "{{delta}} (punteggio invariato)",
+      "download": "Scarica CSV",
+      "finaleAgain": "Mostra di nuovo il finale",
+      "runAgain": "Gioca di nuovo",
+      "closed": "Stanza chiusa",
+      "pickAnother": "Scegli un’altra escape room",
+      "csv": {
+        "place": "Posizione",
+        "team": "Squadra",
+        "escaped": "Evasa",
+        "score": "Punteggio",
+        "stagesCleared": "Fasi superate",
+        "stage": "Tempo fase {{n}}",
+        "hints": "Indizi",
+        "paidHints": "Indizi a pagamento",
+        "penaltyS": "Penalità indizi (s)",
+        "extraS": "Tempo extra (s)",
+        "hostUnlocks": "Lucchetti aperti dall’host",
+        "members": "Membri",
+        "yes": "sì",
+        "no": "no"
+      }
     }
   }
 }

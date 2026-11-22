@@ -1,5 +1,6 @@
 import type {
   EscapeBoard,
+  EscapeFinale,
   EscapeHostOutline,
   EscapeHostState,
   EscapeHostTeam,
@@ -171,3 +172,48 @@ export const SAMPLE_ANSWERS = [
   '314',
   'open sesame',
 ];
+
+type Ranked = EscapeFinale['ranking'][number];
+const ranked = (over: Partial<Ranked> = {}): Ranked => ({
+  teamId: 't1',
+  name: 'Team Red',
+  place: 1,
+  scoreMs: 1_932_000,
+  escaped: true,
+  stagesCleared: 3,
+  stageClearedAt: [252_000, 900_000, 1_872_000],
+  hintsUsed: 2,
+  paidHints: 1,
+  hintPenaltyS: 60,
+  adjustMs: 120_000,
+  hostUnlocks: 1,
+  members: ['Ana', 'Ben'],
+  ...over,
+});
+
+/** The Vault Heist results: one team escaped, one did not (and its name tries a formula). */
+export const finaleOf = (over: Partial<EscapeFinale> = {}): EscapeFinale => ({
+  gameId: GAME,
+  title: 'Vault Heist',
+  finale: 'The vault is open.',
+  ranking: [
+    ranked(),
+    ranked({
+      teamId: 't2',
+      name: '=HYPERLINK("http://x")',
+      place: 2,
+      scoreMs: null,
+      escaped: false,
+      stagesCleared: 1,
+      stageClearedAt: [300_000],
+      hintsUsed: 1,
+      paidHints: 0,
+      hintPenaltyS: 0,
+      adjustMs: 0,
+      hostUnlocks: 0,
+      members: ['@Cy', 'Dee'],
+    }),
+  ],
+  awards: { fastest: 't1', fewestHints: 't2', teamwork: null, photoFinish: null },
+  ...over,
+});

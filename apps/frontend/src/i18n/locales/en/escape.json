@@ -329,6 +329,40 @@
       "endTitle": "End the run for every team now?",
       "endDescription": "Every team stops where it is, and the results show.",
       "endConfirm": "End now"
+    },
+    "results": {
+      "title": "Results",
+      "hostColumns": "What you changed",
+      "col": {
+        "team": "Team",
+        "hints": "Hints",
+        "penalty": "Hint penalty",
+        "extra": "Extra time",
+        "unlocks": "Locks opened by you"
+      },
+      "hints": "{{total}} ({{paid}} paid)",
+      "extra": "{{delta}} (score unchanged)",
+      "download": "Download CSV",
+      "finaleAgain": "Show the finale again",
+      "runAgain": "Run it again",
+      "closed": "Room closed",
+      "pickAnother": "Pick another escape room",
+      "csv": {
+        "place": "Place",
+        "team": "Team",
+        "escaped": "Escaped",
+        "score": "Score",
+        "stagesCleared": "Stages cleared",
+        "stage": "Stage {{n}} time",
+        "hints": "Hints",
+        "paidHints": "Paid hints",
+        "penaltyS": "Hint penalty (s)",
+        "extraS": "Extra time (s)",
+        "hostUnlocks": "Locks opened by the host",
+        "members": "Members",
+        "yes": "yes",
+        "no": "no"
+      }
     }
   }
 }

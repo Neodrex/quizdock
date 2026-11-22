@@ -336,6 +336,40 @@
       "endTitle": "¿Terminar la partida para todos los equipos ahora?",
       "endDescription": "Cada equipo se queda donde está y se muestran los resultados.",
       "endConfirm": "Terminar ya"
+    },
+    "results": {
+      "title": "Resultados",
+      "hostColumns": "Lo que cambiaste",
+      "col": {
+        "team": "Equipo",
+        "hints": "Pistas",
+        "penalty": "Penalización por pistas",
+        "extra": "Tiempo extra",
+        "unlocks": "Candados abiertos por ti"
+      },
+      "hints": "{{total}} ({{paid}} de pago)",
+      "extra": "{{delta}} (puntuación sin cambios)",
+      "download": "Descargar CSV",
+      "finaleAgain": "Mostrar el final otra vez",
+      "runAgain": "Jugar otra vez",
+      "closed": "Sala cerrada",
+      "pickAnother": "Elegir otra sala de escape",
+      "csv": {
+        "place": "Puesto",
+        "team": "Equipo",
+        "escaped": "Escapó",
+        "score": "Puntuación",
+        "stagesCleared": "Etapas superadas",
+        "stage": "Tiempo etapa {{n}}",
+        "hints": "Pistas",
+        "paidHints": "Pistas de pago",
+        "penaltyS": "Penalización por pistas (s)",
+        "extraS": "Tiempo extra (s)",
+        "hostUnlocks": "Candados abiertos por el anfitrión",
+        "members": "Miembros",
+        "yes": "sí",
+        "no": "no"
+      }
     }
   }
 }

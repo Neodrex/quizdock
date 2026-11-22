@@ -322,6 +322,40 @@
       "endTitle": "现在为所有队伍结束游戏？",
       "endDescription": "每个队伍停在当前位置，并显示结果。",
       "endConfirm": "立即结束"
+    },
+    "results": {
+      "title": "结果",
+      "hostColumns": "你做的调整",
+      "col": {
+        "team": "队伍",
+        "hints": "提示",
+        "penalty": "提示罚时",
+        "extra": "加时",
+        "unlocks": "你打开的锁"
+      },
+      "hints": "{{total}}（{{paid}} 条付费）",
+      "extra": "{{delta}}（分数不变）",
+      "download": "下载 CSV",
+      "finaleAgain": "再次显示结局",
+      "runAgain": "再玩一次",
+      "closed": "房间已关闭",
+      "pickAnother": "选择另一个密室",
+      "csv": {
+        "place": "名次",
+        "team": "队伍",
+        "escaped": "已逃脱",
+        "score": "成绩",
+        "stagesCleared": "已通过关卡",
+        "stage": "第 {{n}} 关用时",
+        "hints": "提示",
+        "paidHints": "付费提示",
+        "penaltyS": "提示罚时（秒）",
+        "extraS": "加时（秒）",
+        "hostUnlocks": "主持人打开的锁",
+        "members": "成员",
+        "yes": "是",
+        "no": "否"
+      }
     }
   }
 }
