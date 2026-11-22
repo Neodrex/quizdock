@@ -2,6 +2,8 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { configureAnonymousParticipants } from '../config';
 import { mockApi, renderApp } from '../test/harness';
+import type { EscapeTemplateListItemDto } from '../api/generated/model';
+import { openIfLaunchable } from './escape-rooms-page';
 
 const { createEscapeRoom } = vi.hoisted(() => ({
   createEscapeRoom: vi.fn<(id: string, o?: unknown) => Promise<{ pin: string }>>(),
@@ -253,5 +255,13 @@ describe('/escape', () => {
     for (const b of screen.getAllByRole('button', { name: /Créer la salle|Publier/ })) {
       expect(b.className).toMatch(/min-h-1[12]/);
     }
+  });
+
+  it('Create on a template that cannot be launched opens nothing', () => {
+    const open = vi.fn(() => Promise.resolve());
+    for (const r of [draft, broken]) openIfLaunchable(r as EscapeTemplateListItemDto, open)();
+    expect(open).not.toHaveBeenCalled();
+    openIfLaunchable(item as EscapeTemplateListItemDto, open)();
+    expect(open).toHaveBeenCalledExactlyOnceWith('e1');
   });
 });

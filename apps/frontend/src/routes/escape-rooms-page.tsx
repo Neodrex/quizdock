@@ -87,6 +87,20 @@ function useOpenRoom() {
   return { open, opening, error, dialog };
 }
 
+/**
+ * The Create handler: a template that cannot be launched (a draft, or a row the
+ * server cannot read) opens nothing, even if its disabled button is clicked anyway.
+ */
+export function openIfLaunchable(
+  r: EscapeTemplateListItemDto,
+  open: (id: string) => Promise<void>,
+): () => void {
+  return () => {
+    if (!canLaunch(r)) return;
+    void open(r.id);
+  };
+}
+
 /** /escape: the host's escape templates; a published one opens a room (M5 Task 5.8). */
 export function EscapeRoomsPage() {
   const { t } = useTranslation('escape');
@@ -184,7 +198,7 @@ export function EscapeRoomsPage() {
                   (room.error?.id === r.id ? room.error.text : null) ??
                   (publishError?.id === r.id ? publishError.text : null)
                 }
-                onOpen={() => void room.open(r.id)}
+                onOpen={openIfLaunchable(r, room.open)}
                 onPublish={() => void onPublish(r.id)}
               />
             </li>
