@@ -39,6 +39,7 @@
     "join_url_invalid": "加入位址無效（應為 http(s)://主機[:連接埠]）。",
     "archive_quiz_gone": "測驗在進行中被刪除：結束時沒有歸檔。",
     "locked": "此房間不再接受新的參與者。",
+    "full": "此房間已滿。",
     "open_access_forbidden": "此伺服器不允許開放存取。",
     "open_access_guests_only": "開放存取時參與者沒有帳號：沒有個人追蹤，也不使用帳號名稱。",
     "next_quiz_unavailable": "此測驗不能作為本房間的下一個測驗。",

@@ -40,6 +40,7 @@
     "join_url_invalid": "Geçersiz davet adresi (http:// veya https:// ile başlayan bir adres olmalı).",
     "archive_quiz_gone": "Quiz oynatılırken silindi: arşiv olmadan sona erdi.",
     "locked": "Bu odaya artık yeni katılımcı kabul edilmemektedir.",
+    "full": "Bu oda dolu.",
     "open_access_forbidden": "Bu sunucuda açık erişime izin verilmiyor.",
     "open_access_guests_only": "Açık erişimde katılımcı hesabı bulunmaz; bireysel takip veya hesaptan alınan ad kullanılamaz.",
     "next_quiz_unavailable": "Bu quiz bu odada sıradaki quiz olarak oynatılamaz.",

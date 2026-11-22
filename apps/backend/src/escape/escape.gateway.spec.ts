@@ -7,6 +7,7 @@ import {
   useLicences,
   useStaticLicenceSource,
 } from '../../test/escape/escape-harness';
+import { capTests } from '../../test/escape/caps';
 import { clockTests } from '../../test/escape/clock';
 import { finaleTests } from '../../test/escape/finale';
 import { hintTests } from '../../test/escape/hints';
@@ -53,4 +54,5 @@ describe('EscapeGateway (socket integration)', () => {
   describe('screen', () => screenTests(ctx));
   describe('vault heist', () => vaultHeistRunTests(ctx));
   describe('sessions', () => sessionTests(ctx));
+  describe('caps', () => capTests(ctx));
 });

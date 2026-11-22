@@ -103,11 +103,13 @@ return raw
  */
 
 /**
- * Join. KEYS: players, room, session, tokens, nicknames. ARGV: playerId, record,
+ * Join. KEYS: players, room, session, tokens, nicknames, the room's cap. ARGV: playerId, record,
  * session value, token, zero score, TTL, the two states of a game that is over.
- * Returns 1 when the player is in the current game, 0 when they wait for the next.
+ * Returns 1 when the player is in the current game, 0 when they wait for the next,
+ * -1 when the room is full (nothing written).
  */
 const JOIN_SCRIPT = `
+local cap = tonumber(redis.call('GET', KEYS[6]) or '0'); if cap > 0 and redis.call('HLEN', KEYS[1]) >= cap then return -1 end
 redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
 redis.call('SET', KEYS[3], ARGV[3], 'EX', ARGV[6])
 redis.call('HSET', KEYS[4], ARGV[1], ARGV[4])
@@ -494,6 +496,12 @@ export class GameService {
       throw new ForbiddenException('session.locked');
     }
 
+    // A room with a cap (room:<pin>:cap) is full once it holds that many players.
+    const cap = Number((await this.redis.get(gameKeys.roomCap(pin))) ?? 0);
+    if (cap && (await this.redis.hlen(gameKeys.players(pin))) >= cap) {
+      throw new ForbiddenException('session.full');
+    }
+
     // Nom affiché (RG-15) : celui du compte tant que l'hôte n'ouvre pas le choix,
     // celui saisi sinon (et toujours, faute de compte).
     const fromAccount = !meta.pickOwnName && account ? accountNickname(account.displayName) : null;
@@ -528,14 +536,15 @@ export class GameService {
     // In the room, and in the game it plays unless that one is over (the player
     // then waits for the next quiz) — read in the same step, so a quiz opening
     // meanwhile cannot leave them out of both.
-    await this.redis.eval(
+    const joined = await this.redis.eval(
       JOIN_SCRIPT,
-      5,
+      6,
       gameKeys.players(pin),
       gameKeys.room(pin),
       gameKeys.session(sessionToken),
       gameKeys.tokens(pin),
       gameKeys.nicknames(pin),
+      gameKeys.roomCap(pin),
       playerId,
       JSON.stringify(record),
       JSON.stringify({ pin, playerId }),
@@ -545,6 +554,10 @@ export class GameService {
       GameState.Podium,
       GameState.Ended,
     );
+    if (joined === -1) {
+      await this.redis.srem(gameKeys.nicknames(pin), normalizeAnswer(nickname));
+      throw new ForbiddenException('session.full');
+    }
     // Compteur = joueurs **connectés** (§8), pas le total jamais joint.
     const playerCount = await this.connectedCount(pin);
 

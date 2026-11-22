@@ -42,6 +42,7 @@
     "join_url_invalid": "Nieprawidłowy adres zaproszenia (oczekiwano http(s)://host[:port]).",
     "archive_quiz_gone": "Quiz został usunięty w trakcie rozgrywki: zakończył się bez archiwum.",
     "locked": "Ten pokój nie przyjmuje już nowych uczestników.",
+    "full": "Ten pokój jest pełny.",
     "open_access_forbidden": "Otwarty dostęp nie jest dozwolony na tym serwerze.",
     "open_access_guests_only": "Przy otwartym dostępie uczestnicy nie mają kont: bez śledzenia indywidualnego, bez nazwy pobieranej z konta.",
     "next_quiz_unavailable": "Tego quizu nie można rozegrać jako następnego w tym pokoju.",

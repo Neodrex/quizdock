@@ -40,6 +40,7 @@
     "join_url_invalid": "Ungültige Einladungsadresse (erwartet: http(s)://host[:port]).",
     "archive_quiz_gone": "Das Quiz wurde gelöscht, während es gespielt wurde: Es endete ohne Archiv.",
     "locked": "Dieser Raum nimmt keine neuen Teilnehmenden mehr auf.",
+    "full": "Dieser Raum ist voll.",
     "open_access_forbidden": "Offener Zugang ist auf diesem Server nicht erlaubt.",
     "open_access_guests_only": "Bei offenem Zugang haben Teilnehmende kein Konto: keine persönliche Auswertung, kein Name aus einem Konto.",
     "next_quiz_unavailable": "Dieses Quiz kann in diesem Raum nicht als nächstes gespielt werden.",

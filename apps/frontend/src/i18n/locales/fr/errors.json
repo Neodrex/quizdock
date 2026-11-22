@@ -41,6 +41,7 @@
     "join_url_invalid": "Adresse pour rejoindre invalide (attendu http(s)://hôte[:port]).",
     "archive_quiz_gone": "Le quiz a été supprimé pendant qu’il était joué : il s’est terminé sans archive.",
     "locked": "Ce salon n’accepte plus de nouveaux participants.",
+    "full": "Ce salon est complet.",
     "open_access_forbidden": "L’accès libre n’est pas autorisé sur ce serveur.",
     "open_access_guests_only": "En accès libre, les participants n’ont pas de compte : ni suivi individuel, ni nom tiré d’un compte.",
     "next_quiz_unavailable": "Ce quiz ne peut pas être joué ensuite dans ce salon.",

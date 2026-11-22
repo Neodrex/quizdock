@@ -40,6 +40,7 @@
     "join_url_invalid": "Invalid invitation address (expected http(s)://host[:port]).",
     "archive_quiz_gone": "The quiz was deleted while it was played: it ended without an archive.",
     "locked": "This lobby no longer accepts new participants.",
+    "full": "This session is full.",
     "open_access_forbidden": "Open access is not allowed on this server.",
     "open_access_guests_only": "In open access participants have no account: no personal tracking, no name taken from an account.",
     "next_quiz_unavailable": "This quiz cannot be played next in this lobby.",

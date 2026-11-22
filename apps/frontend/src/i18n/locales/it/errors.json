@@ -41,6 +41,7 @@
     "join_url_invalid": "Indirizzo d’invito non valido (atteso http(s)://host[:port]).",
     "archive_quiz_gone": "Il quiz è stato eliminato mentre veniva giocato: è terminato senza archivio.",
     "locked": "Questa sala non accetta più nuovi partecipanti.",
+    "full": "Questa sala è al completo.",
     "open_access_forbidden": "L’accesso libero non è consentito su questo server.",
     "open_access_guests_only": "Con accesso libero i partecipanti non hanno un account: nessun monitoraggio personale, nessun nome preso da un account.",
     "next_quiz_unavailable": "Questo quiz non può essere giocato dopo in questa sala.",
