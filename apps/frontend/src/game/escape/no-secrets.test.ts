@@ -27,9 +27,13 @@ function files(dir: string): string[] {
 
 describe('the phone never names the host or board payloads', () => {
   const host = resolve(src, 'game/escape/host');
+  const bigScreen = resolve(src, 'game/escape/screen');
   const scanned = [
     // The host console's files (host/) are the host's: they get these payloads.
-    ...files(resolve(src, 'game/escape')).filter((p) => !p.startsWith(host)),
+    // The big screen's (screen/) get the board: their own guard is in screen-reducer.test.ts.
+    ...files(resolve(src, 'game/escape')).filter(
+      (p) => !p.startsWith(host) && !p.startsWith(bigScreen),
+    ),
     resolve(src, 'routes/escape-player-page.tsx'),
     // Tests name them to check they are not listened for; they ship nothing.
   ].filter((p) => !/\.test\.tsx?$/.test(p));
