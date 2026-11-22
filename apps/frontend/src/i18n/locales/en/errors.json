@@ -45,7 +45,8 @@
     "next_quiz_unavailable": "This quiz cannot be played next in this lobby.",
     "next_quiz_from_lobby": "The next quiz is picked in the lobby.",
     "review_unavailable": "You can only look back at a step between two questions.",
-    "step_not_played": "This step has not been played yet."
+    "step_not_played": "This step has not been played yet.",
+    "escape_game": "This room is playing an escape game, not a quiz."
   },
   "participant": {
     "not_found": "Player not found."
@@ -245,5 +246,21 @@
     "duplicate_quiz": "A quiz appears only once in a selection.",
     "quiz_not_found": "This quiz cannot be added: it is neither yours nor shared with you.",
     "nothing_to_save": "This lobby played no quiz you can keep in a selection."
+  },
+  "escape": {
+    "no_players": "No player has joined a team yet.",
+    "not_found": "There is no escape game in this room.",
+    "not_in_room": "You are not part of this escape game.",
+    "not_joined": "Join the room before playing.",
+    "player_not_found": "This player is not in the game.",
+    "self_select_closed": "Teams are set by the host: you cannot pick one.",
+    "team_escaped": "This team has already escaped.",
+    "team_full": "This team is full. Pick another one.",
+    "team_not_found": "This team does not exist any more.",
+    "wrong_phase": "Not possible at this point of the game."
+  },
+  "escape_template": {
+    "invalid": "This escape template is not valid.",
+    "not_found": "Escape template not found."
   }
 }

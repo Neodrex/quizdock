@@ -47,7 +47,8 @@
     "next_quiz_unavailable": "Tego quizu nie można rozegrać jako następnego w tym pokoju.",
     "next_quiz_from_lobby": "Następny quiz wybiera się w pokoju.",
     "review_unavailable": "Spojrzeć wstecz na krok można tylko między dwoma pytaniami.",
-    "step_not_played": "Ten krok nie został jeszcze rozegrany."
+    "step_not_played": "Ten krok nie został jeszcze rozegrany.",
+    "escape_game": "W tym pokoju trwa gra escape, a nie quiz."
   },
   "participant": {
     "not_found": "Nie znaleziono uczestnika."
@@ -247,5 +248,21 @@
     "duplicate_quiz": "Quiz występuje w zestawie tylko raz.",
     "quiz_not_found": "Nie można dodać tego quizu: nie jest twój ani nie jest ci udostępniony.",
     "nothing_to_save": "Ten pokój nie rozegrał żadnego quizu, który możesz zachować w zestawie."
+  },
+  "escape": {
+    "no_players": "Żaden gracz nie dołączył jeszcze do drużyny.",
+    "not_found": "W tym pokoju nie ma gry escape.",
+    "not_in_room": "Nie bierzesz udziału w tej grze escape.",
+    "not_joined": "Dołącz do pokoju, zanim zaczniesz grać.",
+    "player_not_found": "Tego gracza nie ma w grze.",
+    "self_select_closed": "Drużyny ustala prowadzący: nie możesz wybrać drużyny.",
+    "team_escaped": "Ta drużyna już uciekła.",
+    "team_full": "Ta drużyna jest pełna. Wybierz inną.",
+    "team_not_found": "Ta drużyna już nie istnieje.",
+    "wrong_phase": "Na tym etapie gry nie jest to możliwe."
+  },
+  "escape_template": {
+    "invalid": "Ten szablon gry escape jest nieprawidłowy.",
+    "not_found": "Nie znaleziono szablonu gry escape."
   }
 }

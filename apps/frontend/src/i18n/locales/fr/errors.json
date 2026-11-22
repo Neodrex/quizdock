@@ -46,7 +46,8 @@
     "next_quiz_unavailable": "Ce quiz ne peut pas être joué ensuite dans ce salon.",
     "next_quiz_from_lobby": "Le quiz suivant se choisit dans le salon.",
     "review_unavailable": "On ne peut revenir sur une étape qu’entre deux questions.",
-    "step_not_played": "Cette étape n’a pas encore été jouée."
+    "step_not_played": "Cette étape n’a pas encore été jouée.",
+    "escape_game": "Ce salon joue un jeu d’évasion, pas un quiz."
   },
   "participant": {
     "not_found": "Participant introuvable."
@@ -246,5 +247,21 @@
     "duplicate_quiz": "Un quiz n’apparaît qu’une fois dans une sélection.",
     "quiz_not_found": "Ce quiz ne peut pas être ajouté : il n’est ni à vous ni partagé avec vous.",
     "nothing_to_save": "Ce salon n’a joué aucun quiz que vous puissiez garder dans une sélection."
+  },
+  "escape": {
+    "no_players": "Aucun joueur n’a encore rejoint d’équipe.",
+    "not_found": "Il n’y a pas de jeu d’évasion dans ce salon.",
+    "not_in_room": "Vous ne faites pas partie de ce jeu d’évasion.",
+    "not_joined": "Rejoignez le salon avant de jouer.",
+    "player_not_found": "Ce joueur n’est pas dans la partie.",
+    "self_select_closed": "Les équipes sont faites par l’animateur : vous ne pouvez pas en choisir une.",
+    "team_escaped": "Cette équipe s’est déjà évadée.",
+    "team_full": "Cette équipe est complète. Choisissez-en une autre.",
+    "team_not_found": "Cette équipe n’existe plus.",
+    "wrong_phase": "Impossible à ce moment de la partie."
+  },
+  "escape_template": {
+    "invalid": "Ce modèle de jeu d’évasion n’est pas valide.",
+    "not_found": "Modèle de jeu d’évasion introuvable."
   }
 }

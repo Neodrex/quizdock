@@ -44,7 +44,8 @@
     "next_quiz_unavailable": "此測驗不能作為本房間的下一個測驗。",
     "next_quiz_from_lobby": "下一個測驗在房間中選擇。",
     "review_unavailable": "只能在兩道題之間回看已進行的步驟。",
-    "step_not_played": "此步驟尚未進行。"
+    "step_not_played": "此步驟尚未進行。",
+    "escape_game": "此房間正在進行密室逃脫遊戲，而不是測驗。"
   },
   "participant": {
     "not_found": "未找到玩家。"
@@ -244,5 +245,21 @@
     "duplicate_quiz": "一個測驗在選集中只能出現一次。",
     "quiz_not_found": "無法新增該測驗：它既不是你的，也未與你分享。",
     "nothing_to_save": "這個房間沒有示範過可儲存到選集的測驗。"
+  },
+  "escape": {
+    "no_players": "還沒有玩家加入隊伍。",
+    "not_found": "此房間沒有密室逃脫遊戲。",
+    "not_in_room": "你不在這個密室逃脫遊戲中。",
+    "not_joined": "請先加入房間再開始遊戲。",
+    "player_not_found": "該玩家不在遊戲中。",
+    "self_select_closed": "隊伍由主持人分配：你無法自行選擇。",
+    "team_escaped": "該隊伍已經逃脫。",
+    "team_full": "該隊伍已滿，請選擇其他隊伍。",
+    "team_not_found": "該隊伍已不存在。",
+    "wrong_phase": "遊戲的目前階段無法進行此操作。"
+  },
+  "escape_template": {
+    "invalid": "此密室逃脫範本無效。",
+    "not_found": "找不到密室逃脫範本。"
   }
 }

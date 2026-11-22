@@ -46,7 +46,8 @@
     "next_quiz_unavailable": "Questo quiz non può essere giocato dopo in questa sala.",
     "next_quiz_from_lobby": "Il quiz successivo si sceglie nella sala.",
     "review_unavailable": "Puoi tornare a guardare un passaggio solo tra due domande.",
-    "step_not_played": "Questo passaggio non è ancora stato giocato."
+    "step_not_played": "Questo passaggio non è ancora stato giocato.",
+    "escape_game": "In questa sala si gioca a un gioco di fuga, non a un quiz."
   },
   "participant": {
     "not_found": "Partecipante non trovato."
@@ -246,5 +247,21 @@
     "duplicate_quiz": "Un quiz compare una sola volta in una selezione.",
     "quiz_not_found": "Questo quiz non può essere aggiunto: non è tuo né condiviso con te.",
     "nothing_to_save": "Questa sala non ha giocato nessun quiz che tu possa tenere in una selezione."
+  },
+  "escape": {
+    "no_players": "Nessun giocatore si è ancora unito a una squadra.",
+    "not_found": "In questa sala non c’è nessun gioco di fuga.",
+    "not_in_room": "Non fai parte di questo gioco di fuga.",
+    "not_joined": "Entra nella sala prima di giocare.",
+    "player_not_found": "Questo giocatore non è nella partita.",
+    "self_select_closed": "Le squadre le decide l’organizzatore: non puoi sceglierne una.",
+    "team_escaped": "Questa squadra è già evasa.",
+    "team_full": "Questa squadra è al completo. Scegline un’altra.",
+    "team_not_found": "Questa squadra non esiste più.",
+    "wrong_phase": "Non è possibile in questa fase della partita."
+  },
+  "escape_template": {
+    "invalid": "Questo modello di gioco di fuga non è valido.",
+    "not_found": "Modello di gioco di fuga non trovato."
   }
 }

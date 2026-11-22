@@ -45,7 +45,8 @@
     "next_quiz_unavailable": "Dieses Quiz kann in diesem Raum nicht als nächstes gespielt werden.",
     "next_quiz_from_lobby": "Das nächste Quiz wird im Raum gewählt.",
     "review_unavailable": "Ein Rückblick auf einen Schritt ist nur zwischen zwei Fragen möglich.",
-    "step_not_played": "Dieser Schritt wurde noch nicht gespielt."
+    "step_not_played": "Dieser Schritt wurde noch nicht gespielt.",
+    "escape_game": "In diesem Raum läuft ein Escape-Spiel, kein Quiz."
   },
   "participant": {
     "not_found": "Teilnehmende Person nicht gefunden."
@@ -245,5 +246,21 @@
     "duplicate_quiz": "Ein Quiz erscheint nur einmal in einer Auswahl.",
     "quiz_not_found": "Dieses Quiz kann nicht hinzugefügt werden: Es gehört weder Ihnen noch ist es mit Ihnen geteilt.",
     "nothing_to_save": "Dieser Raum hat kein Quiz gespielt, das Sie in einer Auswahl behalten können."
+  },
+  "escape": {
+    "no_players": "Noch hat sich niemand einem Team angeschlossen.",
+    "not_found": "In diesem Raum läuft kein Escape-Spiel.",
+    "not_in_room": "Du gehörst nicht zu diesem Escape-Spiel.",
+    "not_joined": "Tritt dem Raum bei, bevor du spielst.",
+    "player_not_found": "Diese Person ist nicht im Spiel.",
+    "self_select_closed": "Die Teams legt die Spielleitung fest: Du kannst keins wählen.",
+    "team_escaped": "Dieses Team ist bereits entkommen.",
+    "team_full": "Dieses Team ist voll. Wähle ein anderes.",
+    "team_not_found": "Dieses Team gibt es nicht mehr.",
+    "wrong_phase": "In dieser Phase des Spiels nicht möglich."
+  },
+  "escape_template": {
+    "invalid": "Diese Escape-Vorlage ist ungültig.",
+    "not_found": "Escape-Vorlage nicht gefunden."
   }
 }

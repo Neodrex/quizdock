@@ -45,7 +45,8 @@
     "next_quiz_unavailable": "Bu quiz bu odada sıradaki quiz olarak oynatılamaz.",
     "next_quiz_from_lobby": "Sonraki quiz odada seçilir.",
     "review_unavailable": "Bir adımı yalnızca iki soru arasında yeniden gösterebilirsiniz.",
-    "step_not_played": "Bu adım henüz oynanmadı."
+    "step_not_played": "Bu adım henüz oynanmadı.",
+    "escape_game": "Bu odada bilgi yarışması değil, kaçış oyunu oynanıyor."
   },
   "participant": {
     "not_found": "Katılımcı bulunamadı."
@@ -245,5 +246,21 @@
     "duplicate_quiz": "Bir quiz seçkide yalnızca bir kez yer alır.",
     "quiz_not_found": "Bu quiz eklenemez: sizin değil ve sizinle paylaşılmamış.",
     "nothing_to_save": "Bu oda, bir seçkide saklayabileceğiniz hiçbir quiz oynamadı."
+  },
+  "escape": {
+    "no_players": "Henüz hiçbir oyuncu bir takıma katılmadı.",
+    "not_found": "Bu odada kaçış oyunu yok.",
+    "not_in_room": "Bu kaçış oyununun bir parçası değilsiniz.",
+    "not_joined": "Oynamadan önce odaya katılın.",
+    "player_not_found": "Bu oyuncu oyunda değil.",
+    "self_select_closed": "Takımları sunucu belirliyor: takım seçemezsiniz.",
+    "team_escaped": "Bu takım zaten kaçtı.",
+    "team_full": "Bu takım dolu. Başka bir takım seçin.",
+    "team_not_found": "Bu takım artık mevcut değil.",
+    "wrong_phase": "Oyunun bu aşamasında mümkün değil."
+  },
+  "escape_template": {
+    "invalid": "Bu kaçış oyunu şablonu geçerli değil.",
+    "not_found": "Kaçış oyunu şablonu bulunamadı."
   }
 }
