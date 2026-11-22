@@ -398,15 +398,19 @@ function PlayerChip({
         isDragging && 'relative z-10 shadow-lg',
       )}
     >
+      {/* Only the grip starts a drag (and blocks touch scrolling): a swipe over the
+          rest of the chip, or the board, still scrolls on a tablet. */}
       <button
         type="button"
         ref={setActivatorNodeRef}
         {...attributes}
         {...listeners}
         aria-label={t('host.board.drag', { name: chip.nickname })}
-        className="flex min-h-11 min-w-0 flex-1 touch-none items-center gap-2 px-2 py-1 text-left"
+        className="text-muted-foreground flex min-h-11 min-w-11 shrink-0 touch-none items-center justify-center rounded-md"
       >
-        <GripVertical className="text-muted-foreground size-4 shrink-0" aria-hidden />
+        <GripVertical className="size-4" aria-hidden />
+      </button>
+      <span className="flex min-h-11 min-w-0 flex-1 items-center gap-2 py-1 pr-2">
         <Avatar name={chip.nickname} size={28} />
         <span className="flex min-w-0 flex-col">
           <span className="truncate font-medium">{chip.nickname}</span>
@@ -420,7 +424,7 @@ function PlayerChip({
             {t('host.board.offline')}
           </span>
         ) : null}
-      </button>
+      </span>
       <Popover
         align="end"
         trigger={({ open, toggle }) => (

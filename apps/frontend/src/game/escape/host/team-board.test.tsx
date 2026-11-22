@@ -72,9 +72,10 @@ describe('TeamBoard', () => {
     const team = within(column('Team Red'));
     expect(team.getByText('Ana')).toBeInTheDocument();
     expect(team.getByText('Hacker')).toBeInTheDocument();
-    const ben = team.getByRole('button', { name: 'Drag Ben' });
-    expect(ben).toHaveTextContent('Offline');
-    expect(team.getByRole('button', { name: 'Drag Ana' })).not.toHaveTextContent('Offline');
+    const chipOf = (name: string) =>
+      team.getByRole('button', { name: `Drag ${name}` }).closest('li');
+    expect(chipOf('Ben')).toHaveTextContent('Offline');
+    expect(chipOf('Ana')).not.toHaveTextContent('Offline');
     expect(within(column('Unassigned')).getByText('Zoe')).toBeInTheDocument();
     expect(within(column('Team Blue')).getByText('Nobody here yet')).toBeInTheDocument();
   });
@@ -149,6 +150,19 @@ describe('TeamBoard', () => {
       await new Promise((r) => setTimeout(r, 20));
     });
     await waitFor(() => expect(onMove).toHaveBeenCalledWith('p1', 't2'));
+  });
+
+  it('only the grip is the drag handle, so a swipe over the board scrolls', () => {
+    draw(forming());
+    const grip = screen.getByRole('button', { name: 'Drag Ana' });
+    expect(grip).toHaveClass('touch-none', 'min-h-11', 'min-w-11');
+    expect(grip).toHaveAttribute('aria-roledescription', 'draggable');
+    // The name sits outside the handle, and nothing else on the board blocks scrolling.
+    const name = within(column('Team Red')).getByText('Ana');
+    expect(grip).not.toContainElement(name);
+    expect(document.querySelectorAll('.touch-none')).toHaveLength(
+      screen.getAllByRole('button', { name: /^Drag / }).length,
+    );
   });
 
   it('configures the pointer, touch (held 150 ms, so the page scrolls) and keyboard sensors', () => {
