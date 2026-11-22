@@ -117,6 +117,8 @@ export * from './escapeTemplateDetailDtoContentStagesItemHintsItem';
 export * from './escapeTemplateDetailDtoContentStagesItemLocksItem';
 export * from './escapeTemplateDetailDtoStatus';
 export * from './escapeTemplateListItemDto';
+export * from './escapeTemplateListItemDtoDifficulty';
+export * from './escapeTemplateListItemDtoMode';
 export * from './escapeTemplateListItemDtoStatus';
 export * from './historyListDto';
 export * from './historyListDtoRoomsItem';

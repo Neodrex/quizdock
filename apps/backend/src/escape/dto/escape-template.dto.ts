@@ -5,7 +5,8 @@ import { z } from 'zod';
 /** Body of a create or an update: the whole content, the shared schema (contracts). */
 export class EscapeTemplateContentDto extends createZodDto(escapeTemplateContentSchema) {}
 
-export const escapeTemplateListItemSchema = z.object({
+/** The row's own fields, shared by the list and the detail. */
+const templateRowSchema = z.object({
   id: z.string(),
   title: z.string(),
   status: z.enum(['draft', 'published', 'archived']),
@@ -14,9 +15,17 @@ export const escapeTemplateListItemSchema = z.object({
   updatedAt: z.string(),
 });
 
+/** A list item: the row and what the picker shows, no content. */
+export const escapeTemplateListItemSchema = templateRowSchema.extend({
+  mode: z.enum(['roles', 'parallel']),
+  difficulty: z.enum(['standard', 'hard']),
+  targetMinutes: z.number().int(),
+  stageCount: z.number().int(),
+});
+
 export class EscapeTemplateListItemDto extends createZodDto(escapeTemplateListItemSchema) {}
 
-export const escapeTemplateDetailSchema = escapeTemplateListItemSchema.extend({
+export const escapeTemplateDetailSchema = templateRowSchema.extend({
   createdAt: z.string(),
   content: escapeTemplateContentSchema,
 });

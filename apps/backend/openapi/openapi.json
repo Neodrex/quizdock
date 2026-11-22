@@ -8721,6 +8721,30 @@
           },
           "updatedAt": {
             "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "roles",
+              "parallel"
+            ]
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": [
+              "standard",
+              "hard"
+            ]
+          },
+          "targetMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "stageCount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
           }
         },
         "required": [
@@ -8728,7 +8752,11 @@
           "title",
           "status",
           "version",
-          "updatedAt"
+          "updatedAt",
+          "mode",
+          "difficulty",
+          "targetMinutes",
+          "stageCount"
         ]
       },
       "EscapeTemplateContentDto": {

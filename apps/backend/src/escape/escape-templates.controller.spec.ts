@@ -58,6 +58,29 @@ describe('EscapeTemplatesController', () => {
     Object.values(service).forEach((fn) => fn.mockClear());
   });
 
+  it('GET /escape-templates sends what the picker shows, drafts and published alike', async () => {
+    const item = {
+      id: 'e1',
+      title: 'Vault Heist',
+      version: 0,
+      updatedAt: '2026-11-22T10:00:00.000Z',
+      mode: 'roles',
+      difficulty: 'standard',
+      targetMinutes: 40,
+      stageCount: 4,
+    };
+    const items = [
+      { ...item, status: 'draft' },
+      { ...item, id: 'e2', status: 'published', version: 1 },
+    ];
+    service.list.mockResolvedValueOnce(items);
+    const res = await request(app.getHttpServer())
+      .get('/escape-templates')
+      .set(as('host'))
+      .expect(200);
+    expect(res.body).toEqual(items);
+  });
+
   it("calls each route's service with the current user's id", async () => {
     const http = () => request(app.getHttpServer());
     await http().get('/escape-templates').set(as('host')).expect(200);

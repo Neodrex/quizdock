@@ -57,14 +57,41 @@ describe('EscapeTemplatesService', () => {
   });
 
   it("lists the owner's templates, newest first, archived excluded", async () => {
-    const items = [{ id: 'e2', title: 'B', status: 'draft', version: 0, updatedAt: new Date() }];
-    prisma.escapeTemplate.findMany.mockResolvedValue(items);
-    await expect(service.list(OWNER)).resolves.toEqual(items);
+    prisma.escapeTemplate.findMany.mockResolvedValue([]);
+    await expect(service.list(OWNER)).resolves.toEqual([]);
     expect(prisma.escapeTemplate.findMany).toHaveBeenCalledWith({
       where: { ownerId: OWNER, status: { not: EscapeTemplateStatus.archived } },
-      select: { id: true, title: true, status: true, version: true, updatedAt: true },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        version: true,
+        updatedAt: true,
+        content: true,
+      },
       orderBy: { updatedAt: 'desc' },
     });
+  });
+
+  it('gives each item its mode, difficulty, length and stage count, and no content', async () => {
+    const updatedAt = new Date();
+    const published = { ...row({ id: 'e2', status: 'published', version: 1, updatedAt }) };
+    const draft = { ...row({ id: 'e3', updatedAt, content: { ...valid, mode: 'parallel' } }) };
+    prisma.escapeTemplate.findMany.mockResolvedValue([published, draft]);
+    const items = await service.list(OWNER);
+    const base = {
+      title: valid.title,
+      difficulty: valid.difficulty,
+      targetMinutes: valid.targetMinutes,
+      stageCount: valid.stages.length,
+      updatedAt,
+    };
+    expect(items).toEqual([
+      { ...base, id: 'e2', status: 'published', version: 1, mode: valid.mode },
+      { ...base, id: 'e3', status: 'draft', version: 0, mode: 'parallel' },
+    ]);
+    expect(JSON.stringify(items)).not.toContain('stages');
+    expect(JSON.stringify(items)).not.toContain('answer');
   });
 
   it('creates a draft titled after its content', async () => {

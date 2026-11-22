@@ -19,6 +19,19 @@ export interface EscapeTemplateDetail {
   content: EscapeTemplateContent;
 }
 
+/** A template in the owner's list: what the picker shows, no content. */
+export interface EscapeTemplateListItem {
+  id: string;
+  title: string;
+  status: EscapeTemplateStatus;
+  version: number;
+  updatedAt: Date;
+  mode: EscapeTemplateContent['mode'];
+  difficulty: EscapeTemplateContent['difficulty'];
+  targetMinutes: number;
+  stageCount: number;
+}
+
 /** A client's content, checked against the shared schema: a 400 with the zod issues. */
 function parseInput(content: unknown): EscapeTemplateContent {
   const parsed = escapeTemplateContentSchema.safeParse(content);
@@ -52,12 +65,37 @@ function toDetail(row: EscapeTemplateRow): EscapeTemplateDetail {
 export class EscapeTemplatesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** The owner's templates, most recently changed first; removed (archived) ones left out. */
-  list(ownerId: string) {
-    return this.prisma.escapeTemplate.findMany({
+  /**
+   * The owner's templates, most recently changed first; removed (archived) ones
+   * left out. Each says what the picker shows (mode, difficulty, length, stage
+   * count), never its content.
+   */
+  async list(ownerId: string): Promise<EscapeTemplateListItem[]> {
+    const rows = await this.prisma.escapeTemplate.findMany({
       where: { ownerId, status: NOT_ARCHIVED },
-      select: { id: true, title: true, status: true, version: true, updatedAt: true },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        version: true,
+        updatedAt: true,
+        content: true,
+      },
       orderBy: { updatedAt: 'desc' },
+    });
+    return rows.map((row) => {
+      const c = escapeTemplateContentSchema.parse(row.content);
+      return {
+        id: row.id,
+        title: row.title,
+        status: row.status,
+        version: row.version,
+        updatedAt: row.updatedAt,
+        mode: c.mode,
+        difficulty: c.difficulty,
+        targetMinutes: c.targetMinutes,
+        stageCount: c.stages.length,
+      };
     });
   }
 

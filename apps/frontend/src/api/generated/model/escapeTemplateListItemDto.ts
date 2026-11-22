@@ -5,6 +5,8 @@
  * API REST du builder de quiz et des restitutions
  * OpenAPI spec version: 0.1.0
  */
+import type { EscapeTemplateListItemDtoDifficulty } from './escapeTemplateListItemDtoDifficulty';
+import type { EscapeTemplateListItemDtoMode } from './escapeTemplateListItemDtoMode';
 import type { EscapeTemplateListItemDtoStatus } from './escapeTemplateListItemDtoStatus';
 
 export interface EscapeTemplateListItemDto {
@@ -17,4 +19,16 @@ export interface EscapeTemplateListItemDto {
      */
   version: number;
   updatedAt: string;
+  mode: EscapeTemplateListItemDtoMode;
+  difficulty: EscapeTemplateListItemDtoDifficulty;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  targetMinutes: number;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  stageCount: number;
 }
