@@ -131,4 +131,40 @@ describe('ScreenFinale', () => {
     draw(five, 'done', true);
     expect(screen.getByText('Thanks for playing')).toBeInTheDocument();
   });
+
+  it('tied places (1, 1, 3): each podium step keeps a spot of its own, both winners raised', () => {
+    const tied = screenFinaleOf({
+      ranking: [
+        team(1, { name: 'Team Red', teamId: 't1', place: 1 }),
+        team(2, { place: 1 }),
+        team(3),
+      ],
+    });
+    draw(tied);
+    const steps = screen.getAllByTestId('podium-step');
+    expect(steps.map((s) => s.dataset.place)).toEqual(['1', '1', '3']);
+    const orders = steps.map((s) => s.className.match(/order-\d/)?.[0]);
+    expect(new Set(orders).size).toBe(3);
+    expect(steps[0].className).toContain('border-primary');
+    expect(steps[1].className).toContain('border-primary');
+    expect(steps[2].className).not.toContain('border-primary');
+  });
+
+  it('a photo finish under a second shows tenths, never "0 s"', () => {
+    const close = screenFinaleOf({
+      ranking: [team(1, { teamId: 't1', name: 'Team Red' }), team(2, { scoreMs: 1_904_300 })],
+      awards: { fastest: null, fewestHints: null, teamwork: null, photoFinish: ['t1', 't2'] },
+    });
+    draw(close);
+    expect(document.querySelector('[data-award="photoFinish"]')).toHaveTextContent(
+      'Photo finish: Team Red and Team 2, 0.3 s apart',
+    );
+  });
+
+  it('the penalty reads in the card’s colour (contrast): red is the icon’s only', () => {
+    draw(five);
+    const [red] = screen.getAllByTestId('podium-step');
+    const penalty = within(red).getByText('+1:00 penalty');
+    expect(penalty.className).not.toContain('text-destructive');
+  });
 });

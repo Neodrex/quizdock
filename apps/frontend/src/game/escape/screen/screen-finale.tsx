@@ -1,5 +1,5 @@
 import type { EscapeScreenFinale } from '@quiz-dock/contracts';
-import { Award, CircleCheck, Hourglass, Lightbulb, Trophy } from 'lucide-react';
+import { AlarmClockPlus, Award, CircleCheck, Hourglass, Lightbulb, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { formatClock } from '../team-timer';
@@ -72,8 +72,8 @@ function Results({ finale }: { finale: EscapeScreenFinale }) {
     <div className="flex min-h-0 w-full flex-1 flex-col gap-[0.8em]">
       <h2 className="sr-only">{t('screen.finale.podium')}</h2>
       <ol data-testid="podium" className="flex shrink-0 items-end justify-center gap-[1em]">
-        {podium.map((r) => (
-          <PodiumStep key={r.teamId} team={r} />
+        {podium.map((r, i) => (
+          <PodiumStep key={r.teamId} team={r} index={i} />
         ))}
       </ol>
       {listed.length > 0 && (
@@ -116,7 +116,9 @@ function Outcome({ team }: { team: Ranked }) {
         {t('finale.hints', { count: team.hintsUsed })}
       </span>
       {team.hintPenaltyS > 0 && (
-        <span className="text-destructive font-bold">
+        // The words in the card's own colour (contrast); the red is the icon's.
+        <span className="flex items-center gap-[0.2em] font-bold">
+          <AlarmClockPlus aria-hidden className="text-destructive size-[1em]" />
           {t('screen.finale.penalty', { time: formatClock(team.hintPenaltyS * 1000) })}
         </span>
       )}
@@ -134,9 +136,10 @@ function Place({ place }: { place: number }) {
   );
 }
 
-function PodiumStep({ team }: { team: Ranked }) {
+function PodiumStep({ team, index }: { team: Ranked; index: number }) {
   // Visually 2 · 1 · 3, with the winner raised; read in place order.
-  const order = team.place === 1 ? 'order-2' : team.place === 2 ? 'order-1' : 'order-3';
+  // By position on the podium, not by place: tied places (1, 1, 3) keep a spot each.
+  const order = ['order-2', 'order-1', 'order-3'][index] ?? 'order-3';
   return (
     <li
       data-testid="podium-step"
@@ -185,8 +188,15 @@ function RankedRow({ team }: { team: Ranked }) {
   );
 }
 
+/** A photo finish's gap in seconds: tenths under 10 s (never "0 s"), whole seconds above. */
+function gapSeconds(gapMs: number, lng: string): string {
+  const tenths = gapMs < 10_000;
+  const value = tenths ? Math.max(0.1, Math.round(gapMs / 100) / 10) : Math.round(gapMs / 1000);
+  return new Intl.NumberFormat(lng, { maximumFractionDigits: tenths ? 1 : 0 }).format(value);
+}
+
 function AwardsList({ finale }: { finale: EscapeScreenFinale }) {
-  const { t } = useTranslation('escape');
+  const { t, i18n } = useTranslation('escape');
   const byId = new Map(finale.ranking.map((r) => [r.teamId, r]));
   const name = (id: string) => byId.get(id)?.name ?? '';
   const items = AWARDS.flatMap((key) => {
@@ -205,7 +215,7 @@ function AwardsList({ finale }: { finale: EscapeScreenFinale }) {
               ? t('screen.finale.award.photoFinishPair', params)
               : t('screen.finale.award.photoFinish', {
                   ...params,
-                  seconds: Math.round(gapMs / 1000),
+                  seconds: gapSeconds(gapMs, i18n.language),
                 }),
         },
       ];
