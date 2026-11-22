@@ -32,6 +32,7 @@ import { isHost } from '../auth/roles';
 import { sameOriginHandshake } from '../game/game.gateway';
 import { WsExceptionFilter } from '../game/ws-exception.filter';
 import { EscapeEngine, type EscapeSocket } from './escape.engine';
+import type { LicenceHost } from './licences/licence.port';
 
 type Ok = { ok: true };
 const OK: Ok = { ok: true };
@@ -66,8 +67,8 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     @ConnectedSocket() socket: EscapeSocket,
     @MessageBody() payload: unknown,
   ): Promise<{ pin: string }> {
-    const hostId = this.requireHostId(socket);
-    const pin = await this.engine.create(hostId, parse(escapeCreateSchema, payload));
+    const host = this.licenceHost(socket);
+    const pin = await this.engine.create(host, parse(escapeCreateSchema, payload));
     socket.data.pin = pin;
     socket.data.isHostControl = true;
     await socket.join(pin);
@@ -80,7 +81,7 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     @MessageBody() payload: unknown,
   ): Promise<Ok> {
     const dto = parse(escapeOpenSchema, payload);
-    await this.engine.open(dto.pin, this.requireHostId(socket), dto);
+    await this.engine.open(dto.pin, this.licenceHost(socket), dto);
     return OK;
   }
 
@@ -239,6 +240,12 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     await this.engine.playerGone(pin, playerId).catch((err: Error) => {
       this.log.warn(`playerGone ${pin}/${playerId}: ${err.message}`);
     });
+  }
+
+  /** The signed-in host, as the licence port knows them (M7 §1.2). */
+  private licenceHost(socket: EscapeSocket): LicenceHost {
+    const user = this.requireHost(socket);
+    return { userId: user.id, email: user.email, oidcSubject: user.oidcSubject };
   }
 
   /** As GameGateway.requireHost: signed in, with the `host` role. */

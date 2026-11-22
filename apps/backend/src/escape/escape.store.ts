@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { type EscapeFinale, GameState, escapeTemplateContentSchema } from '@quiz-dock/contracts';
+import {
+  BUILTIN_THEMES,
+  ESCAPE_SESSION_TYPES,
+  type EscapeFinale,
+  GameState,
+  escapeTemplateContentSchema,
+} from '@quiz-dock/contracts';
 import { z } from 'zod';
 import { gameKeys, type GameId } from '../game/game.keys';
 import { RedisService } from '../redis/redis.service';
-import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
-import { ESCAPE_TTL_S, escapeKeys } from './escape.keys';
+import type { EscapeRun, EscapeSession, EscapeSnapshot, TeamRecord } from './escape-live.types';
+import { ESCAPE_TTL_S, escapeKeys, escapeRoomKeys } from './escape.keys';
 import type { Same, TeamState } from './escape.types';
 
 /** Parsed snapshots kept in memory, as GameService keeps quiz snapshots. */
@@ -90,13 +96,47 @@ const finaleSchema = z.object({
   }),
 });
 
+const sessionSchema = z.object({
+  type: z.enum(ESCAPE_SESSION_TYPES),
+  cap: z.number().int().min(1),
+  race: z
+    .object({
+      format: z.enum(['solo', 'teams']),
+      startsAt: ms.nullable(),
+      started: z.boolean(),
+    })
+    .nullable(),
+  licence: z
+    .object({
+      id: z.string(),
+      organisationId: z.string(),
+      participantCap: z.number().int(),
+      expiresAt: ms,
+      package: z.enum(['single', 'bundle', 'annual']),
+      brand: z
+        .object({
+          name: z.string(),
+          logoUrl: z.string().nullable(),
+          accent: z.string(),
+          background: z.string().nullable(),
+          baseTheme: z.enum(BUILTIN_THEMES),
+          intro: z.string().nullable(),
+        })
+        .nullable(),
+    })
+    .nullable(),
+  licenceUsed: z.boolean(),
+  phoneHostUserId: z.string().nullable(),
+});
+
 export const storedShapesMatch: [
   Same<z.infer<typeof snapshotSchema>, EscapeSnapshot>,
   Same<z.infer<typeof runSchema>, EscapeRun>,
   Same<z.infer<typeof teamSchema>, TeamState>,
   Same<z.infer<typeof teamRecordSchema>, TeamRecord>,
   Same<z.infer<typeof finaleSchema>, EscapeFinale>,
-] = [true, true, true, true, true];
+  Same<z.infer<typeof sessionSchema>, EscapeSession>,
+] = [true, true, true, true, true, true];
 
 const parseJson = <T>(schema: z.ZodType<T>, raw: string | null): T | null =>
   raw === null ? null : schema.parse(JSON.parse(raw));
@@ -136,21 +176,47 @@ export class EscapeStore {
 
   constructor(private readonly redis: RedisService) {}
 
-  /** A run opens in room `pin` for its host: its frozen template and its first run record. */
+  /**
+   * A run opens in room `pin` for its host: its frozen template and its first
+   * run record. With `session`, the room's session and its cap key (M7 §1.5).
+   */
   async writeOpen(
     id: GameId,
     pin: string,
     hostUserId: string,
     snapshot: EscapeSnapshot,
     run: EscapeRun,
+    session?: EscapeSession,
   ): Promise<void> {
     const pipe = this.redis.multi();
+    if (session) {
+      pipe.set(escapeRoomKeys.session(pin), JSON.stringify(session), 'EX', ESCAPE_TTL_S);
+      pipe.set(gameKeys.roomCap(pin), String(session.cap), 'EX', ESCAPE_TTL_S);
+    }
     pipe.set(escapeKeys.room(id), pin, 'EX', ESCAPE_TTL_S);
     pipe.set(escapeKeys.host(id), hostUserId, 'EX', ESCAPE_TTL_S);
     pipe.set(escapeKeys.template(id), JSON.stringify(snapshot), 'EX', ESCAPE_TTL_S);
     pipe.set(escapeKeys.run(id), JSON.stringify(run), 'EX', ESCAPE_TTL_S);
     await pipe.exec();
     this.remember(id, snapshot);
+  }
+
+  /** The room's session (null: a quiz room, or gone). */
+  async session(pin: string): Promise<EscapeSession | null> {
+    return parseJson(sessionSchema, await this.redis.get(escapeRoomKeys.session(pin)));
+  }
+
+  /** Rewrites the room's session (its race and licence flags); the cap key is left as it is. */
+  async writeSession(pin: string, session: EscapeSession): Promise<void> {
+    await this.redis.set(escapeRoomKeys.session(pin), JSON.stringify(session), 'EX', ESCAPE_TTL_S);
+  }
+
+  /** The room's session and cap key get the TTL again. */
+  async touchRoom(pin: string): Promise<void> {
+    const pipe = this.redis.multi();
+    pipe.expire(escapeRoomKeys.session(pin), ESCAPE_TTL_S);
+    pipe.expire(gameKeys.roomCap(pin), ESCAPE_TTL_S);
+    await pipe.exec();
   }
 
   /** The frozen template (null when gone or expired). */

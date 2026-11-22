@@ -4,6 +4,8 @@ import {
   dropTemplates,
   fastTimings,
   seedTemplate,
+  useLicences,
+  useStaticLicenceSource,
 } from '../../test/escape/escape-harness';
 import { clockTests } from '../../test/escape/clock';
 import { finaleTests } from '../../test/escape/finale';
@@ -13,6 +15,7 @@ import { playTests } from '../../test/escape/play';
 import { presenceTests } from '../../test/escape/presence';
 import { raceTests } from '../../test/escape/races';
 import { screenTests } from '../../test/escape/screen';
+import { sessionTests } from '../../test/escape/sessions';
 import { vaultHeistRunTests } from '../../test/escape/vault-heist-run';
 import { vaultHeist } from './samples';
 
@@ -26,7 +29,9 @@ describe('EscapeGateway (socket integration)', () => {
   const ctx = {} as EscapeContext;
 
   beforeAll(async () => {
+    useStaticLicenceSource();
     ctx.h = await bootGameApp();
+    useLicences(ctx.h);
     fastTimings(ctx.h);
     ctx.templateId = await seedTemplate(ctx.h, vaultHeist);
     ctx.vault = { id: ctx.templateId, ...vaultHeist };
@@ -47,4 +52,5 @@ describe('EscapeGateway (socket integration)', () => {
   describe('races', () => raceTests(ctx));
   describe('screen', () => screenTests(ctx));
   describe('vault heist', () => vaultHeistRunTests(ctx));
+  describe('sessions', () => sessionTests(ctx));
 });

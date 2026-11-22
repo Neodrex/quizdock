@@ -8,6 +8,7 @@ import type { EscapeTemplatesService } from './escape-templates.service';
 import { EscapeTimings } from './escape-timings';
 import { EscapeEngine } from './escape.engine';
 import type { EscapeStore } from './escape.store';
+import { NoLicences } from './licences/no-licences';
 
 const run = (phase: EscapeRun['phase']): EscapeRun => ({
   phase,
@@ -48,6 +49,7 @@ describe('EscapeEngine.recover (bindServer)', () => {
       redis as unknown as RedisService,
       {} as EscapeAttempts,
       { get: () => ({}) } as unknown as ModuleRef,
+      new NoLicences(),
     );
     const ticker = (engine as unknown as { ticker: { start: (...a: unknown[]) => void } }).ticker;
     const start = jest.spyOn(ticker, 'start').mockImplementation(() => undefined);

@@ -61,6 +61,8 @@ export const gameKeys = {
   players: (pin: string) => `room:${pin}:players`,
   /** Set of the normalized nicknames (atomic deduplication). */
   nicknames: (pin: string) => `room:${pin}:nicknames`,
+  /** The room's participant cap (players joined, connected or not); absent = none. */
+  roomCap: (pin: string) => `room:${pin}:cap`,
   /** A banned normalized nickname (self-expiring key = the ban's length, RG-12). */
   ban: (pin: string, normalized: string) => `room:${pin}:ban:${normalized}`,
   /** Player session token → { pin, playerId } (reconnection). */

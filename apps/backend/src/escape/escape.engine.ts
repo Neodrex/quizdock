@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -37,7 +38,14 @@ import type { GameMeta } from '../game/game.types';
 import { RedisService } from '../redis/redis.service';
 import { EscapeAttempts } from './escape-attempts';
 import { endClock, isTimedOut, pauseClock, resumeClock, runElapsed } from './escape-clock';
-import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
+import type {
+  EscapeRun,
+  EscapeSession,
+  EscapeSnapshot,
+  FrozenLicence,
+  TeamRecord,
+} from './escape-live.types';
+import { RACE_MAX_LEAD_MIN, capOf, modeAllowed } from './escape-session';
 import {
   announceOf,
   boardOf,
@@ -62,7 +70,17 @@ import { EscapeTimings } from './escape-timings';
 import { escapeRooms } from './escape.keys';
 import { EscapeStore } from './escape.store';
 import type { TeamState } from './escape.types';
+import { LICENCE_REQUIRED, licenceErrorCode } from './licences/licence-errors';
+import {
+  LICENCE_PORT,
+  type Licence,
+  type LicenceHost,
+  type LicencePort,
+} from './licences/licence.port';
 import { SerialQueue } from './serial-queue';
+
+/** A scheduled race starts at least this far ahead. */
+const RACE_MIN_LEAD_MS = 60_000;
 
 type EscapeServer = Server<
   ClientToServerEvents,
@@ -102,6 +120,16 @@ function isHostConsole(d: GameSocketData, pin: string, hostUserId: string): bool
     d.user?.id === hostUserId
   );
 }
+
+/** What a hosted room keeps of its licence: never its uses, nor who may use it. */
+const frozen = (l: Licence): FrozenLicence => ({
+  id: l.id,
+  organisationId: l.organisationId,
+  participantCap: l.participantCap,
+  expiresAt: l.expiresAt,
+  package: l.package,
+  brand: l.brand ? { ...l.brand } : null,
+});
 
 const fresh = (team: TeamState): TeamRecord => ({
   team,
@@ -174,6 +202,7 @@ export class EscapeEngine implements OnModuleDestroy {
     private readonly redis: RedisService,
     private readonly attempts: EscapeAttempts,
     private readonly modules: ModuleRef,
+    @Inject(LICENCE_PORT) private readonly licences: LicencePort,
   ) {}
 
   bindServer(server: EscapeServer): void {
@@ -218,9 +247,15 @@ export class EscapeEngine implements OnModuleDestroy {
 
   // ── Open (O1–O4) ──
 
-  /** O1: a new room whose first game is this run, forming. Returns the PIN. */
-  async create(hostUserId: string, dto: EscapeCreate): Promise<string> {
-    const snap = await this.freeze(hostUserId, dto.templateId);
+  /**
+   * O1: a new room whose first game is this run, forming. Returns the PIN.
+   * The session type is checked first (M7 §1.1): nothing is opened on a refusal.
+   */
+  async create(host: LicenceHost, dto: EscapeCreate): Promise<string> {
+    const hostUserId = host.userId;
+    const type = dto.sessionType ?? 'hosted';
+    const snap = await this.freeze(hostUserId, dto.templateId, type);
+    const session = await this.newSession(host, type, dto);
     const { pin } = await this.game.createSession(
       hostUserId,
       {
@@ -232,21 +267,25 @@ export class EscapeEngine implements OnModuleDestroy {
     );
     const meta = await this.game.getMeta(pin);
     if (!meta) throw new NotFoundException('session.not_found');
-    await this.openOn(pin, meta.id, hostUserId, snap, dto.durationMin);
+    await this.openOn(pin, meta.id, hostUserId, snap, dto.durationMin, session);
     return pin;
   }
 
   /** O2: a run as the room's next game, from its lobby; the room's players unassigned. */
-  async open(pin: string, hostUserId: string, dto: EscapeOpen): Promise<void> {
+  async open(pin: string, host: LicenceHost, dto: EscapeOpen): Promise<void> {
+    const hostUserId = host.userId;
     const first = await this.requireHostMeta(pin, hostUserId);
     await this.queue.run(first.id, async () => {
       const meta = await this.requireHostMeta(pin, hostUserId);
       if (meta.state !== GameState.Lobby) {
         throw new BadRequestException('session.next_quiz_from_lobby');
       }
-      const snap = await this.freeze(hostUserId, dto.templateId);
+      // The room keeps its session; a quiz room gets a hosted one, as on create.
+      const kept = await this.store.session(pin);
+      const snap = await this.freeze(hostUserId, dto.templateId, kept?.type ?? 'hosted');
+      const session = kept ? undefined : await this.newSession(host, 'hosted', {});
       const id = await this.game.openGameWith(pin, null);
-      await this.openOn(pin, id, hostUserId, snap, dto.durationMin);
+      await this.openOn(pin, id, hostUserId, snap, dto.durationMin, session);
       this.server
         .to(pin)
         .emit('game:state', { state: GameState.Lobby, questionIndex: -1, totalQuestions: 0 });
@@ -885,7 +924,7 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /** The room's keys and the run's get their TTL again. */
   private async keepAlive(pin: string, id: GameId): Promise<void> {
-    await Promise.all([this.game.touchRoom(pin), this.store.touch(id)]);
+    await Promise.all([this.game.touchRoom(pin), this.store.touch(id), this.store.touchRoom(pin)]);
   }
 
   /** Whether setGameState wrote the state itself, from the state it found. */
@@ -963,13 +1002,18 @@ export class EscapeEngine implements OnModuleDestroy {
   // ── Helpers ──
 
   /** O3/O4: the host's template, checked and frozen with its version. */
-  private async freeze(hostUserId: string, templateId: string): Promise<EscapeSnapshot> {
+  private async freeze(
+    hostUserId: string,
+    templateId: string,
+    type: EscapeSession['type'],
+  ): Promise<EscapeSnapshot> {
     const row = await this.templates.get(hostUserId, templateId);
     const template = { id: row.id, ...row.content };
     const problems = validateTemplate(template);
     if (problems.length) {
       throw new BadRequestException({ code: 'escape_template.invalid', problems });
     }
+    if (!modeAllowed(type, template.mode)) throw new BadRequestException('escape.session_mode');
     return { templateId: row.id, version: row.version, template, takenAt: Date.now() };
   }
 
@@ -980,6 +1024,7 @@ export class EscapeEngine implements OnModuleDestroy {
     hostUserId: string,
     snap: EscapeSnapshot,
     durationMin?: number,
+    session?: EscapeSession,
   ): Promise<void> {
     const run: EscapeRun = {
       phase: 'forming',
@@ -998,7 +1043,43 @@ export class EscapeEngine implements OnModuleDestroy {
       gameKeys.game(id),
       gameHash({ kind: 'escape', title: snap.template.title }),
     );
-    await this.store.writeOpen(id, pin, hostUserId, snap, run);
+    await this.store.writeOpen(id, pin, hostUserId, snap, run, session);
+  }
+
+  /** A room's session from its create (M7 §1.4): a hosted one freezes its licence. */
+  private async newSession(
+    host: LicenceHost,
+    type: EscapeSession['type'],
+    dto: Pick<EscapeCreate, 'licenceId' | 'race'>,
+  ): Promise<EscapeSession> {
+    const base = { licenceUsed: false, race: null, licence: null, phoneHostUserId: null };
+    if (type === 'group') {
+      return { ...base, type, cap: capOf(type), phoneHostUserId: host.userId };
+    }
+    if (type === 'race') {
+      const startsAt = dto.race?.startsAt ?? null;
+      const lead = startsAt === null ? null : startsAt - Date.now();
+      if (lead !== null && (lead < RACE_MIN_LEAD_MS || lead > RACE_MAX_LEAD_MIN * 60_000)) {
+        throw new BadRequestException('escape.race_start_out_of_range');
+      }
+      const format = dto.race?.format ?? 'solo';
+      return { ...base, type, cap: capOf(type), race: { format, startsAt, started: false } };
+    }
+    const licence = await this.licenceFor(host, dto.licenceId);
+    return { ...base, type, cap: capOf(type, licence), licence: frozen(licence) };
+  }
+
+  /** The licence a hosted event runs under: the one chosen, or the host's only usable one. */
+  private async licenceFor(host: LicenceHost, licenceId?: string): Promise<Licence> {
+    const now = Date.now();
+    if (licenceId === undefined) {
+      const usable = await this.licences.usableBy(host, now);
+      if (usable.length !== 1) throw new ForbiddenException(LICENCE_REQUIRED);
+      return usable[0];
+    }
+    const checked = await this.licences.check(host, licenceId, now);
+    if (!checked.ok) throw new ForbiddenException(licenceErrorCode(checked.reason));
+    return checked.licence;
   }
 
   /** Everything a payload is built from, read once. R1: connected = a live socket in the room. */

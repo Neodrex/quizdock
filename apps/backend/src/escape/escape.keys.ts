@@ -23,6 +23,12 @@ export const escapeKeys = {
   results: (id: GameId) => `game:${id}:escape:results`,
 };
 
+/** Redis keys of an escape room, under its PIN: what every run in it shares. */
+export const escapeRoomKeys = {
+  /** The room's session type, cap and frozen licence: JSON EscapeSession. */
+  session: (pin: string) => `escape:session:${pin}`,
+};
+
 /** Socket.IO rooms (not Redis): who receives what. */
 export const escapeRooms = {
   host: (pin: string) => `${pin}:escape:host`,

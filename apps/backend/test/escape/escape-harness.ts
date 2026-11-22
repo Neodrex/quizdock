@@ -5,6 +5,9 @@ import type {
 } from '@quiz-dock/contracts';
 import type { Socket } from 'socket.io-client';
 import { EscapeTimings } from '../../src/escape/escape-timings';
+import { DEV_LICENCE } from '../../src/escape/licences/dev-licences';
+import { LICENCE_PORT } from '../../src/escape/licences/licence.port';
+import { StaticLicences, type StaticLicence } from '../../src/escape/licences/static-licences';
 import type { EscapeTemplate } from '../../src/escape/escape.types';
 import { type GameHarness, nextEvent, settle } from '../game-harness';
 
@@ -58,6 +61,39 @@ export function fastTimings(h: GameHarness): EscapeTimings {
     wrongWindowS: 1,
     boardEveryMs: 50,
   });
+}
+
+/**
+ * The licence source the escape tests boot with (M7 §1.2): static. Call before
+ * bootGameApp; the settings read the environment when the module is built.
+ */
+export function useStaticLicenceSource(): void {
+  process.env.ESCAPE_LICENCE_SOURCE = 'static';
+  process.env.ESCAPE_STATIC_LICENCES = '';
+}
+
+/**
+ * The licences every host may use from now on, uses forgotten. The default is
+ * the Dev licence alone, so a legacy create (no session type) opens hosted.
+ */
+export function useLicences(h: GameHarness, licences: StaticLicence[] = [DEV_LICENCE]): void {
+  const port: unknown = h.app.get(LICENCE_PORT);
+  if (!(port instanceof StaticLicences)) throw new Error('the escape tests need the static source');
+  port.replace(licences);
+}
+
+/** escape:create of a session type, its ack as it comes (a PIN or a refusal). */
+export function createAs(
+  host: Socket,
+  templateId: string,
+  sessionType?: 'group' | 'race' | 'hosted',
+  opts: { licenceId?: string; race?: { format: 'solo' | 'teams'; startsAt?: number } } = {},
+): Promise<{ pin?: string; ok?: false; error?: { code: string } }> {
+  return host.emitWithAck('escape:create', {
+    templateId,
+    ...(sessionType ? { sessionType } : {}),
+    ...opts,
+  }) as Promise<{ pin?: string; ok?: false; error?: { code: string } }>;
 }
 
 /** Creates an escape room of `templateId` from `host` and returns its PIN. */
