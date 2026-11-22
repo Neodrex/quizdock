@@ -82,7 +82,8 @@ describe('escapeHostReducer: state', () => {
       hostTeamOf();
     const summary = {
       ...{ id, name, memberCount, connectedCount, stageIndex, stageCount, stageTitle },
-      ...{ locksSolved: 1, locksTotal: 2, hintsUsed: 0, escaped: false, timedOut: false },
+      ...{ locksSolved: 1, locksTotal: 2, hintsUsed: 0, escaped: false, escapedAtMs: null },
+      timedOut: false,
       ...{ remainingMs: 1000, deadlineAt: null },
     };
     const board = boardOf({ clock, teams: [summary] });

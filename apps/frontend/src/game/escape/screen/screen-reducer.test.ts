@@ -53,7 +53,7 @@ describe('screenReducer: board', () => {
     expect(ui.board).toBe(later);
   });
 
-  it('a new run forgets the last one: titles, finale and escape order', () => {
+  it('a new run forgets the last one: titles and finale', () => {
     const ui = run([
       { type: 'board', board: boardOf({ teams: [{ ...red, escaped: true }] }) },
       { type: 'screenFinale', finale: screenFinaleOf(), record: null },
@@ -70,7 +70,6 @@ describe('screenReducer: board', () => {
     expect(ui.board?.gameId).toBe('f'.repeat(32));
     expect(ui.stageTitles).toEqual({ 0: 'Other' });
     expect(ui.finale).toBeNull();
-    expect(ui.escapedOrder).toEqual([]);
   });
 });
 
@@ -145,11 +144,6 @@ describe('screenReducer: banners', () => {
     expect(ui.current).toBeNull();
     expect(ui.banners).toEqual([]);
   });
-
-  it('an escape announce learns the escape order', () => {
-    const ui = run([announce({ kind: 'escaped', teamId: 't2' })]);
-    expect(ui.escapedOrder).toEqual(['t2']);
-  });
 });
 
 describe('screenReducer: finale', () => {
@@ -191,25 +185,40 @@ describe('lanesOf', () => {
         { ...green, stageIndex: 2 },
       ],
     });
-    expect(lanesOf(board, []).map((l) => [l.id, l.place])).toEqual([
+    expect(lanesOf(board).map((l) => [l.id, l.place])).toEqual([
       ['t1', 3],
       ['t2', 2],
       ['t3', 1],
     ]);
   });
 
-  it('puts escaped teams first, by escape order', () => {
+  it('puts escaped teams first, by their escape run time', () => {
     const board = boardOf({
       teams: [
-        { ...red, escaped: true, stageIndex: 3 },
+        { ...red, escaped: true, escapedAtMs: 1_500_000, stageIndex: 3 },
         { ...blue, stageIndex: 2 },
-        { ...green, escaped: true, stageIndex: 3 },
+        { ...green, escaped: true, escapedAtMs: 1_200_000, stageIndex: 3 },
       ],
     });
-    expect(lanesOf(board, ['t3', 't1']).map((l) => [l.id, l.place])).toEqual([
+    expect(lanesOf(board).map((l) => [l.id, l.place])).toEqual([
       ['t1', 2],
       ['t2', 3],
       ['t3', 1],
+    ]);
+  });
+
+  it('a team given extra time that escaped later stays behind, even on a fresh screen (a reload)', () => {
+    // Red got +5:00 and escaped at 30:00, with more time left than Blue, out at 28:00.
+    const board = boardOf({
+      teams: [
+        { ...red, escaped: true, escapedAtMs: 1_800_000, remainingMs: 900_000, deadlineAt: null },
+        { ...blue, escaped: true, escapedAtMs: 1_680_000, remainingMs: 720_000, deadlineAt: null },
+      ],
+    });
+    const ui = run([{ type: 'board', board }]);
+    expect(lanesOf(ui.board!).map((l) => [l.id, l.place])).toEqual([
+      ['t1', 2],
+      ['t2', 1],
     ]);
   });
 
@@ -221,23 +230,7 @@ describe('lanesOf', () => {
         { ...green, remainingMs: 100_000 },
       ],
     });
-    expect(lanesOf(board, []).map((l) => l.place)).toEqual([2, 1, 2]);
-  });
-
-  it('learns the escape order from boards too', () => {
-    const ui = run([
-      { type: 'board', board: boardOf({ teams: [red, { ...blue, escaped: true }] }) },
-      {
-        type: 'board',
-        board: boardOf({
-          teams: [
-            { ...red, escaped: true },
-            { ...blue, escaped: true },
-          ],
-        }),
-      },
-    ]);
-    expect(ui.escapedOrder).toEqual(['t2', 't1']);
+    expect(lanesOf(board).map((l) => l.place)).toEqual([2, 1, 2]);
   });
 });
 
@@ -388,7 +381,7 @@ function keysOf(value: unknown, into = new Set<string>()): Set<string> {
 describe('the screen state holds no secret', () => {
   it('a JSON walk over every output finds no forbidden key', () => {
     const board = boardOf({
-      teams: [red, { ...blue, escaped: true }],
+      teams: [red, { ...blue, escaped: true, escapedAtMs: 1_000 }],
       roster: [{ teamId: 't1', nickname: 'Ana', connected: true }],
     });
     const ui = run([
@@ -397,7 +390,7 @@ describe('the screen state holds no secret', () => {
       { type: 'announce', announce: announceOf({ kind: 'hint' }), now: NOW },
       { type: 'screenFinale', finale: screenFinaleOf(), record: null },
     ]);
-    const outputs = [ui, lanesOf(board, ui.escapedOrder), showClockOf(board, NOW), lobbyOf(board)];
+    const outputs = [ui, lanesOf(board), showClockOf(board, NOW), lobbyOf(board)];
     const keys = keysOf(JSON.parse(JSON.stringify(outputs)));
     expect(FORBIDDEN.filter((k) => keys.has(k))).toEqual([]);
   });

@@ -60,8 +60,6 @@ export interface EscapeScreenUi {
   stageTitles: Record<number, string>;
   polite: Announcement[];
   replay: 'pending' | 'playing' | 'done';
-  /** Team ids in the order they escaped: the live places of escaped teams. */
-  escapedOrder: string[];
   /** The room closed after the finale: "Thanks for playing". */
   closed: boolean;
   /** The next banner or message id. */
@@ -76,7 +74,6 @@ export const initialScreenUi: EscapeScreenUi = {
   stageTitles: {},
   polite: [],
   replay: 'pending',
-  escapedOrder: [],
   closed: false,
   seq: 1,
 };
@@ -90,15 +87,6 @@ export type EscapeScreenAction =
   | { type: 'closed' }
   | { type: 'reset' };
 
-function learnEscapes(order: string[], teams: EscapeTeamSummary[]): string[] {
-  const fresh = teams
-    .filter((t) => t.escaped && !order.includes(t.id))
-    // Two in one board: the one with more time left got out first.
-    .sort((a, b) => b.remainingMs - a.remainingMs)
-    .map((t) => t.id);
-  return fresh.length ? [...order, ...fresh] : order;
-}
-
 function onBoard(ui: EscapeScreenUi, board: EscapeBoard): EscapeScreenUi {
   const prev = ui.board;
   const sameRun = prev?.gameId === board.gameId;
@@ -108,13 +96,7 @@ function onBoard(ui: EscapeScreenUi, board: EscapeBoard): EscapeScreenUi {
   for (const t of board.teams) if (t.stageTitle) stageTitles[t.stageIndex] = t.stageTitle;
   // A finale of another run is not this one's.
   const finale = base.finale && base.finale.gameId !== board.gameId ? null : base.finale;
-  return {
-    ...base,
-    board,
-    stageTitles,
-    finale,
-    escapedOrder: learnEscapes(base.escapedOrder, board.teams),
-  };
+  return { ...base, board, stageTitles, finale };
 }
 
 /** Shows the next waiting banner when the current one is done (or none is up). */
@@ -137,15 +119,16 @@ function advance(ui: EscapeScreenUi, now: number): EscapeScreenUi {
   };
 }
 
+/**
+ * An announce carries no run id: one of a new run that came before its first board would
+ * queue under the last run's board. It cannot happen in practice: a run's first board
+ * goes out at `escape:open`, while forming, and announces only come once it runs.
+ */
 function onAnnounce(ui: EscapeScreenUi, a: EscapeAnnounce, now: number): EscapeScreenUi {
-  const escapedOrder =
-    a.kind === 'escaped' && !ui.escapedOrder.includes(a.teamId)
-      ? [...ui.escapedOrder, a.teamId]
-      : ui.escapedOrder;
   // A second hint for a team already waiting for one says nothing new.
   const dup =
     a.kind === 'hint' && ui.banners.some((b) => b.kind === 'hint' && b.teamId === a.teamId);
-  if (dup) return { ...ui, escapedOrder };
+  if (dup) return ui;
   const banner: Banner = {
     kind: a.kind,
     teamId: a.teamId,
@@ -159,7 +142,7 @@ function onAnnounce(ui: EscapeScreenUi, a: EscapeAnnounce, now: number): EscapeS
   const banners = [...ui.banners, banner]
     .sort((x, y) => PRIORITY[y.kind] - PRIORITY[x.kind])
     .slice(0, MAX_WAITING_BANNERS + (ui.current ? 0 : 1));
-  return advance({ ...ui, banners, escapedOrder, seq: ui.seq + 1 }, now);
+  return advance({ ...ui, banners, seq: ui.seq + 1 }, now);
 }
 
 export function screenReducer(ui: EscapeScreenUi, a: EscapeScreenAction): EscapeScreenUi {
@@ -188,31 +171,27 @@ export function screenReducer(ui: EscapeScreenUi, a: EscapeScreenAction): Escape
 
 export type Lane = EscapeTeamSummary & { place: number };
 
-/** Negative when `a` ranks before `b`: escaped by escape order, then stage, locks, time left. */
-function compareTeams(order: string[]) {
-  const rankOf = (id: string) => {
-    const i = order.indexOf(id);
-    return i === -1 ? Number.MAX_SAFE_INTEGER : i;
-  };
-  return (a: EscapeTeamSummary, b: EscapeTeamSummary): number => {
-    if (a.escaped !== b.escaped) return a.escaped ? -1 : 1;
-    if (a.escaped) {
-      const byOrder = rankOf(a.id) - rankOf(b.id);
-      if (byOrder) return byOrder;
-    } else {
-      if (a.stageIndex !== b.stageIndex) return b.stageIndex - a.stageIndex;
-      if (a.locksSolved !== b.locksSolved) return b.locksSolved - a.locksSolved;
-    }
-    return b.remainingMs - a.remainingMs;
-  };
+/**
+ * Negative when `a` ranks before `b`: escaped teams by their escape run time (the
+ * server's, so extra time and a reload change nothing), then stage, locks, time left.
+ */
+function compareTeams(a: EscapeTeamSummary, b: EscapeTeamSummary): number {
+  if (a.escaped !== b.escaped) return a.escaped ? -1 : 1;
+  if (a.escaped) {
+    const byTime = (a.escapedAtMs ?? Infinity) - (b.escapedAtMs ?? Infinity);
+    if (byTime) return byTime;
+  } else {
+    if (a.stageIndex !== b.stageIndex) return b.stageIndex - a.stageIndex;
+    if (a.locksSolved !== b.locksSolved) return b.locksSolved - a.locksSolved;
+  }
+  return b.remainingMs - a.remainingMs;
 }
 
 /** The lanes in team order (owner question 5), each with its live place; ties share one. */
-export function lanesOf(board: EscapeBoard, escapedOrder: string[]): Lane[] {
-  const cmp = compareTeams(escapedOrder);
+export function lanesOf(board: EscapeBoard): Lane[] {
   return board.teams.map((t) => ({
     ...t,
-    place: 1 + board.teams.filter((o) => cmp(o, t) < 0).length,
+    place: 1 + board.teams.filter((o) => compareTeams(o, t) < 0).length,
   }));
 }
 

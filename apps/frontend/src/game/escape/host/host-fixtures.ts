@@ -108,6 +108,7 @@ export const hostTeamOf = (over: Partial<EscapeHostTeam> = {}): EscapeHostTeam =
   locksTotal: 2,
   hintsUsed: 0,
   escaped: false,
+  escapedAtMs: null,
   timedOut: false,
   remainingMs: 2_400_000,
   deadlineAt: 1_002_400_000,

@@ -203,6 +203,8 @@ export interface EscapeTeamSummary {
   locksTotal: number;
   hintsUsed: number;
   escaped: boolean;
+  /** Run time (ms) at the team's escape, pauses excluded, no extra time or penalties; null until then. */
+  escapedAtMs: number | null;
   timedOut: boolean;
   remainingMs: number;
   deadlineAt: number | null;

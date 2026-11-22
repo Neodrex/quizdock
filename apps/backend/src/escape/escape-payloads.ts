@@ -154,6 +154,7 @@ export function teamSummaryOf(v: RunView, rec: TeamRecord): EscapeTeamSummary {
     locksTotal: stage.locks.length,
     hintsUsed: team.hintsUsed.length,
     escaped: team.escapedAt !== null,
+    escapedAtMs: team.escapedAt,
     timedOut: rec.timedOut,
     ...teamClockOf(v, rec),
   };

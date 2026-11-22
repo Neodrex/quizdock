@@ -254,10 +254,16 @@ describe('boardOf', () => {
       locksTotal: 2,
       hintsUsed: 0,
       escaped: false,
+      escapedAtMs: null,
       timedOut: false,
       remainingMs: 2_280_000,
       deadlineAt: NOW + 2_280_000,
     });
+  });
+
+  it('gives an escaped team its escape run time, extra time left out (the live places)', () => {
+    const escaped: TeamState = { ...teamA, escapedAt: 900_000, adjustMs: 120_000 };
+    expect(boardOf(view(escaped)).teams[0]).toMatchObject({ escaped: true, escapedAtMs: 900_000 });
   });
 
   it('says the run and how teams form (M6 Task 6.2)', () => {
