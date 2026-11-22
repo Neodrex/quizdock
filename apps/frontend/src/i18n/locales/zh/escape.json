@@ -143,6 +143,33 @@
       "timeUp": "{{team}}：时间到",
       "stuck": "{{team}} 卡在 {{stage}}（{{minutes}} 分钟）",
       "disconnected": "{{name}} 已断开连接（{{team}}）"
+    },
+    "rooms": {
+      "intro": "选择一个房间并打开。玩家在手机上输入 PIN 加入。",
+      "empty": "还没有密室逃脱房间",
+      "emptyHint": "添加两个示例房间，发布其中一个并打开。",
+      "addSamples": "添加示例房间",
+      "addSamplesFailed": "无法添加示例房间，请重试。",
+      "mode": {
+        "roles": "角色与组合锁",
+        "parallel": "并行锁"
+      },
+      "difficulty": {
+        "standard": "普通",
+        "hard": "困难"
+      },
+      "minutes": "{{minutes}} 分钟",
+      "stages": "关卡：{{stages}}",
+      "status": {
+        "published": "已发布",
+        "draft": "草稿"
+      },
+      "publishFirst": "请先发布",
+      "publish": "发布",
+      "unreadable": "无法读取此房间，因此无法打开。",
+      "create": "创建房间",
+      "creating": "正在打开…",
+      "length": "时长 {{minutes}} 分钟。游戏中可以加时。"
     }
   }
 }

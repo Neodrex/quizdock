@@ -161,6 +161,33 @@
       "timeUp": "{{team}}: koniec czasu",
       "stuck": "{{team}} utknęła na etapie {{stage}} ({{minutes}} min)",
       "disconnected": "{{name}} traci połączenie ({{team}})"
+    },
+    "rooms": {
+      "intro": "Wybierz pokój i otwórz go. Gracze dołączają kodem PIN na telefonie.",
+      "empty": "Nie ma jeszcze escape roomów",
+      "emptyHint": "Dodaj dwa przykładowe pokoje, opublikuj jeden i otwórz go.",
+      "addSamples": "Dodaj przykładowe pokoje",
+      "addSamplesFailed": "Nie udało się dodać przykładowych pokoi. Spróbuj ponownie.",
+      "mode": {
+        "roles": "Role i kłódki łączone",
+        "parallel": "Kłódki równoległe"
+      },
+      "difficulty": {
+        "standard": "Normalny",
+        "hard": "Trudny"
+      },
+      "minutes": "{{minutes}} min",
+      "stages": "Etapy: {{stages}}",
+      "status": {
+        "published": "Opublikowany",
+        "draft": "Szkic"
+      },
+      "publishFirst": "Najpierw go opublikuj",
+      "publish": "Opublikuj",
+      "unreadable": "Tego pokoju nie da się odczytać, więc nie można go otworzyć.",
+      "create": "Utwórz pokój",
+      "creating": "Otwieranie…",
+      "length": "Trwa {{minutes}} min. W trakcie gry możesz dodać czas."
     }
   }
 }

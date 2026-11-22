@@ -155,6 +155,33 @@
       "timeUp": "{{team}}: se acabó el tiempo",
       "stuck": "{{team}} está atascado en {{stage}} ({{minutes}} min)",
       "disconnected": "{{name}} se desconectó ({{team}})"
+    },
+    "rooms": {
+      "intro": "Elige una sala y ábrela. Los jugadores entran con el PIN en su móvil.",
+      "empty": "Todavía no hay salas de escape",
+      "emptyHint": "Añade las dos salas de ejemplo, publica una y ábrela.",
+      "addSamples": "Añadir las salas de ejemplo",
+      "addSamplesFailed": "No se pudieron añadir las salas de ejemplo. Inténtalo de nuevo.",
+      "mode": {
+        "roles": "Roles y candados combinados",
+        "parallel": "Candados en paralelo"
+      },
+      "difficulty": {
+        "standard": "Normal",
+        "hard": "Difícil"
+      },
+      "minutes": "{{minutes}} min",
+      "stages": "Etapas: {{stages}}",
+      "status": {
+        "published": "Publicada",
+        "draft": "Borrador"
+      },
+      "publishFirst": "Publícala primero",
+      "publish": "Publicar",
+      "unreadable": "No se puede leer esta sala, así que no se puede abrir.",
+      "create": "Crear sala",
+      "creating": "Abriendo…",
+      "length": "Dura {{minutes}} min. Puedes añadir tiempo durante la partida."
     }
   }
 }

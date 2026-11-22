@@ -143,6 +143,33 @@
       "timeUp": "{{team}}：時間到",
       "stuck": "{{team}} 卡在 {{stage}}（{{minutes}} 分鐘）",
       "disconnected": "{{name}} 已中斷連線（{{team}}）"
+    },
+    "rooms": {
+      "intro": "選擇一個房間並開啟。玩家在手機上輸入 PIN 加入。",
+      "empty": "還沒有密室逃脫房間",
+      "emptyHint": "新增兩個範例房間，發布其中一個並開啟。",
+      "addSamples": "新增範例房間",
+      "addSamplesFailed": "無法新增範例房間，請再試一次。",
+      "mode": {
+        "roles": "角色與組合鎖",
+        "parallel": "平行鎖"
+      },
+      "difficulty": {
+        "standard": "普通",
+        "hard": "困難"
+      },
+      "minutes": "{{minutes}} 分鐘",
+      "stages": "關卡：{{stages}}",
+      "status": {
+        "published": "已發布",
+        "draft": "草稿"
+      },
+      "publishFirst": "請先發布",
+      "publish": "發布",
+      "unreadable": "無法讀取此房間，因此無法開啟。",
+      "create": "建立房間",
+      "creating": "正在開啟…",
+      "length": "時長 {{minutes}} 分鐘。遊戲中可以加時。"
     }
   }
 }

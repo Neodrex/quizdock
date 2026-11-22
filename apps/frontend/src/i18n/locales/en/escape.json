@@ -149,6 +149,33 @@
       "timeUp": "{{team}}: time is up",
       "stuck": "{{team}} is stuck on {{stage}} ({{minutes}} min)",
       "disconnected": "{{name}} disconnected ({{team}})"
+    },
+    "rooms": {
+      "intro": "Pick a room and open it. Players join with the PIN on their phones.",
+      "empty": "No escape rooms yet",
+      "emptyHint": "Add the two sample rooms, publish one and open it.",
+      "addSamples": "Add the sample rooms",
+      "addSamplesFailed": "Could not add the sample rooms. Try again.",
+      "mode": {
+        "roles": "Roles and combined locks",
+        "parallel": "Parallel locks"
+      },
+      "difficulty": {
+        "standard": "Standard",
+        "hard": "Hard"
+      },
+      "minutes": "{{minutes}} min",
+      "stages": "Stages: {{stages}}",
+      "status": {
+        "published": "Published",
+        "draft": "Draft"
+      },
+      "publishFirst": "Publish it first",
+      "publish": "Publish",
+      "unreadable": "This room cannot be read, so it cannot be opened.",
+      "create": "Create room",
+      "creating": "Opening…",
+      "length": "Lasts {{minutes}} min. You can add time during the game."
     }
   }
 }

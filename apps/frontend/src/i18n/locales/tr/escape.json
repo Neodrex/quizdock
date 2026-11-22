@@ -149,6 +149,33 @@
       "timeUp": "{{team}}: süre doldu",
       "stuck": "{{team}}, {{stage}} aşamasında takıldı ({{minutes}} dk)",
       "disconnected": "{{name}} bağlantısı koptu ({{team}})"
+    },
+    "rooms": {
+      "intro": "Bir oda seçip açın. Oyuncular telefonlarından PIN ile katılır.",
+      "empty": "Henüz kaçış odası yok",
+      "emptyHint": "İki örnek odayı ekleyin, birini yayınlayın ve açın.",
+      "addSamples": "Örnek odaları ekle",
+      "addSamplesFailed": "Örnek odalar eklenemedi. Tekrar deneyin.",
+      "mode": {
+        "roles": "Roller ve birleşik kilitler",
+        "parallel": "Paralel kilitler"
+      },
+      "difficulty": {
+        "standard": "Normal",
+        "hard": "Zor"
+      },
+      "minutes": "{{minutes}} dk",
+      "stages": "Aşamalar: {{stages}}",
+      "status": {
+        "published": "Yayında",
+        "draft": "Taslak"
+      },
+      "publishFirst": "Önce yayınlayın",
+      "publish": "Yayınla",
+      "unreadable": "Bu oda okunamıyor, bu yüzden açılamaz.",
+      "create": "Oda oluştur",
+      "creating": "Açılıyor…",
+      "length": "{{minutes}} dk sürer. Oyun sırasında süre ekleyebilirsiniz."
     }
   }
 }

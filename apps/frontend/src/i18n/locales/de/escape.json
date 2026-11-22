@@ -149,6 +149,33 @@
       "timeUp": "{{team}}: Zeit abgelaufen",
       "stuck": "{{team}} steckt bei {{stage}} fest ({{minutes}} Min.)",
       "disconnected": "{{name}} hat die Verbindung verloren ({{team}})"
+    },
+    "rooms": {
+      "intro": "Wähle einen Raum und öffne ihn. Die Spieler treten mit der PIN auf dem Handy bei.",
+      "empty": "Noch keine Escape-Räume",
+      "emptyHint": "Füge die zwei Beispielräume hinzu, veröffentliche einen und öffne ihn.",
+      "addSamples": "Beispielräume hinzufügen",
+      "addSamplesFailed": "Die Beispielräume konnten nicht hinzugefügt werden. Versuche es erneut.",
+      "mode": {
+        "roles": "Rollen und kombinierte Schlösser",
+        "parallel": "Parallele Schlösser"
+      },
+      "difficulty": {
+        "standard": "Normal",
+        "hard": "Schwer"
+      },
+      "minutes": "{{minutes}} Min.",
+      "stages": "Etappen: {{stages}}",
+      "status": {
+        "published": "Veröffentlicht",
+        "draft": "Entwurf"
+      },
+      "publishFirst": "Zuerst veröffentlichen",
+      "publish": "Veröffentlichen",
+      "unreadable": "Dieser Raum ist nicht lesbar und kann daher nicht geöffnet werden.",
+      "create": "Raum erstellen",
+      "creating": "Wird geöffnet…",
+      "length": "Dauert {{minutes}} Min. Während des Spiels kannst du Zeit hinzufügen."
     }
   }
 }

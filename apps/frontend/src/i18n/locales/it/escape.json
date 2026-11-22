@@ -155,6 +155,33 @@
       "timeUp": "{{team}}: tempo scaduto",
       "stuck": "{{team}} è bloccata su {{stage}} ({{minutes}} min)",
       "disconnected": "{{name}} si è disconnesso ({{team}})"
+    },
+    "rooms": {
+      "intro": "Scegli una stanza e aprila. I giocatori entrano con il PIN sul telefono.",
+      "empty": "Ancora nessuna escape room",
+      "emptyHint": "Aggiungi le due stanze di esempio, pubblicane una e aprila.",
+      "addSamples": "Aggiungi le stanze di esempio",
+      "addSamplesFailed": "Impossibile aggiungere le stanze di esempio. Riprova.",
+      "mode": {
+        "roles": "Ruoli e lucchetti combinati",
+        "parallel": "Lucchetti in parallelo"
+      },
+      "difficulty": {
+        "standard": "Normale",
+        "hard": "Difficile"
+      },
+      "minutes": "{{minutes}} min",
+      "stages": "Tappe: {{stages}}",
+      "status": {
+        "published": "Pubblicata",
+        "draft": "Bozza"
+      },
+      "publishFirst": "Prima pubblicala",
+      "publish": "Pubblica",
+      "unreadable": "Questa stanza non è leggibile, quindi non si può aprire.",
+      "create": "Crea stanza",
+      "creating": "Apertura…",
+      "length": "Dura {{minutes}} min. Puoi aggiungere tempo durante la partita."
     }
   }
 }

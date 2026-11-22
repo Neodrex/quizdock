@@ -143,6 +143,33 @@
       "timeUp": "{{team}}：時間切れ",
       "stuck": "{{team}} が {{stage}} で行き詰まっています（{{minutes}} 分）",
       "disconnected": "{{name}} の接続が切れました（{{team}}）"
+    },
+    "rooms": {
+      "intro": "ルームを選んで開きます。プレイヤーはスマートフォンで PIN を入力して参加します。",
+      "empty": "脱出ゲームのルームはまだありません",
+      "emptyHint": "サンプルルームを2つ追加し、1つを公開して開きましょう。",
+      "addSamples": "サンプルルームを追加",
+      "addSamplesFailed": "サンプルルームを追加できませんでした。もう一度お試しください。",
+      "mode": {
+        "roles": "役割と組み合わせ錠",
+        "parallel": "並行ロック"
+      },
+      "difficulty": {
+        "standard": "ふつう",
+        "hard": "むずかしい"
+      },
+      "minutes": "{{minutes}} 分",
+      "stages": "ステージ：{{stages}}",
+      "status": {
+        "published": "公開中",
+        "draft": "下書き"
+      },
+      "publishFirst": "先に公開してください",
+      "publish": "公開",
+      "unreadable": "このルームは読み込めないため、開けません。",
+      "create": "ルームを作成",
+      "creating": "開いています…",
+      "length": "所要時間 {{minutes}} 分。ゲーム中に時間を追加できます。"
     }
   }
 }

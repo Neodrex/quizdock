@@ -155,6 +155,33 @@
       "timeUp": "{{team}} : temps écoulé",
       "stuck": "{{team}} bloque sur {{stage}} ({{minutes}} min)",
       "disconnected": "{{name}} s’est déconnecté·e ({{team}})"
+    },
+    "rooms": {
+      "intro": "Choisissez une salle et ouvrez-la. Les joueurs la rejoignent avec le PIN sur leur téléphone.",
+      "empty": "Aucun escape game pour l’instant",
+      "emptyHint": "Ajoutez les deux salles d’exemple, publiez-en une et ouvrez-la.",
+      "addSamples": "Ajouter les salles d’exemple",
+      "addSamplesFailed": "Impossible d’ajouter les salles d’exemple. Réessayez.",
+      "mode": {
+        "roles": "Rôles et cadenas combinés",
+        "parallel": "Cadenas en parallèle"
+      },
+      "difficulty": {
+        "standard": "Normal",
+        "hard": "Difficile"
+      },
+      "minutes": "{{minutes}} min",
+      "stages": "Étapes : {{stages}}",
+      "status": {
+        "published": "Publié",
+        "draft": "Brouillon"
+      },
+      "publishFirst": "Publiez-le d’abord",
+      "publish": "Publier",
+      "unreadable": "Cette salle est illisible : impossible de l’ouvrir.",
+      "create": "Créer la salle",
+      "creating": "Ouverture…",
+      "length": "Dure {{minutes}} min. Vous pourrez ajouter du temps pendant la partie."
     }
   }
 }

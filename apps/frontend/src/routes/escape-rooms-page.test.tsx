@@ -1,9 +1,63 @@
-import { screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { configureAnonymousParticipants } from '../config';
 import { mockApi, renderApp } from '../test/harness';
 
+const { createEscapeRoom } = vi.hoisted(() => ({
+  createEscapeRoom: vi.fn<(id: string, o?: unknown) => Promise<{ pin: string }>>(),
+}));
+vi.mock('../game/escape/host/host-client', async (orig) => ({
+  ...(await orig<typeof import('../game/escape/host/host-client')>()),
+  createEscapeRoom: (id: string, o?: unknown) => createEscapeRoom(id, o),
+}));
+// The console the create leads to: not under test here.
+vi.mock('./control-page', () => ({ ControlPage: () => <h1>console</h1> }));
+
+const item = {
+  id: 'e1',
+  title: 'Vault Heist',
+  status: 'published',
+  version: 1,
+  updatedAt: '2026-11-22T10:00:00.000Z',
+  mode: 'roles',
+  difficulty: 'standard',
+  targetMinutes: 40,
+  stageCount: 4,
+};
+const draft = {
+  ...item,
+  id: 'e2',
+  title: 'Lost Library',
+  status: 'draft',
+  version: 0,
+  mode: 'parallel',
+  difficulty: 'hard',
+  targetMinutes: 30,
+  stageCount: 3,
+};
+// A stored row the schema no longer reads: no picker fields.
+const broken = {
+  ...item,
+  id: 'e3',
+  title: 'Broken',
+  mode: null,
+  difficulty: null,
+  targetMinutes: null,
+  stageCount: null,
+};
+
+function signedIn() {
+  localStorage.setItem('live.localUser', 'Animateur');
+}
+const card = (title: string) => screen.getByRole('article', { name: title });
+
 describe('/escape', () => {
-  afterEach(() => localStorage.clear());
+  afterEach(() => {
+    localStorage.clear();
+    configureAnonymousParticipants(false);
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
 
   it('sends a signed-out visitor to the sign-in page', async () => {
     mockApi([]);
@@ -12,11 +66,192 @@ describe('/escape', () => {
   });
 
   it('is in the nav as "Escape rooms", marked as the current page', async () => {
-    localStorage.setItem('live.localUser', 'Animateur');
-    mockApi([]);
+    signedIn();
+    mockApi([{ path: '/escape-templates', body: [] }]);
     renderApp('/escape');
     await screen.findByRole('heading', { level: 1 });
     const links = screen.getAllByRole('link', { name: 'Escape games' });
     expect(links[0]).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('lists each template: title, mode, difficulty, length, stages and status', async () => {
+    signedIn();
+    mockApi([{ path: '/escape-templates', body: [item, draft] }]);
+    renderApp('/escape');
+    await screen.findByRole('article', { name: 'Vault Heist' });
+    const vault = within(card('Vault Heist'));
+    expect(vault.getByText('Rôles et cadenas combinés')).toBeInTheDocument();
+    expect(vault.getByText('Normal')).toBeInTheDocument();
+    expect(vault.getByText('40 min')).toBeInTheDocument();
+    expect(vault.getByText('Étapes : 4')).toBeInTheDocument();
+    expect(vault.getByText('Publié')).toBeInTheDocument();
+    const library = within(card('Lost Library'));
+    expect(library.getByText('Cadenas en parallèle')).toBeInTheDocument();
+    expect(library.getByText('Difficile')).toBeInTheDocument();
+    expect(library.getByText('Brouillon')).toBeInTheDocument();
+  });
+
+  it('shows the length read-only: no duration field', async () => {
+    signedIn();
+    mockApi([{ path: '/escape-templates', body: [item] }]);
+    renderApp('/escape');
+    await screen.findByRole('article', { name: 'Vault Heist' });
+    expect(
+      within(card('Vault Heist')).getByText(
+        'Dure 40 min. Vous pourrez ajouter du temps pendant la partie.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('spinbutton')).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
+  });
+
+  it('empty: adds the sample rooms (list items only), then the list shows them', async () => {
+    signedIn();
+    let added = false;
+    const api = mockApi([
+      { path: '/escape-templates', body: [] },
+      { method: 'POST', path: /\/escape-templates\/samples\?view=summary$/, body: [draft] },
+    ]);
+    renderApp('/escape');
+    const add = await screen.findByRole('button', { name: 'Ajouter les salles d’exemple' });
+    // The refreshed list.
+    api.mockImplementation(async (_url: string, opts?: RequestInit) => {
+      if ((opts?.method ?? 'GET') === 'POST') {
+        added = true;
+        return Response.json([draft], { status: 201 });
+      }
+      return Response.json(added ? [draft] : []);
+    });
+    fireEvent.click(add);
+    expect(await screen.findByRole('article', { name: 'Lost Library' })).toBeInTheDocument();
+    expect(api.mock.calls.some(([url]) => String(url).endsWith('/samples?view=summary'))).toBe(
+      true,
+    );
+  });
+
+  it('a draft is greyed out and cannot be launched; Publish (summary) refreshes the list', async () => {
+    signedIn();
+    let published = false;
+    const api = vi.fn(async (url: string, opts?: RequestInit) => {
+      if ((opts?.method ?? 'GET') === 'POST' && url.endsWith('/e2/publish?view=summary')) {
+        published = true;
+        return Response.json({ ...draft, status: 'published', version: 1 });
+      }
+      return Response.json(published ? [{ ...draft, status: 'published' }] : [draft]);
+    });
+    vi.stubGlobal('fetch', api);
+    renderApp('/escape');
+    await screen.findByRole('article', { name: 'Lost Library' });
+    const library = within(card('Lost Library'));
+    expect(card('Lost Library')).toHaveAttribute('aria-disabled', 'true');
+    expect(library.getByText('Publiez-le d’abord')).toBeInTheDocument();
+    expect(library.getByRole('button', { name: 'Créer la salle' })).toBeDisabled();
+    fireEvent.click(library.getByRole('button', { name: 'Publier' }));
+    await waitFor(() =>
+      expect(
+        within(card('Lost Library')).getByRole('button', { name: 'Créer la salle' }),
+      ).toBeEnabled(),
+    );
+    expect(createEscapeRoom).not.toHaveBeenCalled();
+  });
+
+  it('a refused publish says why', async () => {
+    signedIn();
+    mockApi([
+      { path: '/escape-templates', body: [draft] },
+      {
+        method: 'POST',
+        path: /\/e2\/publish\?view=summary$/,
+        status: 400,
+        body: { code: 'escape_template.invalid', problems: ['x'] },
+      },
+    ]);
+    renderApp('/escape');
+    await screen.findByRole('article', { name: 'Lost Library' });
+    fireEvent.click(within(card('Lost Library')).getByRole('button', { name: 'Publier' }));
+    expect(await within(card('Lost Library')).findByRole('alert')).toHaveTextContent(
+      'Ce modèle de jeu d’évasion n’est pas valide.',
+    );
+  });
+
+  it('a row without a mode (unreadable) is greyed out, with no Create nor Publish', async () => {
+    signedIn();
+    mockApi([{ path: '/escape-templates', body: [broken] }]);
+    renderApp('/escape');
+    await screen.findByRole('article', { name: 'Broken' });
+    const row = within(card('Broken'));
+    expect(card('Broken')).toHaveAttribute('aria-disabled', 'true');
+    expect(
+      row.getByText('Cette salle est illisible : impossible de l’ouvrir.'),
+    ).toBeInTheDocument();
+    expect(row.getByRole('button', { name: 'Créer la salle' })).toBeDisabled();
+    expect(row.queryByRole('button', { name: 'Publier' })).toBeNull();
+  });
+
+  it('Create emits once on a double click, then opens the console', async () => {
+    signedIn();
+    let open: (v: { pin: string }) => void = () => {};
+    createEscapeRoom.mockImplementation(() => new Promise((r) => (open = r)));
+    mockApi([{ path: '/escape-templates', body: [item] }]);
+    const { router } = renderApp('/escape');
+    await screen.findByRole('article', { name: 'Vault Heist' });
+    const create = within(card('Vault Heist')).getByRole('button', { name: 'Créer la salle' });
+    fireEvent.click(create);
+    fireEvent.click(create);
+    expect(createEscapeRoom).toHaveBeenCalledTimes(1);
+    expect(createEscapeRoom).toHaveBeenCalledWith('e1', {});
+    open({ pin: '482913' });
+    await waitFor(() => expect(router.state.location.pathname).toBe('/session/482913/console'));
+  });
+
+  it('under OIDC with open access offered, asks how players get in first', async () => {
+    configureAnonymousParticipants(true);
+    createEscapeRoom.mockResolvedValue({ pin: '482913' });
+    mockApi([
+      { path: '/escape-templates', body: [item] },
+      { path: '/me/preferences', body: {} },
+      {
+        path: '/me',
+        body: { id: 'u1', displayName: 'Hôte', email: null, roles: ['host'], subject: 'kc' },
+      },
+    ]);
+    const { router } = renderApp('/escape', 'oidc', true);
+    await screen.findByRole('article', { name: 'Vault Heist' });
+    fireEvent.click(within(card('Vault Heist')).getByRole('button', { name: 'Créer la salle' }));
+    fireEvent.click(await screen.findByRole('radio', { name: /Accès libre/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Lancer' }));
+    await waitFor(() =>
+      expect(createEscapeRoom).toHaveBeenCalledWith('e1', { participantAccess: 'open' }),
+    );
+    await waitFor(() => expect(router.state.location.pathname).toBe('/session/482913/console'));
+  });
+
+  it('a refused create shows its text', async () => {
+    signedIn();
+    createEscapeRoom.mockRejectedValue(
+      Object.assign(new Error('Ce modèle de jeu d’évasion n’est pas valide.'), {
+        code: 'escape_template.invalid',
+      }),
+    );
+    mockApi([{ path: '/escape-templates', body: [item] }]);
+    renderApp('/escape');
+    await screen.findByRole('article', { name: 'Vault Heist' });
+    fireEvent.click(within(card('Vault Heist')).getByRole('button', { name: 'Créer la salle' }));
+    expect(await within(card('Vault Heist')).findByRole('alert')).toHaveTextContent(
+      'Ce modèle de jeu d’évasion n’est pas valide.',
+    );
+    expect(
+      within(card('Vault Heist')).getByRole('button', { name: 'Créer la salle' }),
+    ).toBeEnabled();
+  });
+
+  it('buttons are tap-sized (laptop and tablet)', async () => {
+    signedIn();
+    mockApi([{ path: '/escape-templates', body: [item, draft] }]);
+    renderApp('/escape');
+    await screen.findByRole('article', { name: 'Vault Heist' });
+    for (const b of screen.getAllByRole('button', { name: /Créer la salle|Publier/ })) {
+      expect(b.className).toMatch(/min-h-1[12]/);
+    }
   });
 });
