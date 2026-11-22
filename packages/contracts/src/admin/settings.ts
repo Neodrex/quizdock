@@ -904,6 +904,34 @@ export const SETTINGS = {
     internal: true,
   }),
 
+  // Escape rooms (M7): who owns the licences of hosted events.
+  ESCAPE_LICENCE_SOURCE: define({
+    key: 'ESCAPE_LICENCE_SOURCE',
+    description:
+      'Where hosted escape events find their licences: `none` = no hosted events (group play and races still work); `static` = the licences listed in `ESCAPE_STATIC_LICENCES`, for development and the tests.',
+    category: 'internal',
+    criticality: 'C2',
+    schema: oneOf(['none', 'static'] as const),
+    accepts: '`none` · `static`',
+    default: 'none' as 'none' | 'static',
+    applies: 'restart',
+    overridable: false,
+    internal: true,
+  }),
+  ESCAPE_STATIC_LICENCES: define({
+    key: 'ESCAPE_STATIC_LICENCES',
+    description:
+      'The licences of `ESCAPE_LICENCE_SOURCE=static`: a JSON array of licences, each with the `hosts` (user ids, emails or `*`) who may use it. Read once at start-up: an invalid value stops it.',
+    category: 'internal',
+    criticality: 'C2',
+    schema: text(),
+    accepts: 'a JSON array of licences',
+    default: '',
+    applies: 'restart',
+    overridable: false,
+    internal: true,
+  }),
+
   // Administration
   ADMIN_WEB_SCOPE: define({
     key: 'ADMIN_WEB_SCOPE',

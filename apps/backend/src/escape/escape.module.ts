@@ -7,10 +7,11 @@ import { EscapeTimings } from './escape-timings';
 import { EscapeEngine } from './escape.engine';
 import { EscapeGateway } from './escape.gateway';
 import { EscapeStore } from './escape.store';
+import { LicencesModule } from './licences/licences.module';
 
 /** Live escape rooms: their templates (M2) and the live run over the `/game` namespace (M3). */
 @Module({
-  imports: [GameStateModule],
+  imports: [GameStateModule, LicencesModule],
   controllers: [EscapeTemplatesController],
   providers: [
     EscapeTemplatesService,
