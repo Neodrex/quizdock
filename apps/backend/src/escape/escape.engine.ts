@@ -710,19 +710,37 @@ export class EscapeEngine implements OnModuleDestroy {
   }
 
   /**
-   * A finished run's stored finale, the room ended or not. Only for someone who
-   * was in the room: a socket whose PIN is the run's (phone, screen, host
-   * console), or a phone with the session token it joined that room with.
+   * A finished run's stored finale, the room ended or not, for someone who was
+   * in this run (§1.6 of the M4 plan):
+   * - a phone, by the session token it joined with: the token's room is the
+   *   run's and its player was in a team of the run. A socket that is a player
+   *   must take this path; its PIN alone never passes;
+   * - a host console or screen (no player), by its live room, while the PIN's
+   *   current game is still this run. A recycled PIN or a room that moved on to
+   *   another game has another id.
    */
   async results(socket: EscapeSocket, dto: EscapeResults): Promise<EscapeFinale> {
     const id = dto.gameId as GameId;
     const [pin, finale] = await Promise.all([this.store.roomOf(id), this.store.results(id)]);
     if (!pin || !finale) throw new NotFoundException('escape.not_found');
-    const session = dto.sessionToken ? await this.game.resolveSession(dto.sessionToken) : null;
-    if (socket.data.pin !== pin && session?.pin !== pin) {
+    if (!(await this.wasInRun(socket, dto.sessionToken, id, pin))) {
       throw new ForbiddenException('escape.not_in_room');
     }
     return finale;
+  }
+
+  private async wasInRun(
+    socket: EscapeSocket,
+    sessionToken: string | undefined,
+    id: GameId,
+    pin: string,
+  ): Promise<boolean> {
+    const session = sessionToken ? await this.game.resolveSession(sessionToken) : null;
+    if (session) {
+      return session.pin === pin && (await this.store.teamOfPlayer(id, session.playerId)) !== null;
+    }
+    if (socket.data.playerId || socket.data.pin !== pin) return false;
+    return (await this.game.getMeta(pin))?.id === id;
   }
 
   /**

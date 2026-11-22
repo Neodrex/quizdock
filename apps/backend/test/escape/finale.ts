@@ -12,6 +12,7 @@ import {
   type RunningRoom,
   createEscape,
   eventually,
+  joinAndSync,
   record,
   runningRoom,
   stateWhere,
@@ -181,8 +182,11 @@ export function finaleTests(ctx: EscapeContext): void {
     host.emit('host:end', { pin });
     const f = await finale;
     await ended;
-    // Still connected: the phone, the screen and the host console.
-    for (const s of [a.socket, screen, host]) {
+    // Still connected: the phone (with its token), the screen and the host console.
+    expect(
+      await a.socket.emitWithAck('escape:results', { gameId: id, sessionToken: a.sessionToken }),
+    ).toEqual({ ok: true, finale: f });
+    for (const s of [screen, host]) {
       expect(await s.emitWithAck('escape:results', { gameId: id })).toEqual({
         ok: true,
         finale: f,
@@ -206,6 +210,42 @@ export function finaleTests(ctx: EscapeContext): void {
       ok: false,
       error: { code: 'escape.not_found' },
     });
+  });
+
+  it('escape:results: a phone needs its token; a switched room refuses the old run to newcomers, host and screen', async () => {
+    const { pin, host, players, screen } = await runningRoom(ctx, { players: 1, teams: 1 });
+    const id = await gameId(pin);
+    const [a] = players;
+    const finale = finaleOn(a.socket);
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    const f = await finale;
+    const refused = { ok: false, error: { code: 'escape.not_in_room' } };
+    const ask = (s: Socket, sessionToken?: string) =>
+      s.emitWithAck('escape:results', { gameId: id, ...(sessionToken ? { sessionToken } : {}) });
+
+    // A phone of the run, still connected: its socket's PIN alone is not enough.
+    expect(await ask(a.socket)).toMatchObject(refused);
+    expect(await ask(a.socket, a.sessionToken)).toEqual({ ok: true, finale: f });
+    // The host console and the screen, while the room is still on this run.
+    expect(await ask(host)).toEqual({ ok: true, finale: f });
+    expect(await ask(screen)).toEqual({ ok: true, finale: f });
+
+    // The room moves on to a new run under the same PIN.
+    expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
+    expect(await host.emitWithAck('escape:open', { pin, templateId: ctx.templateId })).toEqual({
+      ok: true,
+    });
+    expect(await gameId(pin)).not.toBe(id);
+    const newcomer = await joinAndSync(ctx.h, pin, 'New');
+    // A newcomer who knows the old id: refused without a token, and with its own
+    // token, as it was in no team of the old run.
+    expect(await ask(newcomer.socket)).toMatchObject(refused);
+    expect(await ask(newcomer.socket, newcomer.sessionToken)).toMatchObject(refused);
+    // The host and the screen are in the room of another game now.
+    expect(await ask(host)).toMatchObject(refused);
+    expect(await ask(screen)).toMatchObject(refused);
+    // The old run's player still gets its results with its token.
+    expect(await ask(a.socket, a.sessionToken)).toEqual({ ok: true, finale: f });
   });
 
   it('host gone: the host window never cuts a run short; it closes the room once the run is over', async () => {
