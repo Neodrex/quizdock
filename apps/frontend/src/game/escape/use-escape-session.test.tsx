@@ -24,7 +24,9 @@ const { fakeSocket, listeners, emitted, acks } = vi.hoisted(() => {
       },
       emit: (e: string, payload: unknown, ack?: (r: unknown) => void) => {
         emitted.push({ event: e, payload });
-        ack?.(acks.get(e)?.(payload) ?? { ok: true });
+        const res = acks.get(e)?.(payload) ?? { ok: true };
+        // A server that never answers: the client's ack timeout runs out.
+        if (res !== 'no-ack') ack?.(res);
       },
     },
   };
@@ -39,7 +41,12 @@ vi.mock('../game-client', async (orig) => ({
 }));
 
 import { loadEscapeRecord, saveEscapeRecord } from './escape-record';
-import { FINALE_GRACE_MS, type EscapeSessionSeam, useEscapeSession } from './use-escape-session';
+import {
+  FINALE_GRACE_MS,
+  SYNC_RETRY_MS,
+  type EscapeSessionSeam,
+  useEscapeSession,
+} from './use-escape-session';
 
 const PIN = '482913';
 const GAME = '0123456789abcdef0123456789abcdef';
@@ -136,6 +143,78 @@ describe('useEscapeSession', () => {
     );
     await flush();
     expect(sent('escape:sync')).toHaveLength(2);
+  });
+
+  describe('a sync that times out (no ack)', () => {
+    const ACK_TIMEOUT_MS = 8_000;
+
+    it('is sent again, until it is answered', async () => {
+      vi.useFakeTimers();
+      acks.set('escape:sync', () => 'no-ack');
+      const { result } = mount(seam({ attachSeq: 1 }));
+      await flush();
+      expect(sent('escape:sync')).toHaveLength(1);
+      await act(() => vi.advanceTimersByTimeAsync(ACK_TIMEOUT_MS + SYNC_RETRY_MS));
+      expect(sent('escape:sync')).toHaveLength(2);
+      acks.delete('escape:sync');
+      await act(() => vi.advanceTimersByTimeAsync(ACK_TIMEOUT_MS + SYNC_RETRY_MS));
+      expect(sent('escape:sync')).toHaveLength(3);
+      expect(result.current.active).toBe(true);
+      await act(() => vi.advanceTimersByTimeAsync(5 * (ACK_TIMEOUT_MS + SYNC_RETRY_MS)));
+      expect(sent('escape:sync')).toHaveLength(3);
+    });
+
+    it('stops once a state arrives', async () => {
+      vi.useFakeTimers();
+      acks.set('escape:sync', () => 'no-ack');
+      mount(seam({ attachSeq: 1 }));
+      await flush();
+      fire('escape:state', state());
+      await act(() => vi.advanceTimersByTimeAsync(3 * (ACK_TIMEOUT_MS + SYNC_RETRY_MS)));
+      expect(sent('escape:sync')).toHaveLength(1);
+    });
+
+    it('stops at the next attach, which syncs on its own', async () => {
+      vi.useFakeTimers();
+      acks.set('escape:sync', () => 'no-ack');
+      const { rerender, unmount } = mount(seam({ attachSeq: 1 }));
+      await flush();
+      await act(() => vi.advanceTimersByTimeAsync(ACK_TIMEOUT_MS));
+      rerender(seam({ attachSeq: 2 }));
+      await flush();
+      expect(sent('escape:sync')).toHaveLength(2);
+      unmount();
+      await act(() => vi.advanceTimersByTimeAsync(3 * (ACK_TIMEOUT_MS + SYNC_RETRY_MS)));
+      expect(sent('escape:sync')).toHaveLength(2);
+    });
+
+    it('a refusal is not retried', async () => {
+      vi.useFakeTimers();
+      acks.set('escape:sync', () => ({ ok: false, error: { code: 'escape.not_found' } }));
+      mount(seam({ attachSeq: 1 }));
+      await flush();
+      await act(() => vi.advanceTimersByTimeAsync(3 * (ACK_TIMEOUT_MS + SYNC_RETRY_MS)));
+      expect(sent('escape:sync')).toHaveLength(1);
+    });
+  });
+
+  it('rejoining the same team with a new token saves the record again', async () => {
+    const { rerender } = mount(seam({ attachSeq: 1 }));
+    await flush();
+    fire('escape:state', state());
+    expect(loadEscapeRecord(PIN)?.sessionToken).toBe('tok');
+    // A fresh join (the record of the old token is cleared), back into the same team.
+    loadPlayerSession.mockReturnValue({
+      pin: PIN,
+      sessionToken: 'tok2',
+      playerId: 'p1',
+      nickname: 'Ana',
+    });
+    rerender(seam({ attachSeq: 2 }));
+    await flush();
+    expect(loadEscapeRecord(PIN)).toBeNull();
+    fire('escape:state', state());
+    expect(loadEscapeRecord(PIN)).toMatchObject({ sessionToken: 'tok2', teamId: 't1' });
   });
 
   it('an unasked escape:state turns it on and keeps the record', async () => {

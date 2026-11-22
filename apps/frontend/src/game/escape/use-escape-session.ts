@@ -20,6 +20,9 @@ import { type EscapeAction, escapeReducer, initialEscapeUi } from './escape-redu
 /** How long a phone waits for the finale after `game:ended` before fetching it (§1.4). */
 export const FINALE_GRACE_MS = 3000;
 
+/** The wait before a sync that got no answer (an ack timeout) is sent again. */
+export const SYNC_RETRY_MS = 2000;
+
 /** The quiz states an escape room also goes through; any other means a quiz is on. */
 const ESCAPE_ROOM_STATES: ReadonlySet<GameState> = new Set([
   GameState.Lobby,
@@ -47,6 +50,8 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
   const [active, setActive] = useState(false);
   const socketRef = useRef<GameSocket | null>(null);
   const stateRef = useRef<EscapePlayerState | null>(null);
+  // Bumped on each escape:state: a state that came makes a sync with no answer moot.
+  const statesRef = useRef(0);
   // The run whose results were already asked for (the finale phase after a reload).
   const fetchedRef = useRef<string | null>(null);
 
@@ -66,11 +71,15 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
     const onState = (state: EscapePlayerState) => {
       const prev = stateRef.current;
       stateRef.current = state;
+      statesRef.current += 1;
       setActive(true);
       const session = loadPlayerSession();
+      // A new run or team, or a new token for the same team (a fresh join back into it).
       if (
         session?.pin === pin &&
-        (prev?.gameId !== state.gameId || prev?.team?.id !== state.team?.id)
+        (prev?.gameId !== state.gameId ||
+          prev?.team?.id !== state.team?.id ||
+          session.sessionToken !== loadEscapeRecord(pin)?.sessionToken)
       ) {
         saveEscapeRecord({
           pin,
@@ -124,19 +133,29 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
     const record = loadEscapeRecord(pin);
     if (record && s?.pin === pin && s.sessionToken !== record.sessionToken) clearEscapeRecord();
     let live = true;
-    void ensureGameSocket('guest', pin).then((sock) => {
-      if (!live) return;
-      socketRef.current = sock;
-      emitWithAckOrError(sock, 'escape:sync', { pin }).then(
-        // A quiz shown meanwhile wins: that room is not (or no longer) an escape run.
-        () => live && !quizOnRef.current && setActive(true),
-        (e: { code?: string }) => {
-          if (live && e.code === 'escape.not_found') setActive(false);
-        },
-      );
-    });
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const sync = () =>
+      void ensureGameSocket('guest', pin).then((sock) => {
+        if (!live) return;
+        socketRef.current = sock;
+        const seen = statesRef.current;
+        emitWithAckOrError(sock, 'escape:sync', { pin }).then(
+          // A quiz shown meanwhile wins: that room is not (or no longer) an escape run.
+          () => live && !quizOnRef.current && setActive(true),
+          (e: { code?: string }) => {
+            if (!live) return;
+            if (e.code === 'escape.not_found') setActive(false);
+            // No answer at all (an ack timeout, no code): again, unless a state came meanwhile.
+            else if (!e.code && statesRef.current === seen && !quizOnRef.current) {
+              retry = setTimeout(sync, SYNC_RETRY_MS);
+            }
+          },
+        );
+      });
+    sync();
     return () => {
       live = false;
+      clearTimeout(retry);
     };
   }, [pin, attachSeq]);
 
