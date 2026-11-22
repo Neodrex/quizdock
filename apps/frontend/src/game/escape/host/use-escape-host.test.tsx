@@ -37,7 +37,7 @@ vi.mock('../../game-client', async (orig) => ({
   ensureGameSocket: () => Promise.resolve(fakeSocket),
 }));
 
-import { SYNC_RETRY_MS } from '../escape-sync';
+import { SYNC_RETRY_MS, useEscapeSync } from '../escape-sync';
 import { GAME } from '../test-fixtures';
 import { hostStateOf, hostTeamOf, outlineOf } from './host-fixtures';
 import { loadHostRecord, saveHostRecord } from './host-record';
@@ -118,6 +118,32 @@ describe('useEscapeHost', () => {
       await vi.advanceTimersByTimeAsync(10_000 + SYNC_RETRY_MS);
     });
     expect(sent('escape:sync')).toHaveLength(2);
+  });
+
+  it('a retry already scheduled waits while the sync is on hold', async () => {
+    vi.useFakeTimers();
+    acks.set('escape:sync', () => 'no-ack');
+    const holdRef = { current: false };
+    renderHook(() =>
+      useEscapeSync(PIN, 'host', 1, 0, {
+        quizOnRef: { current: false },
+        heardRef: { current: 0 },
+        socketRef: { current: null },
+        setActive: () => {},
+        holdRef,
+      }),
+    );
+    await act(async () => {
+      // Past the ack timeout (8 s), before the retry fires.
+      await vi.advanceTimersByTimeAsync(8_000 + SYNC_RETRY_MS / 2);
+    });
+    expect(sent('escape:sync')).toHaveLength(1);
+    // The retry is scheduled now; the hold starts before it fires.
+    holdRef.current = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SYNC_RETRY_MS + 1);
+    });
+    expect(sent('escape:sync')).toHaveLength(1);
   });
 
   it('{ok:true} turns it on; escape.not_found keeps it off', async () => {

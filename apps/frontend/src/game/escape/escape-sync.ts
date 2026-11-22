@@ -78,7 +78,8 @@ export function useEscapeSync(
     let retry: ReturnType<typeof setTimeout> | undefined;
     const sync = () =>
       void ensureGameSocket(role, pin).then((sock) => {
-        if (!live) return;
+        // A retry scheduled before the hold began: the hold's end bumps `resync`.
+        if (!live || optsRef.current.holdRef?.current) return;
         const { socketRef, heardRef, quizOnRef, setActive } = optsRef.current;
         socketRef.current = sock;
         // Down: socket.io would buffer the sync and flush it ahead of the reattach,
