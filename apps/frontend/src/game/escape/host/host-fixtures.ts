@@ -138,11 +138,14 @@ export const hostTeamOf = (over: Partial<EscapeHostTeam> = {}): EscapeHostTeam =
 });
 
 export const boardOf = (over: Partial<EscapeBoard> = {}): EscapeBoard => ({
+  gameId: GAME,
   phase: 'running',
   clock: { serverNow: 1_000_000_000, paused: false, elapsedMs: 0, limitMs: 2_400_000 },
   title: 'Vault Heist',
+  formation: { mode: 'auto', maxSize: null },
   teams: [],
   unassigned: 0,
+  roster: [],
   ...over,
 });
 

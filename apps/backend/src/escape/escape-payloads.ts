@@ -18,6 +18,7 @@ import type {
   EscapeHostTeam,
   EscapeMember,
   EscapePlayerState,
+  EscapeRosterEntry,
   EscapeScreenFinale,
   EscapeTeamClock,
   EscapeTeamSummary,
@@ -160,13 +161,29 @@ export function teamSummaryOf(v: RunView, rec: TeamRecord): EscapeTeamSummary {
 
 const unassignedOf = (v: RunView) => v.players.filter((p) => !recOf(v, p.playerId));
 
+/**
+ * The lobby roster (M6 owner answer 1): while forming, every player in join
+ * order by nickname, with their team or null. Nothing else of a player.
+ */
+function rosterOf(v: RunView): EscapeRosterEntry[] {
+  if (v.run.phase !== 'forming') return [];
+  return v.players.map((p) => ({
+    teamId: recOf(v, p.playerId)?.team.id ?? null,
+    nickname: p.nickname,
+    connected: p.connected,
+  }));
+}
+
 export function boardOf(v: RunView): EscapeBoard {
   return {
+    gameId: v.id,
     phase: v.run.phase,
     clock: clockOf(v),
     title: v.snap.template.title,
+    formation: { mode: v.run.formation, maxSize: v.run.maxSize || null },
     teams: v.teams.map((r) => teamSummaryOf(v, r)),
     unassigned: unassignedOf(v).length,
+    roster: rosterOf(v),
   };
 }
 

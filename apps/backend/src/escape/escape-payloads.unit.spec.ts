@@ -260,6 +260,33 @@ describe('boardOf', () => {
     });
   });
 
+  it('says the run and how teams form (M6 Task 6.2)', () => {
+    const forming: EscapeRun = { ...running, phase: 'forming', formation: 'self', maxSize: 4 };
+    expect(boardOf(view(teamA, forming))).toMatchObject({
+      gameId: 'g1',
+      formation: { mode: 'self', maxSize: 4 },
+    });
+    expect(boardOf(view()).formation).toEqual({ mode: 'auto', maxSize: null });
+    expect(boardOf(view()).gameId).toBe('g1');
+  });
+
+  it('lists the forming roster by nickname, in join order, and nothing once running', () => {
+    const forming: EscapeRun = { ...running, phase: 'forming' };
+    const board = boardOf(view(teamA, forming));
+    expect(board.roster).toEqual([
+      { teamId: 'a', nickname: 'Ann', connected: true },
+      { teamId: 'a', nickname: 'Bob', connected: true },
+      { teamId: 'a', nickname: 'Cy', connected: false },
+      { teamId: 'b', nickname: 'Dee', connected: true },
+      { teamId: null, nickname: 'Lone', connected: true },
+    ]);
+    const keys = keysIn(board);
+    for (const k of ['playerId', 'roles', 'avatar']) expect(keys).not.toContain(k);
+    expect(stringsIn(board)).not.toContain('ann');
+    expect(boardOf(view()).roster).toEqual([]);
+    expect(boardOf(view(teamA, { ...running, phase: 'finale' })).roster).toEqual([]);
+  });
+
   it('announces with names and counts only', () => {
     const cleared = { ...teamA, stageIndex: 1, stageClearedAt: [60_000] };
     expect(announceOf('stage-cleared', cleared)).toEqual({

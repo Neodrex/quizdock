@@ -275,8 +275,10 @@ export class EscapeEngine implements OnModuleDestroy {
         if (team && (await this.reconcileRoles(ref, v, [team.id]))) return;
         this.placeInTeamRoom(socket, ref.id, v, me.playerId);
         socket.emit('escape:state', playerStateOf(v, me.playerId));
-        // The host sees who is here.
+        // The host sees who is here, and so do the screens (the lobby roster, M6);
+        // a finished run's board no longer changes.
         this.toHost(ref, v);
+        if (ref.run.phase !== 'finale') this.toBoard(ref, v);
         return;
       }
       if (!socket.rooms.has(pin)) throw new ForbiddenException('escape.not_in_room');

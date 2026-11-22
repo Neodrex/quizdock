@@ -2,7 +2,14 @@ import type { EscapeBoard, EscapeFinale, EscapeScreenFinale } from '@quiz-dock/c
 import type { Socket } from 'socket.io-client';
 import { GameService } from '../../src/game/game.service';
 import { nextEvent, settle } from '../game-harness';
-import { type EscapeContext, type RunningRoom, record, runningRoom } from './escape-harness';
+import {
+  type EscapeContext,
+  type RunningRoom,
+  createEscape,
+  joinAndSync,
+  record,
+  runningRoom,
+} from './escape-harness';
 
 /** Big screens (M6): the screen finale, its routing and the screens' reads. */
 export function screenTests(ctx: EscapeContext): void {
@@ -109,5 +116,40 @@ export function screenTests(ctx: EscapeContext): void {
       await a.socket.emitWithAck('escape:results', { gameId: id, sessionToken: a.sessionToken }),
     ).toEqual({ ok: true, finale });
     expect(await host.emitWithAck('escape:results', { gameId: id })).toEqual({ ok: true, finale });
+  });
+
+  it('the lobby board names the players as they come and as teams form; the run empties it', async () => {
+    const host = ctx.h.connectHost();
+    const pin = await createEscape(host, ctx.templateId);
+    expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    const screen = ctx.h.connect();
+    await screen.emitWithAck('spectator:join', { pin });
+    const first = nextEvent<EscapeBoard>(screen, 'escape:board');
+    expect(await screen.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    expect(await first).toMatchObject({
+      gameId: await gameId(pin),
+      phase: 'forming',
+      formation: { mode: 'auto', maxSize: null },
+      roster: [],
+    });
+    // A phone joins and syncs: the screen sees its nickname, with no team yet.
+    const named = nextEvent<EscapeBoard>(screen, 'escape:board', {
+      where: (b) => b.roster.some((r) => r.nickname === 'Ada'),
+    });
+    await joinAndSync(ctx.h, pin, 'Ada');
+    expect((await named).roster).toEqual([{ teamId: null, nickname: 'Ada', connected: true }]);
+    await joinAndSync(ctx.h, pin, 'Ben');
+    const dealt = nextEvent<EscapeBoard>(screen, 'escape:board', {
+      where: (b) => b.roster.length === 2 && b.roster.every((r) => r.teamId !== null),
+    });
+    expect(await host.emitWithAck('escape:teams', { pin, mode: 'auto', count: 2 })).toEqual({
+      ok: true,
+    });
+    expect((await dealt).roster.map((r) => r.nickname)).toEqual(['Ada', 'Ben']);
+    const started = nextEvent<EscapeBoard>(screen, 'escape:board', {
+      where: (b) => b.phase === 'running',
+    });
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    expect((await started).roster).toEqual([]);
   });
 }

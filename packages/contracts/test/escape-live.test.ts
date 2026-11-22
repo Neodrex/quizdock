@@ -18,6 +18,7 @@ import {
   type EscapeHostOutline,
   type EscapeHostTeam,
   type EscapePlayerState,
+  type EscapeBoard,
   type EscapeScreenFinale,
   type EscapeServerToClientEvents,
 } from '../src/escape-live';
@@ -139,5 +140,21 @@ describe('EscapeScreenFinale (M6 §1.4)', () => {
       | 'members'
     >();
     expectTypeOf<EscapeScreenFinale['ranking'][number]['members']>().toEqualTypeOf<string[]>();
+  });
+});
+
+describe('EscapeBoard (M6 Task 6.2)', () => {
+  it('says the run and how teams form', () => {
+    expectTypeOf<EscapeBoard['gameId']>().toEqualTypeOf<string>();
+    expectTypeOf<EscapeBoard['formation']>().toEqualTypeOf<{
+      mode: 'auto' | 'self';
+      maxSize: number | null;
+    }>();
+  });
+
+  it('gives the roster nicknames only: no player id, avatar or role', () => {
+    expectTypeOf<keyof EscapeBoard['roster'][number]>().toEqualTypeOf<
+      'teamId' | 'nickname' | 'connected'
+    >();
   });
 });

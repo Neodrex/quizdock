@@ -208,13 +208,27 @@ export interface EscapeTeamSummary {
   deadlineAt: number | null;
 }
 
+/** A player on the lobby screen: nickname only (M6 owner answer 1). */
+export interface EscapeRosterEntry {
+  /** null: no team yet. */
+  teamId: string | null;
+  nickname: string;
+  connected: boolean;
+}
+
 export interface EscapeBoard {
+  /** The run's id: what the screen keys its record by. */
+  gameId: string;
   phase: EscapePhase;
   clock: EscapeClock;
   title: string;
+  /** How teams form: auto (dealt) or self (picked on the phone), and the cap (null: none). */
+  formation: Pick<EscapeFormation, 'mode' | 'maxSize'>;
   teams: EscapeTeamSummary[];
   /** Players in the room without a team. */
   unassigned: number;
+  /** While forming, every player in join order; [] once running (keeps the board small). */
+  roster: EscapeRosterEntry[];
 }
 
 /** To the team's phones and the host. `by` is the player id, or null when the host did it. */
