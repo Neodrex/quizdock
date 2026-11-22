@@ -6,6 +6,7 @@ import {
   GameState,
 } from '@quiz-dock/contracts';
 import type { Socket } from 'socket.io-client';
+import { hashOrder } from '../../src/escape/escape-rules';
 import { vaultHeist } from '../../src/escape/samples';
 import { GameService } from '../../src/game/game.service';
 import { nextEvent } from '../game-harness';
@@ -82,6 +83,38 @@ export function lobbyTests(ctx: EscapeContext): void {
     for (const a of answersOf(ctx.vault)) expect(strings).not.toContain(a);
     expect(await view).toMatchObject({ teams: [], unassigned: [], templateVersion: 1 });
     expect(await board).toMatchObject({ phase: 'forming', title: 'Vault Heist', teams: [] });
+  });
+
+  it('the outline shows sequence items in the per-run hash order, not as authored', async () => {
+    // Authored in solution order: the template order would give the answer away.
+    const solved = {
+      ...vaultHeist,
+      title: 'Solution order',
+      stages: vaultHeist.stages.map((st) => ({
+        ...st,
+        locks: st.locks.map((l) =>
+          l.kind === 'sequence'
+            ? { ...l, items: l.order.map((id) => l.items.find((i) => i.id === id)!) }
+            : l,
+        ),
+      })),
+    };
+    const templateId = await seedTemplate(ctx.h, solved);
+    const host = ctx.h.connectHost();
+    const pin = await createEscape(host, templateId);
+    const outline = nextEvent<EscapeHostOutline>(host, 'escape:outline');
+    const view = nextEvent<EscapeHostState>(host, 'escape:host');
+    expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    const { gameId } = await view;
+    const o = await outline;
+    const authored = solved.stages.flatMap((st) => st.locks).filter((l) => l.kind === 'sequence');
+    expect(authored.length).toBeGreaterThan(0);
+    for (const lock of authored) {
+      const shown = o.stages.flatMap((st) => st.locks).find((l) => l.id === lock.id)!;
+      // Computed through hashOrder with this run's game id (deterministic for the run).
+      expect(shown.items).toEqual(hashOrder(lock.items, `${gameId}:${lock.id}`));
+      expect(shown.items?.map((i) => i.id).sort()).toEqual([...lock.order].sort());
+    }
   });
 
   it('refuses a guest, and a signed-in user without the host role', async () => {
