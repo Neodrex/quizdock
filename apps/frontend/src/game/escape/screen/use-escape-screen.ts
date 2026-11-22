@@ -40,6 +40,10 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
   const heardRef = useRef(0);
   // A sync went out: the next finale is its answer (a reload), which the record may
   // say was replayed already. Any later one is "Show the finale again".
+  // Known race, harmless: a "Show the finale again" that lands between a sync and the
+  // sync's own finale is taken for the answer (no replay), and the answer that follows
+  // then replays; either way the room sees one replay. A sync while the run is on
+  // leaves the flag up until the finale, whose record is then another run's or none.
   const syncedRef = useRef(false);
   const finaleRef = useRef(false);
   // The run the last board was for: a kept finale of another run is not this room's now.
@@ -82,8 +86,7 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
     };
   }, [pin, socket, setActive, quizOnRef]);
 
-  // `|| 0`: a session without the counter (a test's) never syncs.
-  useEscapeSync(pin, 'guest', session.attachSeq || 0, resync, {
+  useEscapeSync(pin, 'guest', session.attachSeq, resync, {
     quizOnRef,
     heardRef,
     socketRef,

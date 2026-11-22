@@ -10,7 +10,12 @@ const { fakeSocket, hookState } = vi.hoisted(() => ({
 }));
 
 vi.mock('../game/use-game-session', () => ({
-  useGameSession: () => ({ view: hookState.value, socket: fakeSocket, markJoined: vi.fn() }),
+  useGameSession: () => ({
+    view: hookState.value,
+    socket: fakeSocket,
+    attachSeq: 0,
+    markJoined: vi.fn(),
+  }),
 }));
 
 const view = (partial: Partial<GameView>): GameView => ({

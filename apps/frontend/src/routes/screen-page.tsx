@@ -46,8 +46,7 @@ import { joinHostLabel, joinUrlFor } from '../game/join-url';
 import { type GameView, useGameSession } from '../game/use-game-session';
 import type { GameSocket } from '../game/game-client';
 import { playsSound } from '@quiz-dock/contracts';
-import { useEscapeScreen } from '../game/escape/screen/use-escape-screen';
-import { EscapeScreen } from './escape-screen-page';
+import { EscapeOrQuiz } from './escape-or-quiz';
 
 /**
  * The states where the question is on screen, drawn on its background. Not the wait
@@ -110,7 +109,6 @@ export function ScreenView({
 }) {
   const { t } = useTranslation('live');
   const session = useGameSession(pin, 'spectator', { follow: !!follow });
-  const escape = useEscapeScreen(pin, session);
   // The audience's language (#209): the room's choice, else the quiz's.
   useAudienceLanguage(session.view.language);
   // A projector, or a participant's copy of it, never dims during the session.
@@ -118,23 +116,15 @@ export function ScreenView({
   return (
     <>
       <ConnectionLost lost={session.view.connectionLost} />
-      {escape.active ? (
-        <EscapeScreen
-          pin={pin}
-          view={session.view}
-          escape={escape}
-          role={follow ? 'follow' : playMedia ? 'lead' : 'preview'}
-          sound={follow?.sound ?? true}
-        />
-      ) : (
-        <ScreenSurface
-          pin={pin}
-          view={session.view}
-          socket={session.socket}
-          role={follow ? 'follow' : playMedia ? 'lead' : 'preview'}
-          sound={follow?.sound ?? true}
-        />
-      )}
+      <EscapeOrQuiz
+        quiz={ScreenSurface}
+        attachSeq={session.attachSeq}
+        pin={pin}
+        view={session.view}
+        socket={session.socket}
+        role={follow ? 'follow' : playMedia ? 'lead' : 'preview'}
+        sound={follow?.sound ?? true}
+      />
       {/* A projection window on another computer, not paired yet: it follows until
           the host types this code in the console. */}
       {session.pairingCode ? (
