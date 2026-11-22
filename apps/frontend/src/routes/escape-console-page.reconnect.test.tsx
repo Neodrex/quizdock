@@ -211,6 +211,25 @@ describe('escape host console recovery', () => {
     );
   });
 
+  it('3b. a reload while paused: the paused badge and an enabled Resume after the re-sync', async () => {
+    const paused = () =>
+      runningState({
+        board: boardOf({ clock: { ...boardOf().clock, serverNow: Date.now(), paused: true } }),
+      });
+    const page = await load();
+    sync(paused());
+    await grid();
+    expect(screen.getByText('En pause')).toBeInTheDocument();
+
+    await reload(page);
+    await waitFor(() => expect(attachAndSync()).toEqual(['host:attach', 'escape:sync']));
+    sync(paused());
+    await grid();
+    expect(screen.getByText('En pause')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reprendre' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Pause' })).toBeNull();
+  });
+
   it('4. a reload in the finale: no finale replayed, so the results by the room', async () => {
     acks.set('escape:results', () => ({ ok: true, finale: finaleOf() }));
     await load();

@@ -76,6 +76,7 @@ const running = (over: Partial<ReturnType<typeof boardOf>> = {}) => {
 describe('EscapeConsole', () => {
   // The app runs in French in these tests (as the phone's).
   afterEach(() => {
+    vi.restoreAllMocks();
     localStorage.clear();
     sessionStorage.clear();
   });
@@ -207,11 +208,27 @@ describe('EscapeConsole', () => {
           removeEventListener: () => undefined,
         }) as unknown as MediaQueryList,
     );
+    const roles = [
+      'button',
+      'textbox',
+      'spinbutton',
+      'combobox',
+      'link',
+      'region',
+      'checkbox',
+      'radio',
+      'switch',
+      'menuitem',
+      'tab',
+    ] as const;
     const named = () => {
       const page = document.querySelector<HTMLElement>('[data-escape-phase]')!;
-      for (const role of ['button', 'textbox', 'spinbutton', 'combobox', 'link', 'region'] as const)
+      for (const role of roles)
         for (const el of within(page).queryAllByRole(role))
           expect(el, el.outerHTML.slice(0, 80)).toHaveAccessibleName();
+      // No id twice on the page (labels and aria-* references would point at the wrong one).
+      const ids = [...document.querySelectorAll('[id]')].map((el) => el.id);
+      expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
     };
     const lobby = draw(forming(), { state: GameState.Lobby });
     await screen.findByRole('heading', { name: 'Équipes de la salle' });
@@ -230,7 +247,6 @@ describe('EscapeConsole', () => {
     draw({ outline: outlineOf(), host: ended, board: ended.board, finale: finaleOf() });
     await screen.findByRole('button', { name: 'Télécharger le CSV' });
     named();
-    vi.restoreAllMocks();
   });
 
   it('shows no answer of the template in any phase', async () => {
