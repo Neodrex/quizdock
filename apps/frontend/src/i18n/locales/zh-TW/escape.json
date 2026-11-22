@@ -142,7 +142,13 @@
       "time": "{{team}}：時間 {{delta}}",
       "timeUp": "{{team}}：時間到",
       "stuck": "{{team}} 卡在 {{stage}}（{{minutes}} 分鐘）",
-      "disconnected": "{{name}} 已中斷連線（{{team}}）"
+      "disconnected": "{{name}} 已中斷連線（{{team}}）",
+      "title": "動態",
+      "list": "動態，最新的在前",
+      "filter": "顯示",
+      "allTeams": "所有隊伍",
+      "empty": "還沒有發生任何事。",
+      "reconnected": "已重新連線"
     },
     "rooms": {
       "intro": "選擇一個房間並開啟。玩家在手機上輸入 PIN 加入。",

@@ -142,7 +142,13 @@
       "time": "{{team}}：時間 {{delta}}",
       "timeUp": "{{team}}：時間切れ",
       "stuck": "{{team}} が {{stage}} で行き詰まっています（{{minutes}} 分）",
-      "disconnected": "{{name}} の接続が切れました（{{team}}）"
+      "disconnected": "{{name}} の接続が切れました（{{team}}）",
+      "title": "アクティビティ",
+      "list": "アクティビティ（新しい順）",
+      "filter": "表示",
+      "allTeams": "すべてのチーム",
+      "empty": "まだ何も起きていません。",
+      "reconnected": "再接続しました"
     },
     "rooms": {
       "intro": "ルームを選んで開きます。プレイヤーはスマートフォンで PIN を入力して参加します。",

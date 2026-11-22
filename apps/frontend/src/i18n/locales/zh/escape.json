@@ -142,7 +142,13 @@
       "time": "{{team}}：时间 {{delta}}",
       "timeUp": "{{team}}：时间到",
       "stuck": "{{team}} 卡在 {{stage}}（{{minutes}} 分钟）",
-      "disconnected": "{{name}} 已断开连接（{{team}}）"
+      "disconnected": "{{name}} 已断开连接（{{team}}）",
+      "title": "动态",
+      "list": "动态，最新的在前",
+      "filter": "显示",
+      "allTeams": "所有队伍",
+      "empty": "还没有发生任何事。",
+      "reconnected": "已重新连接"
     },
     "rooms": {
       "intro": "选择一个房间并打开。玩家在手机上输入 PIN 加入。",

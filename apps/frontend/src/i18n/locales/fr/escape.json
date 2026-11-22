@@ -154,7 +154,13 @@
       "time": "{{team}} : temps {{delta}}",
       "timeUp": "{{team}} : temps écoulé",
       "stuck": "{{team}} bloque sur {{stage}} ({{minutes}} min)",
-      "disconnected": "{{name}} s’est déconnecté·e ({{team}})"
+      "disconnected": "{{name}} s’est déconnecté·e ({{team}})",
+      "title": "Activité",
+      "list": "Activité, la plus récente en premier",
+      "filter": "Afficher",
+      "allTeams": "Toutes les équipes",
+      "empty": "Rien ne s’est encore passé.",
+      "reconnected": "Reconnecté"
     },
     "rooms": {
       "intro": "Choisissez une salle et ouvrez-la. Les joueurs la rejoignent avec le PIN sur leur téléphone.",

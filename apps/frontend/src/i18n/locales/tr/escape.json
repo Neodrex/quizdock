@@ -148,7 +148,13 @@
       "time": "{{team}}: süre {{delta}}",
       "timeUp": "{{team}}: süre doldu",
       "stuck": "{{team}}, {{stage}} aşamasında takıldı ({{minutes}} dk)",
-      "disconnected": "{{name}} bağlantısı koptu ({{team}})"
+      "disconnected": "{{name}} bağlantısı koptu ({{team}})",
+      "title": "Etkinlik",
+      "list": "Etkinlik, en yenisi önce",
+      "filter": "Göster",
+      "allTeams": "Tüm takımlar",
+      "empty": "Henüz bir şey olmadı.",
+      "reconnected": "Yeniden bağlanıldı"
     },
     "rooms": {
       "intro": "Bir oda seçip açın. Oyuncular telefonlarından PIN ile katılır.",

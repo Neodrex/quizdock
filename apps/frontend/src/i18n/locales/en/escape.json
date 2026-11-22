@@ -148,7 +148,13 @@
       "time": "{{team}}: time {{delta}}",
       "timeUp": "{{team}}: time is up",
       "stuck": "{{team}} is stuck on {{stage}} ({{minutes}} min)",
-      "disconnected": "{{name}} disconnected ({{team}})"
+      "disconnected": "{{name}} disconnected ({{team}})",
+      "title": "Activity",
+      "list": "Activity, newest first",
+      "filter": "Show",
+      "allTeams": "All teams",
+      "empty": "Nothing has happened yet.",
+      "reconnected": "Reconnected"
     },
     "rooms": {
       "intro": "Pick a room and open it. Players join with the PIN on their phones.",

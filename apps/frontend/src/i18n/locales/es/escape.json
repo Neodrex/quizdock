@@ -154,7 +154,13 @@
       "time": "{{team}}: tiempo {{delta}}",
       "timeUp": "{{team}}: se acabó el tiempo",
       "stuck": "{{team}} está atascado en {{stage}} ({{minutes}} min)",
-      "disconnected": "{{name}} se desconectó ({{team}})"
+      "disconnected": "{{name}} se desconectó ({{team}})",
+      "title": "Actividad",
+      "list": "Actividad, lo más reciente primero",
+      "filter": "Mostrar",
+      "allTeams": "Todos los equipos",
+      "empty": "Todavía no ha pasado nada.",
+      "reconnected": "Reconectado"
     },
     "rooms": {
       "intro": "Elige una sala y ábrela. Los jugadores entran con el PIN en su móvil.",

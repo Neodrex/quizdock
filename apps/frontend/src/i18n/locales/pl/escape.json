@@ -160,7 +160,13 @@
       "time": "{{team}}: czas {{delta}}",
       "timeUp": "{{team}}: koniec czasu",
       "stuck": "{{team}} utknęła na etapie {{stage}} ({{minutes}} min)",
-      "disconnected": "{{name}} traci połączenie ({{team}})"
+      "disconnected": "{{name}} traci połączenie ({{team}})",
+      "title": "Aktywność",
+      "list": "Aktywność, najnowsze najpierw",
+      "filter": "Pokaż",
+      "allTeams": "Wszystkie drużyny",
+      "empty": "Jeszcze nic się nie wydarzyło.",
+      "reconnected": "Połączono ponownie"
     },
     "rooms": {
       "intro": "Wybierz pokój i otwórz go. Gracze dołączają kodem PIN na telefonie.",

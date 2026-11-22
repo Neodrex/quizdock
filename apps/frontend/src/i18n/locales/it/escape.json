@@ -154,7 +154,13 @@
       "time": "{{team}}: tempo {{delta}}",
       "timeUp": "{{team}}: tempo scaduto",
       "stuck": "{{team}} è bloccata su {{stage}} ({{minutes}} min)",
-      "disconnected": "{{name}} si è disconnesso ({{team}})"
+      "disconnected": "{{name}} si è disconnesso ({{team}})",
+      "title": "Attività",
+      "list": "Attività, la più recente per prima",
+      "filter": "Mostra",
+      "allTeams": "Tutte le squadre",
+      "empty": "Non è ancora successo niente.",
+      "reconnected": "Riconnesso"
     },
     "rooms": {
       "intro": "Scegli una stanza e aprila. I giocatori entrano con il PIN sul telefono.",

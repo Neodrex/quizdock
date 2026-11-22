@@ -148,7 +148,13 @@
       "time": "{{team}}: Zeit {{delta}}",
       "timeUp": "{{team}}: Zeit abgelaufen",
       "stuck": "{{team}} steckt bei {{stage}} fest ({{minutes}} Min.)",
-      "disconnected": "{{name}} hat die Verbindung verloren ({{team}})"
+      "disconnected": "{{name}} hat die Verbindung verloren ({{team}})",
+      "title": "Aktivität",
+      "list": "Aktivität, neueste zuerst",
+      "filter": "Anzeigen",
+      "allTeams": "Alle Teams",
+      "empty": "Bisher ist nichts passiert.",
+      "reconnected": "Wieder verbunden"
     },
     "rooms": {
       "intro": "Wähle einen Raum und öffne ihn. Die Spieler treten mit der PIN auf dem Handy bei.",
