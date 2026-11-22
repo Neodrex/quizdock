@@ -406,7 +406,7 @@
       "title": "比赛回放",
       "penalty": "提示罚时：{{time}}",
       "tableCaption": "各关分段用时",
-      "stage": "关卡",
+      "team": "队伍",
       "notCleared": "未通关"
     },
     "finale": {

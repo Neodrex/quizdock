@@ -4,14 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { type MotionLevel, useMotionLevel } from '../../motion/level';
 import { formatClock } from '../team-timer';
+import { COLUMN_CLASS, lanesLayoutOf } from './screen-layout';
 import { type Lane, lanesOf, ownTimeOf, showClockOf } from './screen-reducer';
-
-/** Up to this many teams, one lane per row across the screen. */
-const ONE_COLUMN_MAX = 12;
-/** Up to this many, two compact columns; above, the top lanes and a count (M6 §1.8). */
-const TWO_COLUMNS_MAX = 30;
-/** Lanes shown above TWO_COLUMNS_MAX teams. */
-const TOP_SHOWN = 12;
 
 /**
  * The race while it runs (M6 Task 6.8): one lane per team in team order (owner
@@ -24,17 +18,20 @@ export function RaceTrack({ board, now }: { board: EscapeBoard; now: number }) {
   const motion = useMotionLevel();
   const all = lanesOf(board);
   const show = showClockOf(board, now);
-  const many = all.length > TWO_COLUMNS_MAX;
-  const compact = all.length > ONE_COLUMN_MAX;
-  // Above 30 teams: the leaders, kept in team order so a lane does not jump about.
-  const top = many
-    ? new Set(
-        [...all]
-          .sort((a, b) => a.place - b.place)
-          .slice(0, TOP_SHOWN)
-          .map((l) => l.id),
-      )
-    : null;
+  // Never a scroll (screen-layout.ts): wide lanes up to 5 teams, then one-line lanes
+  // in up to 4 columns; above 30 teams, the leaders and a count.
+  const layout = lanesLayoutOf(all.length);
+  const compact = !layout.wide;
+  // The leaders, kept in team order so a lane does not jump about.
+  const top =
+    layout.shown < all.length
+      ? new Set(
+          [...all]
+            .sort((a, b) => a.place - b.place)
+            .slice(0, layout.shown)
+            .map((l) => l.id),
+        )
+      : null;
   const lanes = top ? all.filter((l) => top.has(l.id)) : all;
   const rest = top ? all.filter((l) => !top.has(l.id)) : [];
   return (
@@ -42,9 +39,11 @@ export function RaceTrack({ board, now }: { board: EscapeBoard; now: number }) {
       <ol
         aria-label={t('screen.track.label')}
         data-compact={compact || undefined}
+        data-columns={layout.columns}
         className={cn(
-          'grid min-h-0 flex-1 auto-rows-fr gap-x-[1.5em]',
-          compact && !many ? 'grid-cols-2 gap-y-[0.3em]' : 'grid-cols-1 gap-y-[0.5em]',
+          'grid min-h-0 flex-1 auto-rows-fr',
+          COLUMN_CLASS[layout.columns],
+          compact ? 'gap-x-[0.8em] gap-y-[0.3em]' : 'gap-y-[0.5em]',
         )}
       >
         {lanes.map((lane) => (
@@ -53,6 +52,7 @@ export function RaceTrack({ board, now }: { board: EscapeBoard; now: number }) {
             lane={lane}
             ownMs={show ? ownTimeOf(lane, show, now) : null}
             compact={compact}
+            dense={layout.columns > 2}
             motion={motion}
           />
         ))}
@@ -66,11 +66,14 @@ function LaneRow({
   lane,
   ownMs,
   compact,
+  dense,
   motion,
 }: {
   lane: Lane;
   ownMs: number | null;
   compact: boolean;
+  /** Three or four columns: the name and the stages first, the hint count left out. */
+  dense: boolean;
   motion: MotionLevel;
 }) {
   const { t } = useTranslation('escape');
@@ -80,8 +83,10 @@ function LaneRow({
       data-lane={lane.id}
       data-out={out || undefined}
       className={cn(
-        'bg-card text-card-foreground flex min-h-0 min-w-0 items-center gap-[0.8em] rounded-[0.5em] border-[0.1em] px-[0.6em]',
-        out && 'opacity-60 grayscale',
+        'bg-card text-card-foreground flex min-h-0 min-w-0 items-center overflow-hidden rounded-[0.5em] border-[0.1em]',
+        dense ? 'gap-[0.4em] px-[0.3em]' : 'gap-[0.8em] px-[0.6em]',
+        // Greyed, never faded: faded text would fall under 7:1. "Time up" says it too.
+        out && 'border-dashed grayscale',
         lane.escaped && 'border-primary',
       )}
     >
@@ -92,23 +97,28 @@ function LaneRow({
         <span className="sr-only">{t('screen.track.placeLabel', { place: lane.place })}</span>
         <span aria-hidden="true">{t('screen.track.place', { place: lane.place })}</span>
       </span>
-      <div className={cn('flex min-w-0 shrink-0 flex-col', compact ? 'w-[8em]' : 'w-[12em]')}>
+      <div
+        className={cn(
+          'flex min-w-0 flex-col',
+          dense ? 'w-[5em] shrink' : compact ? 'w-[8em] shrink-0' : 'w-[12em] shrink-0',
+        )}
+      >
         <span data-lane-name className="truncate text-[1.4em] leading-tight font-bold">
           {lane.name}
         </span>
-        {!lane.escaped && !out && lane.stageTitle && (
+        {!compact && !lane.escaped && !out && lane.stageTitle && (
           <span className="truncate text-[0.9em] font-medium">{lane.stageTitle}</span>
         )}
       </div>
       <Segments lane={lane} motion={motion} />
       <div className="flex shrink-0 items-center gap-[0.6em] text-[1em] font-semibold tabular-nums">
         {lane.connectedCount === 0 && !lane.escaped && (
-          <span className="flex items-center gap-[0.2em] opacity-80">
+          <span className="flex items-center gap-[0.2em]">
             <WifiOff aria-hidden className="size-[1em]" />
             {t('lobby.offline')}
           </span>
         )}
-        {lane.hintsUsed > 0 && (
+        {lane.hintsUsed > 0 && !dense && (
           <span className="flex items-center gap-[0.2em]">
             <Lightbulb aria-hidden className="size-[1em]" />
             {t('screen.track.hints', { count: lane.hintsUsed })}
@@ -163,7 +173,8 @@ function Segments({ lane, motion }: { lane: Lane; motion: MotionLevel }) {
             data-testid="stage-segment"
             data-state={state}
             className={cn(
-              'bg-muted relative flex flex-1 items-center justify-center overflow-hidden rounded-[0.3em]',
+              // Edged: a stage ahead stands out from the lane at 3:1 (screen-palette.ts).
+              'bg-muted relative flex flex-1 items-center justify-center overflow-hidden rounded-[0.3em] border-[0.08em]',
               state === 'current' && 'ring-primary ring-[0.12em]',
             )}
           >

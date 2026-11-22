@@ -1,4 +1,5 @@
 import type { EscapeScreenFinale } from '@quiz-dock/contracts';
+import { type LanesLayout, lanesLayoutOf } from './screen-layout';
 
 /**
  * The split-time replay (M6 §1.5), pure: the run replayed from the stage clears the
@@ -90,33 +91,30 @@ export function teamOrderOf(finale: EscapeScreenFinale): Ranked[] {
   return [...finale.ranking].sort((a, b) => collator.compare(a.teamId, b.teamId));
 }
 
-/** Lanes on one screen without scrolling (M6 §1.8). */
-export const ONE_COLUMN_MAX = 12;
-export const TWO_COLUMNS_MAX = 30;
-
 export interface ReplayTeams {
   /** The teams shown, in team order. */
   teams: Ranked[];
-  /** 13–30 teams: two compact columns. */
-  columns: 1 | 2;
+  /** As the race track (screen-layout.ts): one column up to 5 teams, then up to 4. */
+  columns: LanesLayout['columns'];
   /** Above 30: the top 12 by place are shown, this many are not. */
   more: number;
 }
 
+/** Lanes on one screen without scrolling (M6 §1.8), laid out as the race track. */
 export function replayTeamsOf(finale: EscapeScreenFinale): ReplayTeams {
   const n = finale.ranking.length;
-  if (n <= ONE_COLUMN_MAX) return { teams: teamOrderOf(finale), columns: 1, more: 0 };
-  if (n <= TWO_COLUMNS_MAX) return { teams: teamOrderOf(finale), columns: 2, more: 0 };
+  const { columns, shown } = lanesLayoutOf(n);
+  if (shown >= n) return { teams: teamOrderOf(finale), columns, more: 0 };
   const top = new Set(
     [...finale.ranking]
       .sort((a, b) => a.place - b.place)
-      .slice(0, ONE_COLUMN_MAX)
+      .slice(0, shown)
       .map((r) => r.teamId),
   );
   return {
     teams: teamOrderOf(finale).filter((r) => top.has(r.teamId)),
-    columns: 1,
-    more: n - ONE_COLUMN_MAX,
+    columns,
+    more: n - shown,
   };
 }
 
@@ -156,12 +154,13 @@ export function frameAt(finale: EscapeScreenFinale, t: number): Frame {
 }
 
 /**
- * The split times as a table: per stage, each team's run time at its clear (null: not
- * cleared), a column per team of `teams` (team order by default).
+ * The split times as a table: a row per team of `teams` (team order by default), each
+ * stage's run time at its clear (null: not cleared). Teams are rows, stages columns: a
+ * run has a few stages and maybe many teams, and rows stack where columns would not fit.
  */
 export function splitTableOf(
   finale: EscapeScreenFinale,
   teams: Ranked[] = teamOrderOf(finale),
 ): (number | null)[][] {
-  return finale.stages.map((_, i) => teams.map((r) => r.stageClearedAt[i] ?? null));
+  return teams.map((r) => finale.stages.map((_, i) => r.stageClearedAt[i] ?? null));
 }

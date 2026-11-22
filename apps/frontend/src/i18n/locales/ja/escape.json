@@ -406,7 +406,7 @@
       "title": "レースのリプレイ",
       "penalty": "ヒントのペナルティ：{{time}}",
       "tableCaption": "ステージごとのスプリットタイム",
-      "stage": "ステージ",
+      "team": "チーム",
       "notCleared": "未クリア"
     },
     "finale": {

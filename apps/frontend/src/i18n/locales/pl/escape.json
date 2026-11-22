@@ -442,7 +442,7 @@
       "title": "Powtórka wyścigu",
       "penalty": "Kara za podpowiedzi: {{time}}",
       "tableCaption": "Międzyczasy na etapach",
-      "stage": "Etap",
+      "team": "Drużyna",
       "notCleared": "Nieukończony"
     },
     "finale": {

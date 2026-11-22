@@ -3,6 +3,7 @@ import { Loader2, Smartphone, Users, WifiOff } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { useMotionLevel } from '../../motion/level';
 import { joinHostLabel, joinUrlFor } from '../../join-url';
 import type { GameView } from '../../use-game-session';
 import { type LobbyTeam, lobbyOf } from './screen-reducer';
@@ -20,6 +21,12 @@ const NAMES_SHOWN_COMPACT = 3;
 const COMPACT_FROM = 13;
 /** Nicknames of the players with no team, shown before counting the rest. */
 const WAITING_SHOWN = 24;
+
+/** Under 3:2 (4:3, 5:4): the lobby stacks the join panel over the teams. */
+const NARROW_STACK = '[@media(max-aspect-ratio:3/2)]:flex-col';
+/** …and lays the panel out in a row: the QR code, then the address and the PIN. */
+const NARROW_ROW =
+  '[@media(max-aspect-ratio:3/2)]:flex-row [@media(max-aspect-ratio:3/2)]:gap-[2em]';
 
 /** Columns by team count: up to 30 teams fit the screen without a scroll (M6 §1.8). */
 export function lobbyColumns(count: number): string {
@@ -48,15 +55,22 @@ export function ScreenLobby({
   const { t } = useTranslation('escape');
   const lobby = lobbyOf(board);
   const compact = lobby.teams.length >= COMPACT_FROM;
+  // The room's motion, not only the system's: off means no spinner either.
+  const spin = useMotionLevel() === 'full';
   return (
     <section className="flex h-full min-h-0 flex-col gap-[1.2em]">
       <h1 className="text-center text-[2em] leading-tight font-bold">{board.title}</h1>
-      <div className="flex min-h-0 flex-1 gap-[2em]">
+      {/* 16:9 and 16:10: the join panel beside the teams. Narrower (4:3 projectors):
+          above them, in a row, so the teams keep the screen's whole width. */}
+      <div data-testid="lobby-body" className={cn('flex min-h-0 flex-1 gap-[2em]', NARROW_STACK)}>
         <JoinPanel pin={pin} view={view} />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-[1em]">
           {lobby.teams.length === 0 ? (
             <p className="flex flex-1 flex-col items-center justify-center gap-[0.6em] text-center">
-              <Loader2 aria-hidden className="text-primary size-[2.5em] motion-safe:animate-spin" />
+              <Loader2
+                aria-hidden
+                className={cn('text-primary size-[2.5em]', spin && 'motion-safe:animate-spin')}
+              />
               <span className="text-[1.6em] font-semibold">{t('lobby.waitingTeams')}</span>
               <span className="text-[1.2em]">
                 {t('screen.lobby.joined', { count: board.roster.length })}
@@ -99,9 +113,13 @@ function JoinPanel({ pin, view }: { pin: string; view: Pick<GameView, 'joinBaseU
   const { t } = useTranslation('escape');
   const host = joinHostLabel(view);
   return (
-    <div className="flex shrink-0 flex-col items-center justify-center gap-[0.8em]">
-      {/* At least 30% of the screen's height, so a phone reads it from the back row. */}
-      <div className="rounded-[0.5em] bg-white p-[0.6em]">
+    <div
+      data-testid="join-panel"
+      className={cn('flex shrink-0 flex-col items-center justify-center gap-[0.8em]', NARROW_ROW)}
+    >
+      {/* At least 30% of the screen's height, so a phone reads it from the back row:
+          34vh, whatever the width (a 4:3 projector stacks the panel instead). */}
+      <div className="shrink-0 rounded-[0.5em] bg-white p-[0.6em]">
         <QRCodeSVG
           value={joinUrlFor(view, pin)}
           size={256}
@@ -109,22 +127,24 @@ function JoinPanel({ pin, view }: { pin: string; view: Pick<GameView, 'joinBaseU
           className="h-[34vh] w-[34vh]"
         />
       </div>
-      <span className="text-[1.2em]">{t('live:screen.joinAt')}</span>
-      <span className="max-w-[16em] text-center text-[1.5em] font-bold [overflow-wrap:anywhere]">
-        {host}
-      </span>
-      {/* Read digit by digit; the large digits are for the room. */}
-      <span data-testid="lobby-pin">
-        <span className="sr-only">
-          {t('screen.lobby.pin', { digits: pin.split('').join(' ') })}
+      <div className="flex flex-col items-center gap-[0.8em]">
+        <span className="text-[1.2em]">{t('live:screen.joinAt')}</span>
+        <span className="max-w-[16em] text-center text-[1.5em] font-bold [overflow-wrap:anywhere]">
+          {host}
         </span>
-        <span
-          aria-hidden="true"
-          className="font-mono text-[6em] leading-none font-bold tracking-[0.1em] tabular-nums"
-        >
-          {pin}
+        {/* Read digit by digit; the large digits are for the room. */}
+        <span data-testid="lobby-pin">
+          <span className="sr-only">
+            {t('screen.lobby.pin', { digits: pin.split('').join(' ') })}
+          </span>
+          <span
+            aria-hidden="true"
+            className="font-mono text-[6em] leading-none font-bold tracking-[0.1em] tabular-nums"
+          >
+            {pin}
+          </span>
         </span>
-      </span>
+      </div>
     </div>
   );
 }
@@ -161,7 +181,8 @@ function TeamCard({
           {shown.map((m, i) => (
             <li key={`${i}-${m.nickname}`} className="flex min-w-0 items-center gap-[0.3em]">
               <span
-                className={cn('min-w-0 truncate text-[1em]', !m.connected && 'opacity-70')}
+                // Offline in words (the icon's label) and italics, never faded (7:1).
+                className={cn('min-w-0 truncate text-[1em]', !m.connected && 'italic')}
                 title={m.nickname}
               >
                 {m.nickname}

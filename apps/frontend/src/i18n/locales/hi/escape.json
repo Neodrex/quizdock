@@ -418,7 +418,7 @@
       "title": "दौड़ का रीप्ले",
       "penalty": "संकेत दंड: {{time}}",
       "tableCaption": "चरण के अनुसार बीच के समय",
-      "stage": "चरण",
+      "team": "टीम",
       "notCleared": "पूरा नहीं हुआ"
     },
     "finale": {

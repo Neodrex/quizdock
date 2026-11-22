@@ -9,8 +9,13 @@ import { SplitReplay } from './split-replay';
 type Ranked = EscapeScreenFinale['ranking'][number];
 type Awards = EscapeScreenFinale['awards'];
 const AWARDS: (keyof Awards)[] = ['fastest', 'fewestHints', 'teamwork', 'photoFinish'];
-/** Teams listed under the podium; past that, a count (no scrolling on a TV). */
-const LISTED = 9;
+/**
+ * Teams listed under the podium, in two columns of two rows; past that, a count. The
+ * results hold about 32 em of height (screen-layout.ts): the title and one line under
+ * it (5.4 em), the podium (13.8 em), the awards on up to two rows (4.4 em) and the
+ * gaps leave room for two rows of 2.6 em. Nothing scrolls on a TV.
+ */
+const LISTED = 4;
 
 /**
  * The big screen's finale (M6 Task 6.13), in order: the template's closing text, the
@@ -42,23 +47,28 @@ export function ScreenFinale({
           <Trophy aria-hidden className="text-primary size-[1em]" />
           {finale.title}
         </h1>
-        {finale.finale && (
+        {/* Closed: the thanks take the closing text's line, so the results still fit. */}
+        {closed && !replaying ? (
+          <p className="text-[1.4em] font-bold">{t('screen.finale.thanks')}</p>
+        ) : finale.finale ? (
           <p
             className={cn(
               'max-w-[40em] font-medium whitespace-pre-line',
-              replaying ? 'text-[1.4em]' : 'line-clamp-2 text-[1.1em]',
+              replaying ? 'line-clamp-3 text-[1.4em]' : 'line-clamp-1 text-[1.1em]',
             )}
           >
             {finale.finale}
           </p>
-        )}
+        ) : null}
       </header>
       {replaying ? (
         <SplitReplay finale={finale} onDone={onReplayDone} />
       ) : (
         <Results finale={finale} />
       )}
-      {closed && <p className="shrink-0 text-[1.8em] font-bold">{t('screen.finale.thanks')}</p>}
+      {closed && replaying && (
+        <p className="shrink-0 text-[1.4em] font-bold">{t('screen.finale.thanks')}</p>
+      )}
     </section>
   );
 }
@@ -79,7 +89,10 @@ function Results({ finale }: { finale: EscapeScreenFinale }) {
       {listed.length > 0 && (
         <>
           <h2 className="sr-only">{t('finale.ranking')}</h2>
-          <ol data-testid="ranked-list" className="flex min-h-0 flex-col gap-[0.3em]">
+          <ol
+            data-testid="ranked-list"
+            className="grid min-h-0 grid-cols-2 gap-x-[1em] gap-y-[0.3em]"
+          >
             {listed.map((r) => (
               <RankedRow key={r.teamId} team={r} />
             ))}
@@ -94,16 +107,36 @@ function Results({ finale }: { finale: EscapeScreenFinale }) {
   );
 }
 
-/** Escape time, hints and the penalty they added; or "Time up" and the stages cleared. */
-function Outcome({ team }: { team: Ranked }) {
+/**
+ * Escape time, hints and the penalty they added; or "Time up" and the stages cleared.
+ * `short` (a ranked row, half the screen wide): one line, the numbers by their icons,
+ * the words for screen readers; "Time up" stays a word (no score beside it).
+ */
+function Outcome({ team, short = false }: { team: Ranked; short?: boolean }) {
   const { t } = useTranslation('escape');
   const escapedAt = team.stageClearedAt[team.stageClearedAt.length - 1];
+  const said = (words: string, shown: string) =>
+    short ? (
+      <>
+        <span className="sr-only">{words}</span>
+        <span aria-hidden="true">{shown}</span>
+      </>
+    ) : (
+      words
+    );
+  const escapedTime = formatClock(escapedAt ?? 0);
+  const penalty = formatClock(team.hintPenaltyS * 1000);
   return (
-    <span className="flex flex-wrap items-center justify-center gap-x-[0.8em] gap-y-[0.1em] font-semibold tabular-nums">
+    <span
+      className={cn(
+        'flex items-center gap-x-[0.8em] gap-y-[0.1em] font-semibold tabular-nums',
+        short ? 'shrink-0 flex-nowrap' : 'flex-wrap justify-center',
+      )}
+    >
       {team.escaped ? (
         <span className="flex items-center gap-[0.2em]">
           <CircleCheck aria-hidden className="size-[1em]" />
-          {t('screen.finale.escapedIn', { time: formatClock(escapedAt ?? 0) })}
+          {said(t('screen.finale.escapedIn', { time: escapedTime }), escapedTime)}
         </span>
       ) : (
         <span className="flex items-center gap-[0.2em]">
@@ -113,13 +146,13 @@ function Outcome({ team }: { team: Ranked }) {
       )}
       <span className="flex items-center gap-[0.2em]">
         <Lightbulb aria-hidden className="size-[1em]" />
-        {t('finale.hints', { count: team.hintsUsed })}
+        {said(t('finale.hints', { count: team.hintsUsed }), String(team.hintsUsed))}
       </span>
       {team.hintPenaltyS > 0 && (
         // The words in the card's own colour (contrast); the red is the icon's.
         <span className="flex items-center gap-[0.2em] font-bold">
           <AlarmClockPlus aria-hidden className="text-destructive size-[1em]" />
-          {t('screen.finale.penalty', { time: formatClock(team.hintPenaltyS * 1000) })}
+          {said(t('screen.finale.penalty', { time: penalty }), `+${penalty}`)}
         </span>
       )}
     </span>
@@ -145,21 +178,22 @@ function PodiumStep({ team, index }: { team: Ranked; index: number }) {
       data-testid="podium-step"
       data-place={team.place}
       className={cn(
-        'bg-card text-card-foreground flex w-[18em] min-w-0 flex-col items-center gap-[0.4em] rounded-[0.6em] border-[0.1em] p-[0.8em] text-center',
+        // Three steps of up to 18em, narrower when the screen is (4:3 projectors).
+        'bg-card text-card-foreground flex max-w-[18em] min-w-0 flex-1 basis-0 flex-col items-center gap-[0.3em] rounded-[0.6em] border-[0.1em] p-[0.6em] text-center',
         order,
-        team.place === 1 && 'border-primary pb-[2em]',
+        team.place === 1 && 'border-primary pb-[1.5em]',
       )}
     >
       <Place place={team.place} />
-      <span className="max-w-full truncate text-[1.8em] leading-tight font-bold">{team.name}</span>
+      <span className="max-w-full truncate text-[1.6em] leading-tight font-bold">{team.name}</span>
       {team.scoreMs !== null && (
-        <span className="font-mono text-[2.4em] leading-none font-bold tabular-nums">
+        <span className="font-mono text-[2em] leading-none font-bold tabular-nums">
           {formatClock(team.scoreMs)}
         </span>
       )}
       <Outcome team={team} />
       {team.members.length > 0 && (
-        <span data-testid="members" className="line-clamp-2 text-[1em] font-medium">
+        <span data-testid="members" className="line-clamp-1 text-[1em] font-medium">
           {team.members.join(', ')}
         </span>
       )}
@@ -174,13 +208,13 @@ function RankedRow({ team }: { team: Ranked }) {
       className="bg-card text-card-foreground flex min-w-0 items-center gap-[0.8em] rounded-[0.5em] border-[0.1em] px-[0.6em] py-[0.2em]"
     >
       <Place place={team.place} />
-      <span className="w-[10em] shrink-0 truncate text-[1.4em] font-bold">{team.name}</span>
+      <span className="w-[7em] min-w-0 shrink truncate text-[1.2em] font-bold">{team.name}</span>
       {team.scoreMs !== null && (
-        <span className="font-mono text-[1.2em] font-bold tabular-nums">
+        <span className="shrink-0 font-mono text-[1.1em] font-bold tabular-nums">
           {formatClock(team.scoreMs)}
         </span>
       )}
-      <Outcome team={team} />
+      <Outcome team={team} short />
       <span data-testid="members" className="min-w-0 flex-1 truncate text-right text-[1em]">
         {team.members.join(', ')}
       </span>
@@ -225,13 +259,13 @@ function AwardsList({ finale }: { finale: EscapeScreenFinale }) {
   if (!items.length) return null;
   return (
     <div className="flex shrink-0 flex-col items-center gap-[0.3em]">
-      <h2 className="text-[1.4em] font-bold">{t('finale.awards')}</h2>
+      <h2 className="sr-only">{t('finale.awards')}</h2>
       <ul className="flex flex-wrap justify-center gap-[0.6em]">
         {items.map(({ key, text }) => (
           <li
             key={key}
             data-award={key}
-            className="bg-card flex items-center gap-[0.3em] rounded-full border-[0.1em] px-[0.8em] py-[0.2em] text-[1.2em] font-semibold"
+            className="bg-card text-card-foreground flex items-center gap-[0.3em] rounded-full border-[0.1em] px-[0.8em] py-[0.2em] text-[1em] font-semibold"
           >
             <Award aria-hidden className="text-primary size-[1em]" />
             {text}

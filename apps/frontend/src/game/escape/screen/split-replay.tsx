@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useMotionLevel } from '../../motion/level';
 import { formatClock } from '../team-timer';
+import { COLUMN_CLASS } from './screen-layout';
 import {
   frameAt,
   replayMsOf,
@@ -96,7 +97,8 @@ function Race({ finale, t }: { finale: EscapeScreenFinale; t: number }) {
   const { teams, columns, more } = replayTeamsOf(finale);
   const byId = new Map(frame.teams.map((x) => [x.teamId, x]));
   const lanes = teams.map((r) => byId.get(r.teamId)!);
-  const compact = columns === 2;
+  const compact = columns > 1;
+  const dense = columns > 2;
   const stageCount = Math.max(1, finale.stages.length);
   return (
     <section
@@ -121,16 +123,26 @@ function Race({ finale, t }: { finale: EscapeScreenFinale; t: number }) {
         data-columns={columns}
         className={cn(
           'min-h-0 flex-1 gap-[0.4em]',
-          compact ? 'grid grid-flow-col grid-cols-2 gap-x-[1em]' : 'flex flex-col justify-center',
+          compact
+            ? cn('grid grid-flow-col gap-x-[0.8em]', COLUMN_CLASS[columns])
+            : 'flex flex-col justify-center',
         )}
         style={
           compact
-            ? { gridTemplateRows: `repeat(${Math.ceil(lanes.length / 2)}, minmax(0, 1fr))` }
+            ? {
+                gridTemplateRows: `repeat(${Math.ceil(lanes.length / columns)}, minmax(0, 1fr))`,
+              }
             : undefined
         }
       >
         {lanes.map((team) => (
-          <ReplayLane key={team.teamId} team={team} stageCount={stageCount} compact={compact} />
+          <ReplayLane
+            key={team.teamId}
+            team={team}
+            stageCount={stageCount}
+            compact={compact}
+            dense={dense}
+          />
         ))}
       </ol>
       <More count={more} />
@@ -142,10 +154,13 @@ function ReplayLane({
   team,
   stageCount,
   compact,
+  dense,
 }: {
   team: TeamFrame;
   stageCount: number;
   compact: boolean;
+  /** Three or four columns: the penalty by its icon, the words for screen readers. */
+  dense: boolean;
 }) {
   const { t } = useTranslation('escape');
   const share = Math.min(1, team.position / stageCount);
@@ -156,9 +171,14 @@ function ReplayLane({
       data-finished={team.finished || undefined}
       data-time-up={team.timeUp || undefined}
       className={cn(
-        'bg-card text-card-foreground flex min-h-0 min-w-0 items-center rounded-[0.5em] border-[0.1em] px-[0.6em]',
-        compact ? 'gap-[0.5em]' : 'gap-[0.8em] py-[0.2em]',
-        team.timeUp && 'opacity-60 grayscale',
+        'bg-card text-card-foreground flex min-h-0 min-w-0 items-center overflow-hidden rounded-[0.5em] border-[0.1em]',
+        dense
+          ? 'gap-[0.3em] px-[0.3em]'
+          : compact
+            ? 'gap-[0.5em] px-[0.6em]'
+            : 'gap-[0.8em] px-[0.6em] py-[0.2em]',
+        // Greyed, never faded: faded text would fall under 7:1. "Time up" says it too.
+        team.timeUp && 'border-dashed grayscale',
         team.finished && 'border-primary',
       )}
     >
@@ -171,8 +191,8 @@ function ReplayLane({
       </span>
       <span
         className={cn(
-          'shrink-0 truncate text-[1.4em] leading-tight font-bold',
-          compact ? 'w-[6em]' : 'w-[10em]',
+          'truncate text-[1.4em] leading-tight font-bold',
+          dense ? 'w-[3.5em] min-w-0 shrink' : compact ? 'w-[6em] shrink-0' : 'w-[10em] shrink-0',
         )}
       >
         {team.name}
@@ -199,7 +219,7 @@ function ReplayLane({
       <div
         className={cn(
           'flex shrink-0 items-center justify-end gap-[0.5em] text-[1.1em] font-semibold tabular-nums',
-          compact ? 'w-[8em]' : 'w-[11em]',
+          dense ? 'w-auto' : compact ? 'w-[8em]' : 'w-[11em]',
         )}
       >
         {team.timeUp ? (
@@ -220,7 +240,7 @@ function ReplayLane({
                 <span className="sr-only">
                   {t('screen.replay.penalty', { time: formatClock(team.penaltyS * 1000) })}
                 </span>
-                <span aria-hidden="true">+{formatClock(team.penaltyS * 1000)}</span>
+                {!dense && <span aria-hidden="true">+{formatClock(team.penaltyS * 1000)}</span>}
               </span>
             )}
             <span className="font-mono">{formatClock(team.timeMs)}</span>
@@ -231,21 +251,26 @@ function ReplayLane({
   );
 }
 
-/** The split times without motion: the shown teams, in two tables side by side past 12. */
+/**
+ * The split times without motion: a row per shown team, a column per stage; past 5
+ * teams, up to 4 tables side by side of at most 8 rows each (screen-layout.ts).
+ */
 function SplitTables({ finale }: { finale: EscapeScreenFinale }) {
   const { t } = useTranslation('escape');
   const { teams, columns, more } = replayTeamsOf(finale);
-  const half = Math.ceil(teams.length / 2);
-  const groups = columns === 2 ? [teams.slice(0, half), teams.slice(half)] : [teams];
+  const per = Math.ceil(teams.length / columns);
+  const groups = Array.from({ length: columns }, (_, g) => teams.slice(g * per, (g + 1) * per));
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-[0.4em]">
       <h2 id="split-table-title" className="text-[1.5em] font-bold">
         {t('screen.replay.tableCaption')}
       </h2>
       <div className="flex min-h-0 gap-[1em]">
-        {groups.map((group, g) => (
-          <SplitTable key={g} finale={finale} teams={group} compact={columns === 2} />
-        ))}
+        {groups
+          .filter((group) => group.length > 0)
+          .map((group, g) => (
+            <SplitTable key={g} finale={finale} teams={group} compact={columns > 1} />
+          ))}
       </div>
       <More count={more} />
     </div>
@@ -274,21 +299,21 @@ function SplitTable({
     >
       <thead>
         <tr>
-          <th scope="col" className="w-[30%] text-left font-semibold">
-            {t('screen.replay.stage')}
+          <th scope="col" className="w-[30%] truncate text-left font-semibold">
+            {t('screen.replay.team')}
           </th>
-          {teams.map((r) => (
-            <th key={r.teamId} scope="col" className="truncate text-left text-[1.2em] font-bold">
-              {r.name}
+          {finale.stages.map((stage, i) => (
+            <th key={i} scope="col" className="truncate text-left font-semibold">
+              {stage.title}
             </th>
           ))}
         </tr>
       </thead>
       <tbody>
         {rows.map((cells, i) => (
-          <tr key={i} className="border-t-[0.06em]">
-            <th scope="row" className="truncate py-[0.2em] text-left font-semibold">
-              {finale.stages[i].title}
+          <tr key={teams[i].teamId} className="border-t-[0.06em]">
+            <th scope="row" className="truncate py-[0.2em] text-left text-[1.2em] font-bold">
+              {teams[i].name}
             </th>
             {cells.map((ms, j) =>
               ms === null ? (

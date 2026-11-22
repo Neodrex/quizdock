@@ -9,6 +9,7 @@ import { ScreenBanners } from '../game/escape/screen/banners';
 import { RaceTrack } from '../game/escape/screen/race-track';
 import { ScreenFinale } from '../game/escape/screen/screen-finale';
 import { ScreenLobby } from '../game/escape/screen/screen-lobby';
+import { screenPaletteOf } from '../game/escape/screen/screen-palette';
 import { ScreenSoundUnlock, useEscapeScreenSounds } from '../game/escape/screen/screen-sounds';
 import { ShowClock } from '../game/escape/screen/show-clock';
 import type { EscapeScreenSession } from '../game/escape/screen/use-escape-screen';
@@ -78,6 +79,8 @@ export function EscapeScreen({
   // Late joiners still can: the PIN stays in the corner until the finale.
   const showPin = phase === 'forming' || phase === 'running';
   const title = finale?.title ?? board?.title ?? null;
+  // Read from the back of the room: 7:1 text, the theme's background only when it allows.
+  const palette = screenPaletteOf(view.theme);
 
   let stage;
   if (finale) {
@@ -108,6 +111,9 @@ export function EscapeScreen({
         <div
           ref={ref}
           data-escape-phase={phase ?? 'none'}
+          data-palette={palette.source}
+          data-tone={palette.tone}
+          style={palette.style}
           onMouseMove={cursor.wake}
           className={cn(
             'qd-screen bg-background text-foreground relative flex h-dvh flex-col overflow-hidden',
@@ -165,7 +171,7 @@ export function EscapeScreen({
           <main
             data-testid="screen-stage"
             data-paused={paused}
-            className={cn('relative min-h-0 flex-1', paused && 'opacity-50')}
+            className={cn('relative min-h-0 flex-1', paused && 'grayscale')}
           >
             {stage}
           </main>

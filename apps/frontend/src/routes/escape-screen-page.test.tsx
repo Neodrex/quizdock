@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import type { EscapeBoard } from '@quiz-dock/contracts';
+import { BUILTIN_THEME_VALUES, type EscapeBoard } from '@quiz-dock/contracts';
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { addClockSample, resetClock, serverNow } from '../game/clock';
@@ -161,7 +161,7 @@ describe('EscapeScreen', () => {
     expect(lane('t1')).toHaveTextContent('1/2');
   });
 
-  it('paused: the race dimmed under a large "Paused" banner', () => {
+  it('paused: the race greyed (never faded: text stays at 7:1) under a "Paused" banner', () => {
     draw({
       board: running(20 * MIN, {
         clock: { serverNow: NOW, paused: true, elapsedMs: 0, limitMs: 45 * MIN },
@@ -169,7 +169,8 @@ describe('EscapeScreen', () => {
     });
     const track = screen.getByTestId('screen-stage');
     expect(track).toHaveAttribute('data-paused', 'true');
-    expect(track.className).toContain('opacity-');
+    expect(track).toHaveClass('grayscale');
+    expect(track.className).not.toContain('opacity-');
     expect(screen.getByTestId('paused-banner')).toHaveTextContent('Paused');
   });
 
@@ -224,6 +225,31 @@ describe('EscapeScreen', () => {
     const frame = document.querySelector<HTMLElement>('[data-escape-phase]')!;
     expect(frame.className).toContain('text-[clamp(1rem,2.6vmin,2.5rem)]');
     expect(within(frame).getByRole('list', { name: /race/i })).toBeInTheDocument();
+  });
+});
+
+describe('the big screen colours (7:1 from the back of the room)', () => {
+  const frame = () => document.querySelector<HTMLElement>('[data-escape-phase]')!;
+
+  it("a theme whose background reads draws it, with the screen's tokens tuned to it", () => {
+    draw({ board: running() }, { view: { theme: BUILTIN_THEME_VALUES.night } });
+    expect(frame()).toHaveAttribute('data-palette', 'theme');
+    expect(frame()).toHaveAttribute('data-tone', 'dark');
+    expect(frame().style.getPropertyValue('--background')).toBe('#0f172a');
+    expect(frame().style.getPropertyValue('--muted-foreground')).not.toBe('');
+  });
+
+  it("a picture theme falls back to the screen's own plain tokens, in its tone", () => {
+    draw({ board: running() }, { view: { theme: BUILTIN_THEME_VALUES.halloween } });
+    expect(frame()).toHaveAttribute('data-palette', 'screen');
+    expect(frame()).toHaveAttribute('data-tone', 'dark');
+    expect(frame().style.getPropertyValue('--background')).toBe('#0a0a0a');
+  });
+
+  it("no theme yet: the screen's own light tokens", () => {
+    draw({ board: running() });
+    expect(frame()).toHaveAttribute('data-palette', 'screen');
+    expect(frame().style.getPropertyValue('--foreground')).toBe('#0a0a0a');
   });
 });
 

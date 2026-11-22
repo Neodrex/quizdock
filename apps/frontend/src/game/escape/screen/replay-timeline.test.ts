@@ -122,11 +122,10 @@ describe('replay timeline', () => {
     ]);
   });
 
-  it('the split table: per stage, each team’s clear or null', () => {
+  it('the split table: per team, each stage’s clear or null', () => {
     expect(splitTableOf(finale)).toEqual([
-      [252_000, 300_000],
-      [900_000, null],
-      [1_872_000, null],
+      [252_000, 900_000, 1_872_000],
+      [300_000, null, null],
     ]);
   });
 
@@ -140,7 +139,10 @@ describe('replay timeline', () => {
     });
     expect(frameAt(flipped, 0).teams.map((x) => x.teamId)).toEqual(['t2', 't10']);
     expect(frameAt(flipped, maxTOf(flipped)).teams.map((x) => x.place)).toEqual([2, 1]);
-    expect(splitTableOf(flipped)[0]).toEqual([r1.stageClearedAt[0], r2.stageClearedAt[0]]);
+    expect(splitTableOf(flipped).map((row) => row[0])).toEqual([
+      r1.stageClearedAt[0],
+      r2.stageClearedAt[0],
+    ]);
   });
 
   it('teams level share a place, while playing and at the end (1, 1, 3)', () => {
@@ -163,7 +165,7 @@ describe('replay timeline', () => {
     expect(frameAt(tied, maxTOf(tied)).teams.map((x) => x.place)).toEqual([1, 1, 3]);
   });
 
-  it('never scrolls: one column to 12, two to 30, then the top 12 and the rest counted', () => {
+  it('never scrolls: one column to 5, up to 4 of 8 rows to 30, then the top 12 counted', () => {
     const many = (n: number) =>
       screenFinaleOf({
         ranking: Array.from({ length: n }, (_, i) => ({
@@ -173,11 +175,14 @@ describe('replay timeline', () => {
           place: i + 1,
         })),
       });
-    expect(replayTeamsOf(many(12))).toMatchObject({ columns: 1, more: 0 });
-    expect(replayTeamsOf(many(13))).toMatchObject({ columns: 2, more: 0 });
+    expect(replayTeamsOf(many(5))).toMatchObject({ columns: 1, more: 0 });
+    expect(replayTeamsOf(many(6))).toMatchObject({ columns: 2, more: 0 });
+    expect(replayTeamsOf(many(16))).toMatchObject({ columns: 2, more: 0 });
+    expect(replayTeamsOf(many(17))).toMatchObject({ columns: 3, more: 0 });
+    expect(replayTeamsOf(many(30))).toMatchObject({ columns: 4, more: 0 });
     expect(replayTeamsOf(many(30)).teams).toHaveLength(30);
     const big = replayTeamsOf(many(31));
-    expect(big).toMatchObject({ columns: 1, more: 19 });
+    expect(big).toMatchObject({ columns: 2, more: 19 });
     // The top 12 by place (t31 … t20), shown in team order.
     expect(big.teams.map((r) => r.teamId)).toEqual(
       Array.from({ length: 12 }, (_, i) => `t${20 + i}`),

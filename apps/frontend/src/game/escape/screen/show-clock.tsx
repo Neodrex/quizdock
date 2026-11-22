@@ -55,7 +55,6 @@ export function ShowClock({ board, now }: { board: EscapeBoard; now: number }) {
         className={cn(
           'font-mono leading-none font-bold tabular-nums',
           final ? 'text-destructive text-[8em]' : 'text-[4em]',
-          paused && 'opacity-70',
           pulse && 'animate-[pulse_1s_ease-in-out_infinite]',
         )}
       >

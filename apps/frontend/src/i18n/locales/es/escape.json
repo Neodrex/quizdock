@@ -430,7 +430,7 @@
       "title": "La carrera, otra vez",
       "penalty": "Penalización por pistas: {{time}}",
       "tableCaption": "Tiempos parciales por etapa",
-      "stage": "Etapa",
+      "team": "Equipo",
       "notCleared": "No superada"
     },
     "finale": {

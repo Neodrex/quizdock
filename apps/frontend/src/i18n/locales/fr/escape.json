@@ -430,7 +430,7 @@
       "title": "La course en replay",
       "penalty": "Pénalité d’indices : {{time}}",
       "tableCaption": "Temps intermédiaires par étape",
-      "stage": "Étape",
+      "team": "Équipe",
       "notCleared": "Non franchie"
     },
     "finale": {

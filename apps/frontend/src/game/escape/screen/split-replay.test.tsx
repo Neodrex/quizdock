@@ -71,13 +71,15 @@ describe('SplitReplay', () => {
     expect(screen.queryByTestId('split-replay')).toBeNull();
     const table = screen.getByRole('table', { name: 'Split times by stage' });
     const rows = within(table).getAllByRole('row');
-    expect(rows[0]).toHaveTextContent('Team Red');
-    expect(rows[0]).toHaveTextContent('Team Blue');
-    expect(within(rows[1]).getByRole('rowheader')).toHaveTextContent('The Lobby');
+    // A row per team, a column per stage.
+    expect(rows[0]).toHaveTextContent('Team');
+    expect(rows[0]).toHaveTextContent('The Lobby');
+    expect(within(rows[1]).getByRole('rowheader')).toHaveTextContent('Team Red');
     expect(rows[1]).toHaveTextContent('4:12');
-    expect(rows[1]).toHaveTextContent('5:00');
-    expect(rows[3]).toHaveTextContent('31:12');
-    expect(within(rows[3]).getByText('Not cleared')).toHaveClass('sr-only');
+    expect(rows[1]).toHaveTextContent('31:12');
+    expect(within(rows[2]).getByRole('rowheader')).toHaveTextContent('Team Blue');
+    expect(rows[2]).toHaveTextContent('5:00');
+    expect(within(rows[2]).getAllByText('Not cleared')[0]).toHaveClass('sr-only');
     act(() => void vi.advanceTimersByTime(REPLAY_MS));
     expect(onDone).toHaveBeenCalledTimes(1);
   });
@@ -112,10 +114,17 @@ describe('SplitReplay', () => {
     ]);
   });
 
-  it('13 to 30 teams: two compact columns, every team shown', () => {
-    drawEn(<SplitReplay finale={many(13)} onDone={() => undefined} />);
+  it('6 to 30 teams: up to 4 compact columns of 8 rows, every team shown', () => {
+    const { unmount } = drawEn(<SplitReplay finale={many(13)} onDone={() => undefined} />);
     expect(screen.getByTestId('replay-lanes')).toHaveAttribute('data-columns', '2');
+    expect(screen.getByTestId('replay-lanes').style.gridTemplateRows).toBe(
+      'repeat(7, minmax(0, 1fr))',
+    );
     expect(screen.getAllByTestId('replay-lane')).toHaveLength(13);
+    unmount();
+    drawEn(<SplitReplay finale={many(30)} onDone={() => undefined} />);
+    expect(screen.getByTestId('replay-lanes')).toHaveAttribute('data-columns', '4');
+    expect(screen.getAllByTestId('replay-lane')).toHaveLength(30);
     expect(screen.queryByTestId('replay-more')).toBeNull();
   });
 
@@ -130,11 +139,12 @@ describe('SplitReplay', () => {
     const { unmount } = drawEn(<SplitReplay finale={many(13)} onDone={() => undefined} />);
     const tables = screen.getAllByTestId('split-table');
     expect(tables).toHaveLength(2);
-    const heads = tables.map((tb) => within(tb).getAllByRole('columnheader').length - 1);
-    expect(heads).toEqual([7, 6]);
+    const teams = tables.map((tb) => within(tb).getAllByRole('rowheader').length);
+    expect(teams).toEqual([7, 6]);
     unmount();
     drawEn(<SplitReplay finale={many(31)} onDone={() => undefined} />);
-    expect(within(screen.getByTestId('split-table')).getAllByRole('columnheader')).toHaveLength(13);
+    const top = screen.getAllByTestId('split-table');
+    expect(top.flatMap((tb) => within(tb).getAllByRole('rowheader'))).toHaveLength(12);
     expect(screen.getByTestId('replay-more')).toHaveTextContent('and 19 more teams');
   });
 

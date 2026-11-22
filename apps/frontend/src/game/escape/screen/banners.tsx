@@ -81,8 +81,9 @@ function BannerView({ banner, titles }: { banner: Banner; titles: Record<number,
   return (
     <m.div
       {...props}
+      // Reduced (`fade`): a fade only, no movement and no transform at all.
       initial={level === 'full' ? { opacity: 0, y: '-0.6em' } : { opacity: 0 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={level === 'full' ? { opacity: 1, y: 0 } : { opacity: 1 }}
       transition={{ duration: level === 'full' ? 0.35 : 0.2 }}
     >
       {body}

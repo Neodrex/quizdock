@@ -418,7 +418,7 @@
       "title": "Das Rennen noch einmal",
       "penalty": "Hinweis-Strafzeit: {{time}}",
       "tableCaption": "Zwischenzeiten pro Etappe",
-      "stage": "Etappe",
+      "team": "Team",
       "notCleared": "Nicht geschafft"
     },
     "finale": {

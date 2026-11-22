@@ -93,16 +93,23 @@ describe('RaceTrack', () => {
     expect(within(lane('Team Blue')).queryByText('Offline')).toBeNull();
   });
 
-  it('uses one column up to 12 teams, two compact ones up to 30', () => {
+  it('one wide column up to 5 teams, then up to 4 compact ones of 8 rows to 30', () => {
     const teams = (n: number) =>
       Array.from({ length: n }, (_, i) => summaryOf({ id: `t${i}`, name: `Team ${i}` }));
-    const { unmount } = draw(teams(12));
+    const { unmount } = draw(teams(5));
     expect(screen.getByRole('list', { name: 'Race' })).toHaveClass('grid-cols-1');
+    expect(screen.getAllByText('The Lobby')).toHaveLength(5);
     unmount();
+    const again = draw(teams(12));
+    const twelve = screen.getByRole('list', { name: 'Race' });
+    expect(twelve).toHaveClass('grid-cols-2');
+    expect(twelve).toHaveAttribute('data-compact', 'true');
+    // One line per lane: the stage title is left out.
+    expect(screen.queryByText('The Lobby')).toBeNull();
+    again.unmount();
     draw(teams(30));
     const track = screen.getByRole('list', { name: 'Race' });
-    expect(track).toHaveClass('grid-cols-2');
-    expect(track).toHaveAttribute('data-compact', 'true');
+    expect(track).toHaveClass('grid-cols-4');
     expect(lanes(track)).toHaveLength(30);
   });
 

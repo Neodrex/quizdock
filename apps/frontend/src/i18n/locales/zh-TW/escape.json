@@ -406,7 +406,7 @@
       "title": "比賽重播",
       "penalty": "提示罰時：{{time}}",
       "tableCaption": "各關分段用時",
-      "stage": "關卡",
+      "team": "隊伍",
       "notCleared": "未通關"
     },
     "finale": {
