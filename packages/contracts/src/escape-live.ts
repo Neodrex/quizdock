@@ -97,7 +97,8 @@ export interface EscapePlayerLockView {
   options?: { id: string; label: string; image: string | null }[];
   /** Sequence items in a stable per-team hash order. */
   items?: { id: string; label: string }[];
-  /** Combined: the role ids this player may enter, and which parts are already in. */
+  /** Combined: every role with a part (role names are public), the ones this player may enter, and which are in. */
+  partRoles?: string[];
   myParts?: string[];
   partsDone?: string[];
   /** Code: the answer is digits only, so the phone may show a number pad. */

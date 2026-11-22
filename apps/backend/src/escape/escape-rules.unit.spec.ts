@@ -1,6 +1,7 @@
 import type {
   ChoiceLock,
   CodeLock,
+  CombinedLock,
   EscapeTemplate,
   PhraseLock,
   SequenceLock,
@@ -575,6 +576,13 @@ describe('playerView', () => {
       kind: 'combined',
       myParts: ['dec'],
     });
+  });
+  it('combined locks name every role with a part, never its answer', () => {
+    const duo = tplClues.stages[0].locks.find((l) => l.id === 'duo') as CombinedLock;
+    const v = playerView(tplClues, team(), 'p2').locks.find((l) => l.id === 'duo');
+    expect(v?.partRoles).toEqual(duo.parts.map((p) => p.roleId));
+    const json = JSON.stringify(v);
+    for (const p of duo.parts) expect(json).not.toContain(`"${p.answer}"`);
   });
 });
 
