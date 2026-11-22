@@ -444,6 +444,19 @@
       "tableCaption": "Промежуточное время по этапам",
       "stage": "Этап",
       "notCleared": "Не пройден"
+    },
+    "finale": {
+      "podium": "Пьедестал",
+      "escapedIn": "Выбрались за {{time}}",
+      "penalty": "+{{time}} штрафа",
+      "thanks": "Спасибо за игру",
+      "award": {
+        "fastest": "Самые быстрые: {{team}}",
+        "fewestHints": "Меньше всего подсказок: {{team}}",
+        "teamwork": "Лучшая командная работа: {{team}}",
+        "photoFinish": "Фотофиниш: {{a}} и {{b}}, разница {{seconds}} с",
+        "photoFinishPair": "Фотофиниш: {{a}} и {{b}}"
+      }
     }
   }
 }

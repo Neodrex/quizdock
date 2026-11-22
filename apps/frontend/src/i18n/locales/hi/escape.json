@@ -420,6 +420,19 @@
       "tableCaption": "चरण के अनुसार बीच के समय",
       "stage": "चरण",
       "notCleared": "पूरा नहीं हुआ"
+    },
+    "finale": {
+      "podium": "पोडियम",
+      "escapedIn": "{{time}} में बाहर निकले",
+      "penalty": "+{{time}} दंड",
+      "thanks": "खेलने के लिए धन्यवाद",
+      "award": {
+        "fastest": "सबसे तेज़: {{team}}",
+        "fewestHints": "सबसे कम संकेत: {{team}}",
+        "teamwork": "सबसे अच्छा टीमवर्क: {{team}}",
+        "photoFinish": "फ़ोटो फ़िनिश: {{a}} और {{b}}, {{seconds}} सेकंड का अंतर",
+        "photoFinishPair": "फ़ोटो फ़िनिश: {{a}} और {{b}}"
+      }
     }
   }
 }

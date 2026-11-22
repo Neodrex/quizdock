@@ -420,6 +420,19 @@
       "tableCaption": "Zwischenzeiten pro Etappe",
       "stage": "Etappe",
       "notCleared": "Nicht geschafft"
+    },
+    "finale": {
+      "podium": "Siegertreppchen",
+      "escapedIn": "Entkommen in {{time}}",
+      "penalty": "+{{time}} Strafzeit",
+      "thanks": "Danke fürs Mitspielen",
+      "award": {
+        "fastest": "Am schnellsten: {{team}}",
+        "fewestHints": "Wenigste Hinweise: {{team}}",
+        "teamwork": "Bestes Teamwork: {{team}}",
+        "photoFinish": "Fotofinish: {{a}} und {{b}}, {{seconds}} s auseinander",
+        "photoFinishPair": "Fotofinish: {{a}} und {{b}}"
+      }
     }
   }
 }

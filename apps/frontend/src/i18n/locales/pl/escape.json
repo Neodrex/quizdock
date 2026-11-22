@@ -444,6 +444,19 @@
       "tableCaption": "Międzyczasy na etapach",
       "stage": "Etap",
       "notCleared": "Nieukończony"
+    },
+    "finale": {
+      "podium": "Podium",
+      "escapedIn": "Ucieczka w {{time}}",
+      "penalty": "+{{time}} kary",
+      "thanks": "Dziękujemy za grę",
+      "award": {
+        "fastest": "Najszybsi: {{team}}",
+        "fewestHints": "Najmniej podpowiedzi: {{team}}",
+        "teamwork": "Najlepsza współpraca: {{team}}",
+        "photoFinish": "Fotofinisz: {{a}} i {{b}}, {{seconds}} s różnicy",
+        "photoFinishPair": "Fotofinisz: {{a}} i {{b}}"
+      }
     }
   }
 }

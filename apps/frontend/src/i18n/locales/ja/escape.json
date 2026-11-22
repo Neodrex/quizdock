@@ -408,6 +408,19 @@
       "tableCaption": "ステージごとのスプリットタイム",
       "stage": "ステージ",
       "notCleared": "未クリア"
+    },
+    "finale": {
+      "podium": "表彰台",
+      "escapedIn": "{{time}}で脱出",
+      "penalty": "ペナルティ +{{time}}",
+      "thanks": "ご参加ありがとうございました",
+      "award": {
+        "fastest": "最速：{{team}}",
+        "fewestHints": "ヒント最少：{{team}}",
+        "teamwork": "ベストチームワーク：{{team}}",
+        "photoFinish": "写真判定：{{a}}と{{b}}、{{seconds}}秒差",
+        "photoFinishPair": "写真判定：{{a}}と{{b}}"
+      }
     }
   }
 }

@@ -420,6 +420,19 @@
       "tableCaption": "Split times by stage",
       "stage": "Stage",
       "notCleared": "Not cleared"
+    },
+    "finale": {
+      "podium": "Podium",
+      "escapedIn": "Escaped in {{time}}",
+      "penalty": "+{{time}} penalty",
+      "thanks": "Thanks for playing",
+      "award": {
+        "fastest": "Fastest: {{team}}",
+        "fewestHints": "Fewest hints: {{team}}",
+        "teamwork": "Best teamwork: {{team}}",
+        "photoFinish": "Photo finish: {{a}} and {{b}}, {{seconds}} s apart",
+        "photoFinishPair": "Photo finish: {{a}} and {{b}}"
+      }
     }
   }
 }

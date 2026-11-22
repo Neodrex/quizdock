@@ -408,6 +408,19 @@
       "tableCaption": "各關分段用時",
       "stage": "關卡",
       "notCleared": "未通關"
+    },
+    "finale": {
+      "podium": "頒獎台",
+      "escapedIn": "用時 {{time}} 逃脫",
+      "penalty": "罰時 +{{time}}",
+      "thanks": "感謝參與",
+      "award": {
+        "fastest": "最快：{{team}}",
+        "fewestHints": "提示最少：{{team}}",
+        "teamwork": "最佳團隊合作：{{team}}",
+        "photoFinish": "險勝：{{a}} 和 {{b}}，相差 {{seconds}} 秒",
+        "photoFinishPair": "險勝：{{a}} 和 {{b}}"
+      }
     }
   }
 }

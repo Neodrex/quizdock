@@ -420,6 +420,19 @@
       "tableCaption": "Aşamalara göre ara süreler",
       "stage": "Aşama",
       "notCleared": "Geçilmedi"
+    },
+    "finale": {
+      "podium": "Kürsü",
+      "escapedIn": "{{time}} sürede kaçtı",
+      "penalty": "+{{time}} ceza",
+      "thanks": "Oynadığınız için teşekkürler",
+      "award": {
+        "fastest": "En hızlı: {{team}}",
+        "fewestHints": "En az ipucu: {{team}}",
+        "teamwork": "En iyi takım çalışması: {{team}}",
+        "photoFinish": "Foto finiş: {{a}} ve {{b}}, aralarında {{seconds}} sn",
+        "photoFinishPair": "Foto finiş: {{a}} ve {{b}}"
+      }
     }
   }
 }

@@ -432,6 +432,19 @@
       "tableCaption": "Tiempos parciales por etapa",
       "stage": "Etapa",
       "notCleared": "No superada"
+    },
+    "finale": {
+      "podium": "Podio",
+      "escapedIn": "Escaparon en {{time}}",
+      "penalty": "+{{time}} de penalización",
+      "thanks": "Gracias por jugar",
+      "award": {
+        "fastest": "Los más rápidos: {{team}}",
+        "fewestHints": "Menos pistas: {{team}}",
+        "teamwork": "Mejor trabajo en equipo: {{team}}",
+        "photoFinish": "Foto finish: {{a}} y {{b}}, a {{seconds}} s",
+        "photoFinishPair": "Foto finish: {{a}} y {{b}}"
+      }
     }
   }
 }

@@ -432,6 +432,19 @@
       "tableCaption": "Tempi intermedi per fase",
       "stage": "Fase",
       "notCleared": "Non superata"
+    },
+    "finale": {
+      "podium": "Podio",
+      "escapedIn": "Fuga in {{time}}",
+      "penalty": "+{{time}} di penalità",
+      "thanks": "Grazie per aver giocato",
+      "award": {
+        "fastest": "I più veloci: {{team}}",
+        "fewestHints": "Meno indizi: {{team}}",
+        "teamwork": "Miglior lavoro di squadra: {{team}}",
+        "photoFinish": "Fotofinish: {{a}} e {{b}}, a {{seconds}} s di distanza",
+        "photoFinishPair": "Fotofinish: {{a}} e {{b}}"
+      }
     }
   }
 }
