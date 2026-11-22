@@ -14,7 +14,7 @@ import {
   submitUpdateOf,
   timeUpOf,
 } from './escape-payloads';
-import { awards, newTeam, nextHint, rankTeams, submit, useHint } from './escape-rules';
+import { awards, hashOrder, newTeam, nextHint, rankTeams, submit, useHint } from './escape-rules';
 import type { EscapeTemplate, Same, TeamState } from './escape.types';
 import { lostLibrary, vaultHeist } from './samples';
 
@@ -307,7 +307,7 @@ describe('hostOutlineOf (owner question 1: no answers to the host)', () => {
     ['Lost Library', lostLibrary],
   ])('%s: no answer key at any depth, and no answer value', (_name, content) => {
     const t: EscapeTemplate = { ...content, id: 's' };
-    const outline = hostOutlineOf({ ...snap, template: t });
+    const outline = hostOutlineOf({ ...snap, template: t }, 'g1');
     expect(keysIn(outline).filter((k) => secret.has(k))).toEqual([]);
     // Every hint and clue may show (the host's view): only answers count as leaks.
     const all = {
@@ -318,7 +318,7 @@ describe('hostOutlineOf (owner question 1: no answers to the host)', () => {
   });
 
   it('keeps what the host needs: locks, part roles, labels, hints and unlock texts', () => {
-    const outline = hostOutlineOf(snap);
+    const outline = hostOutlineOf(snap, 'g1');
     expect(outline).toMatchObject({
       templateId: 'vh',
       version: 3,
@@ -347,11 +347,64 @@ describe('hostOutlineOf (owner question 1: no answers to the host)', () => {
           expect(got.partRoles).toEqual(lock.parts.map((p) => p.roleId));
         }
         if (lock.kind === 'choice') expect(got.options).toEqual(lock.options);
-        if (lock.kind === 'sequence') expect(got.items).toEqual(lock.items);
+        if (lock.kind === 'sequence')
+          expect(got.items).toEqual(hashOrder(lock.items, `g1:${lock.id}`));
       }
     }
     const kinds = tpl.stages.flatMap((s) => s.locks.map((l) => l.kind));
     expect(new Set(kinds)).toEqual(new Set(['code', 'phrase', 'choice', 'sequence', 'combined']));
+  });
+
+  it('sends sequence items in a per-run hash order, not as authored (solution order)', () => {
+    // An author who wrote the items in solution order, with ids and labels in order too.
+    const items = Array.from({ length: 6 }, (_, i) => ({
+      id: `s${i + 1}`,
+      label: `Step ${i + 1}`,
+    }));
+    const ordered: EscapeTemplate = {
+      ...tpl,
+      stages: [
+        {
+          ...tpl.stages[0],
+          locks: [
+            {
+              id: 'seq',
+              label: 'In order',
+              kind: 'sequence',
+              items,
+              order: items.map((i) => i.id),
+            },
+          ],
+        },
+      ],
+    };
+    const sent = (gameId: string) =>
+      hostOutlineOf({ ...snap, template: ordered }, gameId).stages[0].locks[0].items!;
+    const solution = items.map((i) => i.id).join();
+    expect(
+      sent('g1')
+        .map((i) => i.id)
+        .join(),
+    ).not.toBe(solution);
+    expect(sent('g1')).toEqual(hashOrder(items, 'g1:seq'));
+    // Stable for a run (a reload sees the same order), and not one fixed order across runs.
+    expect(sent('g1')).toEqual(sent('g1'));
+    const runs = new Set(
+      ['g1', 'g2', 'g3', 'g4', 'g5'].map((g) =>
+        sent(g)
+          .map((i) => i.id)
+          .join(),
+      ),
+    );
+    expect(runs.size).toBeGreaterThan(1);
+    // Never a sort by id or label: both were authored in order.
+    expect([...runs]).not.toContain(solution);
+    expect(new Set(sent('g1').map((i) => i.id))).toEqual(new Set(items.map((i) => i.id)));
+    // By chance only (1 in 720 for six items): plain FNV-1a gave it one seed in eight.
+    const hits = Array.from({ length: 500 }, (_, g) => sent(`run-${g}`))
+      .map((o) => o.map((i) => i.id).join())
+      .filter((o) => o === solution).length;
+    expect(hits).toBeLessThanOrEqual(5);
   });
 
   it('copies, and drops keys the template type does not have', () => {
@@ -360,7 +413,7 @@ describe('hostOutlineOf (owner question 1: no answers to the host)', () => {
       secret: 'x',
       stages: [{ ...tpl.stages[0], note: 'y' }],
     } as unknown as EscapeTemplate;
-    const out = hostOutlineOf({ ...snap, template: extra });
+    const out = hostOutlineOf({ ...snap, template: extra }, 'g1');
     expect(stringsIn(out)).not.toContain('x');
     expect(stringsIn(out)).not.toContain('y');
     expect(out.roles).not.toBe(tpl.roles);

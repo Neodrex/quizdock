@@ -280,26 +280,44 @@ export function deadlineMs(durationMs: number, team: TeamState): number {
   return durationMs + team.adjustMs;
 }
 
-/** FNV-1a, 32 bit: a small pure hash for a stable per-team order. */
+/**
+ * FNV-1a, 32 bit, then the murmur3 finaliser: a small pure hash for a stable
+ * order. Without the finaliser, ids that differ in their last character only
+ * ("s1".."s6") came out sorted or reversed in about one seed in four.
+ */
 function fnv1a(text: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < text.length; i++) {
     h ^= text.charCodeAt(i);
     h = Math.imul(h, 0x01000193) >>> 0;
   }
-  return h;
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  h ^= h >>> 16;
+  return h >>> 0;
 }
 
 /**
- * Per-team hash order: stable across reconnects, independent of the authored
- * order. It may equal the answer by chance, like any shuffle; never force it
- * away from the answer, since that would leak.
+ * Items in a stable hash order of `seed`: stable across reconnects, independent
+ * of the authored order. It may equal the answer by chance, like any shuffle;
+ * never force it away from the answer, since that would leak. Never sort by id
+ * or label instead: authors may write those in order too.
  */
-function shuffledItems(lock: SequenceLock, teamId: string): { id: string; label: string }[] {
-  return lock.items
-    .map(({ id, label }) => ({ id, label, h: fnv1a(`${teamId}:${id}`) }))
+export function hashOrder(
+  items: readonly { id: string; label: string }[],
+  seed: string,
+): { id: string; label: string }[] {
+  return items
+    .map(({ id, label }) => ({ id, label, h: fnv1a(`${seed}:${id}`) }))
     .sort((a, b) => a.h - b.h || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
     .map(({ id, label }) => ({ id, label }));
+}
+
+/** Per-team hash order of a sequence lock's items (see hashOrder). */
+function shuffledItems(lock: SequenceLock, teamId: string): { id: string; label: string }[] {
+  return hashOrder(lock.items, teamId);
 }
 
 export interface PlayerLockView {

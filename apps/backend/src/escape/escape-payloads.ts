@@ -23,7 +23,7 @@ import type {
 } from '@quiz-dock/contracts';
 import { deadlineAt, remainingMs, runElapsed, stageOpenedAt } from './escape-clock';
 import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
-import { awards, nextHint, playerView, rankTeams } from './escape-rules';
+import { awards, hashOrder, nextHint, playerView, rankTeams } from './escape-rules';
 import type { EscapeTemplate, Lock, Stage, SubmitResult, TeamState } from './escape.types';
 
 /** A player of the room, as the engine sees it (R1 decides `connected`). */
@@ -271,8 +271,12 @@ export function hostStateOf(v: RunView): EscapeHostState {
   };
 }
 
-/** A lock without what opens it (owner question 1): labels and part roles only. */
-function hostLockOf(l: Lock): EscapeHostLock {
+/**
+ * A lock without what opens it (owner question 1): labels and part roles only.
+ * Sequence items come in a per-run hash order (`seed`), as the phones get them:
+ * a template authored in solution order would show the solution otherwise.
+ */
+function hostLockOf(l: Lock, seed: string): EscapeHostLock {
   const base = { id: l.id, label: l.label, kind: l.kind };
   switch (l.kind) {
     case 'code':
@@ -281,14 +285,14 @@ function hostLockOf(l: Lock): EscapeHostLock {
     case 'choice':
       return { ...base, options: l.options.map(({ id, label, image }) => ({ id, label, image })) };
     case 'sequence':
-      return { ...base, items: l.items.map(({ id, label }) => ({ id, label })) };
+      return { ...base, items: hashOrder(l.items, `${seed}:${l.id}`) };
     case 'combined':
       return { ...base, partRoles: l.parts.map((p) => p.roleId) };
   }
 }
 
-/** The frozen template for the host console, without any answer (M5 §1.4). */
-export function hostOutlineOf(snap: EscapeSnapshot): EscapeHostOutline {
+/** The frozen template for the host console, without any answer (M5 §1.4). `gameId`: the run's. */
+export function hostOutlineOf(snap: EscapeSnapshot, gameId: string): EscapeHostOutline {
   const t = snap.template;
   return {
     templateId: snap.templateId,
@@ -304,7 +308,7 @@ export function hostOutlineOf(snap: EscapeSnapshot): EscapeHostOutline {
       title: s.title,
       intro: s.intro,
       unlockText: s.unlockText,
-      locks: s.locks.map(hostLockOf),
+      locks: s.locks.map((l) => hostLockOf(l, gameId)),
       clues: s.clues.map(({ id, roleId, kind, body }) => ({ id, roleId, kind, body })),
       hints: s.hints.map(({ id, text, penaltyS, releaseAfterS }) => ({
         id,
