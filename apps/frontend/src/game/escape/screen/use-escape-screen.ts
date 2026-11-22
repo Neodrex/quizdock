@@ -1,16 +1,132 @@
+import {
+  type EscapeAnnounce,
+  type EscapeBoard,
+  type EscapeScreenFinale,
+  GameState,
+} from '@quiz-dock/contracts';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import type { GameSocket } from '../../game-client';
 import type { GameView } from '../../use-game-session';
+import { useEscapeMode, useEscapeSync } from '../escape-sync';
+import { loadScreenRecord, markScreenReplayed, saveScreenRecord } from './screen-record';
+import { initialScreenUi, screenReducer } from './screen-reducer';
 
 /** What the hook needs of the quiz session (`useGameSession(pin, 'spectator')`). */
 export interface EscapeScreenSeam {
-  view: Pick<GameView, 'state' | 'totalQuestions'>;
+  view: Pick<GameView, 'state' | 'totalQuestions' | 'status'>;
   attachSeq: number;
+  /** The session's socket: the escape listeners go on it, beside the quiz's. */
+  socket: GameSocket | null;
 }
 
-/** The big screen's escape run (M6 §1.1). Stub until Task 6.6: never active. */
+type Listener = (p: never) => void;
+
+/**
+ * The big screen's escape run (M6 §1.1, §1.6), on the projection's socket: syncs once
+ * the spectator is in the room (each `attachSeq` bump) and again on a room switch,
+ * follows the board, the announces and the screen finale, and keeps the finale's
+ * record so a reload does not replay the race and a closed room still shows it.
+ */
 export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
-  void pin;
-  void session;
-  return { active: false };
+  const [ui, dispatch] = useReducer(screenReducer, initialScreenUi);
+  const { active, setActive, quizOnRef } = useEscapeMode(session.view);
+  const socketRef = useRef<GameSocket | null>(null);
+  // Bumped on each board: one that came makes a sync with no answer moot.
+  const heardRef = useRef(0);
+  // A sync went out: the next finale is its answer (a reload), which the record may
+  // say was replayed already. Any later one is "Show the finale again".
+  const syncedRef = useRef(false);
+  const finaleRef = useRef(false);
+  const [resync, setResync] = useState(0);
+
+  const { socket } = session;
+  useEffect(() => {
+    if (!socket) return;
+    const onBoard = (board: EscapeBoard) => {
+      heardRef.current += 1;
+      if (!quizOnRef.current) setActive(true);
+      dispatch({ type: 'board', board });
+    };
+    const onAnnounce = (announce: EscapeAnnounce) =>
+      dispatch({ type: 'announce', announce, now: Date.now() });
+    const onFinale = (finale: EscapeScreenFinale) => {
+      finaleRef.current = true;
+      const record = syncedRef.current ? loadScreenRecord(pin) : null;
+      syncedRef.current = false;
+      const replayed = !!record && record.gameId === finale.gameId && record.replayed;
+      saveScreenRecord(pin, { gameId: finale.gameId, replayed, finale });
+      dispatch({ type: 'screenFinale', finale, record });
+    };
+    const events: [string, Listener][] = [
+      ['escape:board', onBoard as Listener],
+      ['escape:announce', onAnnounce as Listener],
+      ['escape:screen-finale', onFinale as Listener],
+    ];
+    const on = socket.on as unknown as (e: string, h: Listener) => void;
+    for (const [e, h] of events) on.call(socket, e, h);
+    return () => {
+      const off = socket.off as unknown as (e: string, h: Listener) => void;
+      for (const [e, h] of events) off.call(socket, e, h);
+    };
+  }, [pin, socket, setActive, quizOnRef]);
+
+  // `|| 0`: a session without the counter (a test's) never syncs.
+  useEscapeSync(pin, 'guest', session.attachSeq || 0, resync, {
+    quizOnRef,
+    heardRef,
+    socketRef,
+    setActive,
+    before: () => {
+      syncedRef.current = true;
+    },
+  });
+
+  // Room switch (§1.1): the lobby after a podium or a screen finale; sync again, and a
+  // refusal hands the screen back to the quiz.
+  const state = session.view.state;
+  const prevStateRef = useRef(state);
+  useEffect(() => {
+    const prev = prevStateRef.current;
+    prevStateRef.current = state;
+    if (state !== GameState.Lobby || prev === GameState.Lobby) return;
+    if (prev === GameState.Podium || finaleRef.current) {
+      finaleRef.current = false;
+      setResync((n) => n + 1);
+    }
+  }, [state]);
+
+  // The room is gone (game:ended, or the join refused on a reload): this PIN's kept
+  // finale stays up with "Thanks for playing"; with none, upstream's screen says why.
+  const gone = state === GameState.Ended || session.view.status === 'error';
+  const [closedWithRecord, setClosedWithRecord] = useState(false);
+  useEffect(() => {
+    if (!gone) return;
+    const record = loadScreenRecord(pin);
+    if (!record) return;
+    if (!finaleRef.current) dispatch({ type: 'screenFinale', finale: record.finale, record });
+    dispatch({ type: 'closed' });
+    setClosedWithRecord(true);
+  }, [gone, pin]);
+
+  // The banner shown goes at its time, and the next one comes.
+  const until = ui.current?.until;
+  useEffect(() => {
+    if (until === undefined) return;
+    const id = setTimeout(
+      () => dispatch({ type: 'next', now: Date.now() }),
+      Math.max(0, until - Date.now()),
+    );
+    return () => clearTimeout(id);
+  }, [until, ui.current?.id]);
+
+  const gameId = ui.finale?.gameId;
+  /** The split-time replay was played: a reload shows the standings straight away. */
+  const replayDone = useCallback(() => {
+    if (gameId) markScreenReplayed(pin, gameId);
+    dispatch({ type: 'replay', replay: 'done' });
+  }, [pin, gameId]);
+
+  return { active: active || closedWithRecord, ui, replayDone };
 }
 
 export type EscapeScreenSession = ReturnType<typeof useEscapeScreen>;
