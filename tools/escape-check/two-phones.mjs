@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-/* global document, window, MutationObserver -- in page.evaluate, the page's own */
 /**
  * Two phones play a Vault Heist run against the dev stack (M4, Task 4.19), with the
  * host driven by socket (no console until M5). It prints OK or FAIL per check, writes
@@ -31,147 +30,32 @@
  * All along, both phones' received WebSocket frames (CDP) and page text are recorded,
  * and none may hold the host's events or an answer of the template.
  */
-import { mkdirSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
 import { io } from 'socket.io-client';
-
-const HERE = dirname(fileURLToPath(import.meta.url));
-const REPO = resolve(HERE, '../../..');
-const URL = process.env.URL ?? 'http://localhost:5173';
-const OUT = process.env.OUT ?? `${REPO}/.tmp/escape-check`;
-// Chrome's throwaway profiles go under TMPDIR: keep them on the SSD. macOS always
-// sets TMPDIR (on the internal disk), so it is replaced unless already under REPO.
-if (!resolve(process.env.TMPDIR ?? '/').startsWith(`${REPO}/`)) {
-  process.env.TMPDIR = `${REPO}/.tmp`;
-}
-mkdirSync(OUT, { recursive: true });
-mkdirSync(process.env.TMPDIR, { recursive: true });
-
-const HOST = 'Mei';
-const PHONE = { width: 390, height: 780 };
-const TEMPLATE = 'Vault Heist';
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
-const problems = [];
-const check = (ok, what) => {
-  log(ok ? 'OK  ' : 'FAIL', what);
-  if (!ok) problems.push(what);
-  return ok;
-};
-
-async function api(method, path, body) {
-  const res = await fetch(`${URL}/api/v1${path}`, {
-    method,
-    headers: { 'content-type': 'application/json', 'x-local-user': HOST },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`${method} ${path}: ${res.status} ${text}`);
-  return text ? JSON.parse(text) : null;
-}
-
-/** Every answer a phone must never be sent: codes, phrases, combined parts. */
-function answersOf(content) {
-  const out = new Set();
-  for (const stage of content.stages) {
-    for (const lock of stage.locks) {
-      if (lock.kind === 'code') out.add(lock.answer);
-      if (lock.kind === 'phrase') lock.answers.forEach((a) => out.add(a));
-      if (lock.kind === 'combined') lock.parts.forEach((p) => out.add(p.answer));
-    }
-  }
-  return [...out];
-}
-
-let n = 0;
-async function shot(page, name) {
-  await sleep(300);
-  const file = `${OUT}/${String(++n).padStart(2, '0')}-${name}.png`;
-  await page.screenshot({ path: file });
-  log('shot', file);
-}
-
-/** Records what the page's polite region says, every announcement in turn. */
-function recordAnnouncements() {
-  window.__said = [];
-  const seen = new WeakSet();
-  new MutationObserver(() => {
-    for (const el of document.querySelectorAll('[role="status"][aria-live="polite"] span')) {
-      if (seen.has(el) || !el.textContent) continue;
-      seen.add(el);
-      window.__said.push(el.textContent);
-    }
-  }).observe(document, { subtree: true, childList: true, characterData: true });
-}
-
-async function newPhone(browser, name) {
-  const context = await browser.newContext({
-    viewport: PHONE,
-    deviceScaleFactor: 2,
-    isMobile: true,
-    hasTouch: true,
-    locale: 'en-US',
-    reducedMotion: 'no-preference',
-  });
-  await context.addInitScript(recordAnnouncements);
-  const page = await context.newPage();
-  const frames = [];
-  const cdp = await context.newCDPSession(page);
-  await cdp.send('Network.enable');
-  cdp.on('Network.webSocketFrameReceived', (e) => frames.push(e.response.payloadData));
-  const texts = [];
-  page.on('pageerror', (err) => log(`[${name}] page error:`, err.message));
-  return { name, context, page, frames, texts };
-}
-
-/** The page's text as it stands, kept for the no-secrets check at the end. */
-async function keepText(phone) {
-  phone.texts.push(await phone.page.evaluate(() => document.body.innerText));
-}
-
-const said = (page) => page.evaluate(() => window.__said ?? []);
-async function waitSaid(page, re, timeout = 10_000) {
-  const end = Date.now() + timeout;
-  while (Date.now() < end) {
-    const all = await said(page);
-    const hit = all.find((s) => re.test(s));
-    if (hit) return hit;
-    await sleep(150);
-  }
-  return null;
-}
-
-/** The team timer's seconds left, as the phone shows them. */
-async function timerS(page) {
-  const text = await page.locator('[role="timer"] span[aria-hidden]').last().textContent();
-  const parts = text.trim().split(':').map(Number);
-  return parts.reduce((acc, v) => acc * 60 + v, 0);
-}
-
-const visible = (locator, timeout = 10_000) =>
-  locator
-    .first()
-    .waitFor({ state: 'visible', timeout })
-    .then(() => true)
-    .catch(() => false);
-
-/** The lock card titled `label`. */
-const lockCard = (page, label) =>
-  page.locator('article').filter({ has: page.getByRole('heading', { name: label }) });
-
-async function openCode(page, label, answer) {
-  const card = lockCard(page, label);
-  await card.getByRole('textbox').fill(answer);
-  await card.getByRole('button', { name: 'Open', exact: true }).click();
-}
-
-async function openChoice(page, label, optionLabels) {
-  const card = lockCard(page, label);
-  for (const o of optionLabels) await card.getByRole('button', { name: o }).click();
-  await card.getByRole('button', { name: 'Open', exact: true }).click();
-}
+import {
+  answersOf,
+  check,
+  claimSeat,
+  HOST,
+  joinPhone,
+  keepText,
+  lockCard,
+  log,
+  newPhone,
+  openChoice,
+  openCode,
+  OUT,
+  problems,
+  releaseSeat,
+  shot,
+  sleep,
+  TEMPLATE,
+  timerS,
+  URL,
+  vaultHeistTemplate,
+  visible,
+  waitSaid,
+} from './lib.mjs';
 
 /** Waits for the unlock moment, photographs it, taps it away. */
 async function unlockMoment(phone, re, photo) {
@@ -190,19 +74,8 @@ let browser = null;
 
 async function main() {
   // ── 1. Host by socket: the seat, the template, the run ──
-  await api('POST', '/auth/host-seat/claim', { expiresInMinutes: null })
-    .then(() => (seatTaken = true))
-    .catch((err) => {
-      if (!String(err).includes('already_host')) throw err;
-    });
-  const added = await api('POST', '/escape-templates/samples');
-  let tpl = added.find((t) => t.title === TEMPLATE);
-  if (!tpl) {
-    const row = (await api('GET', '/escape-templates')).find((t) => t.title === TEMPLATE);
-    if (!row) throw new Error(`${TEMPLATE} not found among the host's templates`);
-    tpl = await api('GET', `/escape-templates/${row.id}`);
-  }
-  if (tpl.status !== 'published') tpl = await api('POST', `/escape-templates/${tpl.id}/publish`);
+  seatTaken = await claimSeat();
+  const tpl = await vaultHeistTemplate();
   const content = tpl.content;
   const answers = answersOf(content);
   const [lobby, security, vault, getaway] = content.stages;
@@ -249,10 +122,7 @@ async function main() {
     [a, 'Ana'],
     [b, 'Ben'],
   ]) {
-    await phone.page.goto(`${URL}/join/${pin}`);
-    await phone.page.getByLabel(/Nickname/).fill(nickname);
-    await phone.page.getByRole('button', { name: 'Join the lobby', exact: true }).click();
-    phone.nickname = nickname;
+    await joinPhone(phone, pin, nickname);
   }
   for (const p of phones) {
     check(
@@ -555,7 +425,7 @@ if (host?.connected && pin) {
 host?.close();
 bot?.close();
 await browser?.close();
-if (seatTaken) await api('POST', '/auth/host-seat/release').catch(() => undefined);
+if (seatTaken) await releaseSeat();
 if (crashed || problems.length) {
   log(`FAIL: ${problems.length} check(s) failed${crashed ? ', and the run stopped' : ''}`);
   problems.forEach((p) => log('  -', p));
