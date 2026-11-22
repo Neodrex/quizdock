@@ -92,5 +92,18 @@
     "open_few": "Otwarte zamki: {{done}} z {{count}}",
     "open_many": "Otwarte zamki: {{done}} z {{count}}",
     "open_other": "Otwarte zamki: {{done}} z {{count}}"
+  },
+  "hints": {
+    "title": "Podpowiedzi",
+    "total": "Podpowiedzi: {{delta}}",
+    "tagFree": "Darmowa",
+    "tagPaid": "Płatna",
+    "ask": "Podpowiedź ({{cost}})",
+    "cost": "+{{seconds}} s",
+    "free": "darmowa",
+    "confirmTitle": "Poprosić o podpowiedź?",
+    "confirmCost": "Ta podpowiedź doda {{seconds}} s do czasu twojej drużyny.",
+    "confirmFree": "Ta podpowiedź jest darmowa.",
+    "confirm": "Pokaż podpowiedź"
   }
 }

@@ -84,5 +84,18 @@
   "locks": {
     "open_one": "{{count}} में से {{done}} ताला खुला",
     "open_other": "{{count}} में से {{done}} ताले खुले"
+  },
+  "hints": {
+    "title": "संकेत",
+    "total": "संकेत: {{delta}}",
+    "tagFree": "मुफ़्त",
+    "tagPaid": "सशुल्क",
+    "ask": "संकेत ({{cost}})",
+    "cost": "+{{seconds}} से.",
+    "free": "मुफ़्त",
+    "confirmTitle": "संकेत माँगें?",
+    "confirmCost": "यह संकेत आपकी टीम के समय में {{seconds}} से. जोड़ता है।",
+    "confirmFree": "यह संकेत मुफ़्त है।",
+    "confirm": "संकेत पाएँ"
   }
 }

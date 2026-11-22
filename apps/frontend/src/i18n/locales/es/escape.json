@@ -88,5 +88,18 @@
     "open_one": "{{done}} de {{count}} cerradura abierta",
     "open_many": "{{done}} de {{count}} cerraduras abiertas",
     "open_other": "{{done}} de {{count}} cerraduras abiertas"
+  },
+  "hints": {
+    "title": "Pistas",
+    "total": "Pistas: {{delta}}",
+    "tagFree": "Gratis",
+    "tagPaid": "De pago",
+    "ask": "Pista ({{cost}})",
+    "cost": "+{{seconds}} s",
+    "free": "gratis",
+    "confirmTitle": "¿Pedir una pista?",
+    "confirmCost": "Esta pista añade {{seconds}} s al tiempo de tu equipo.",
+    "confirmFree": "Esta pista es gratis.",
+    "confirm": "Obtener la pista"
   }
 }

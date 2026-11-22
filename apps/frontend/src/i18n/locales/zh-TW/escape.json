@@ -80,5 +80,18 @@
   },
   "locks": {
     "open_other": "已開啟 {{done}}/{{count}} 把鎖"
+  },
+  "hints": {
+    "title": "提示",
+    "total": "提示：{{delta}}",
+    "tagFree": "免費",
+    "tagPaid": "付費",
+    "ask": "提示（{{cost}}）",
+    "cost": "+{{seconds}} 秒",
+    "free": "免費",
+    "confirmTitle": "要請求提示嗎？",
+    "confirmCost": "此提示會讓你的隊伍增加 {{seconds}} 秒用時。",
+    "confirmFree": "此提示免費。",
+    "confirm": "取得提示"
   }
 }

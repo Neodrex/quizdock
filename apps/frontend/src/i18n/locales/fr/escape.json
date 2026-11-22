@@ -88,5 +88,18 @@
     "open_one": "{{done}} serrure ouverte sur {{count}}",
     "open_many": "{{done}} serrures ouvertes sur {{count}}",
     "open_other": "{{done}} serrures ouvertes sur {{count}}"
+  },
+  "hints": {
+    "title": "Indices",
+    "total": "Indices : {{delta}}",
+    "tagFree": "Gratuit",
+    "tagPaid": "Payant",
+    "ask": "Indice ({{cost}})",
+    "cost": "+{{seconds}} s",
+    "free": "gratuit",
+    "confirmTitle": "Demander un indice ?",
+    "confirmCost": "Cet indice ajoute {{seconds}} s au temps de votre équipe.",
+    "confirmFree": "Cet indice est gratuit.",
+    "confirm": "Obtenir l'indice"
   }
 }

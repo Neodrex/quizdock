@@ -84,5 +84,18 @@
   "locks": {
     "open_one": "{{done}} von {{count}} Schloss offen",
     "open_other": "{{done}} von {{count}} Schlössern offen"
+  },
+  "hints": {
+    "title": "Hinweise",
+    "total": "Hinweise: {{delta}}",
+    "tagFree": "Gratis",
+    "tagPaid": "Mit Strafzeit",
+    "ask": "Hinweis ({{cost}})",
+    "cost": "+{{seconds}} s",
+    "free": "gratis",
+    "confirmTitle": "Einen Hinweis anfordern?",
+    "confirmCost": "Dieser Hinweis fügt der Zeit eures Teams {{seconds}} s hinzu.",
+    "confirmFree": "Dieser Hinweis ist gratis.",
+    "confirm": "Hinweis holen"
   }
 }

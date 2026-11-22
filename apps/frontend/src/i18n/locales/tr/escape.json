@@ -84,5 +84,18 @@
   "locks": {
     "open_one": "{{count}} kilitten {{done}} tanesi açık",
     "open_other": "{{count}} kilitten {{done}} tanesi açık"
+  },
+  "hints": {
+    "title": "İpuçları",
+    "total": "İpuçları: {{delta}}",
+    "tagFree": "Ücretsiz",
+    "tagPaid": "Bedelli",
+    "ask": "İpucu ({{cost}})",
+    "cost": "+{{seconds}} sn",
+    "free": "ücretsiz",
+    "confirmTitle": "İpucu istensin mi?",
+    "confirmCost": "Bu ipucu takımınızın süresine {{seconds}} sn ekler.",
+    "confirmFree": "Bu ipucu ücretsiz.",
+    "confirm": "İpucunu al"
   }
 }

@@ -84,5 +84,18 @@
   "locks": {
     "open_one": "{{done}} of {{count}} lock open",
     "open_other": "{{done}} of {{count}} locks open"
+  },
+  "hints": {
+    "title": "Hints",
+    "total": "Hints: {{delta}}",
+    "tagFree": "Free",
+    "tagPaid": "Paid",
+    "ask": "Hint ({{cost}})",
+    "cost": "+{{seconds}} s",
+    "free": "free",
+    "confirmTitle": "Ask for a hint?",
+    "confirmCost": "This hint adds {{seconds}} s to your team's time.",
+    "confirmFree": "This hint is free.",
+    "confirm": "Get the hint"
   }
 }

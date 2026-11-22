@@ -80,5 +80,18 @@
   },
   "locks": {
     "open_other": "{{count}}個中{{done}}個の錠が開いています"
+  },
+  "hints": {
+    "title": "ヒント",
+    "total": "ヒント：{{delta}}",
+    "tagFree": "無料",
+    "tagPaid": "有料",
+    "ask": "ヒント（{{cost}}）",
+    "cost": "+{{seconds}}秒",
+    "free": "無料",
+    "confirmTitle": "ヒントをもらいますか？",
+    "confirmCost": "このヒントでチームのタイムに{{seconds}}秒加算されます。",
+    "confirmFree": "このヒントは無料です。",
+    "confirm": "ヒントをもらう"
   }
 }
