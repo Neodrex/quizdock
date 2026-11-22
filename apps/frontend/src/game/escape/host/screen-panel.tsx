@@ -1,6 +1,6 @@
 import type { RoomSoundsPayload, ThemeValues } from '@quiz-dock/contracts';
 import { EllipsisVertical, ExternalLink, Eye, Share2 } from 'lucide-react';
-import { type FormEvent, useRef, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,9 @@ import { RoomSoundsButton } from '../../game-sounds-panel';
  * and its `live:control.*` texts, as the quiz console's), and the room's sound controls
  * (upstream's `RoomSoundsButton`, `host:sounds`). Off while the connection is down.
  */
+/** The pairing code field (upstream's `Input` takes no ref). */
+const CODE_FIELD = 'escape-pair-code';
+
 export function ScreenPanel({
   pin,
   socket,
@@ -34,7 +37,6 @@ export function ScreenPanel({
   const [pairCode, setPairCode] = useState('');
   const [pairResult, setPairResult] = useState<'paired' | 'failed' | null>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);
-  const codeField = useRef<HTMLInputElement>(null);
   const screenUrl = `${window.location.origin}/session/${pin}/projection`;
 
   const openScreen = () => window.open(screenUrl, '_blank', 'noopener,noreferrer');
@@ -46,7 +48,7 @@ export function ScreenPanel({
       if (res.ok) {
         // The emptied code disables the focused submit button, and a browser then drops
         // the focus, which closes the popover before its result is read: keep it inside.
-        codeField.current?.focus();
+        document.getElementById(CODE_FIELD)?.focus();
         setPairCode('');
       }
     });
@@ -126,11 +128,10 @@ export function ScreenPanel({
               {t('control.share')}
             </Button>
             {shareNote ? <p className="text-muted-foreground text-xs">{shareNote}</p> : null}
-            <Label htmlFor="escape-pair-code">{t('control.pairCodeLabel')}</Label>
+            <Label htmlFor={CODE_FIELD}>{t('control.pairCodeLabel')}</Label>
             <div className="flex gap-2">
               <Input
-                id="escape-pair-code"
-                ref={codeField}
+                id={CODE_FIELD}
                 value={pairCode}
                 onChange={(e) => {
                   setPairCode(e.target.value.replace(/\D/g, '').slice(0, 4));
