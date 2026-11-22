@@ -90,6 +90,19 @@ interface RunRef {
 
 const TEAM_ROOM_PREFIX = 'escape:';
 
+/**
+ * The run's host console: a host control of the room, signed in as its host,
+ * that never joined as a spectator. One that did is a screen (M6 §1.4).
+ */
+function isHostConsole(d: GameSocketData, pin: string, hostUserId: string): boolean {
+  return (
+    d.isHostControl === true &&
+    d.pin === pin &&
+    d.projection === undefined &&
+    d.user?.id === hostUserId
+  );
+}
+
 const fresh = (team: TeamState): TeamRecord => ({
   team,
   lastProgressAt: 0,
@@ -248,7 +261,7 @@ export class EscapeEngine implements OnModuleDestroy {
   async sync(socket: EscapeSocket, pin: string): Promise<void> {
     await this.mutate(pin, undefined, async (ref) => {
       const { data } = socket;
-      if (data.isHostControl && data.pin === pin && data.user?.id === ref.meta.hostUserId) {
+      if (isHostConsole(data, pin, ref.meta.hostUserId)) {
         await socket.join(escapeRooms.host(pin));
         const v = await this.viewOf(ref);
         socket.emit('escape:outline', hostOutlineOf(ref.snap, ref.id));
@@ -282,6 +295,8 @@ export class EscapeEngine implements OnModuleDestroy {
         return;
       }
       if (!socket.rooms.has(pin)) throw new ForbiddenException('escape.not_in_room');
+      // A console that joined as a spectator is a screen now: out of the host room.
+      await socket.leave(escapeRooms.host(pin));
       await socket.join(escapeRooms.board(pin));
       const v = await this.viewOf(ref);
       socket.emit('escape:board', boardOf(v));
@@ -301,7 +316,14 @@ export class EscapeEngine implements OnModuleDestroy {
     const meta = await this.game.getMeta(pin);
     if (meta?.kind !== 'escape') return;
     await this.mutate(pin, undefined, async (ref) => {
-      // Roles move only while the run plays: its ticker clears what is kept here.
+      // While forming, the lobby roster shows them disconnected (M6); roles move
+      // only while the run plays: its ticker clears what is kept here.
+      if (ref.run.phase === 'forming') {
+        const v = await this.viewOf(ref);
+        this.toHost(ref, v);
+        this.toBoard(ref, v);
+        return;
+      }
       if (ref.run.phase !== 'running') return;
       const sockets = await this.server.in(pin).fetchSockets();
       if (sockets.some((s) => s.data.pin === pin && s.data.playerId === playerId)) return;
@@ -856,12 +878,7 @@ export class EscapeEngine implements OnModuleDestroy {
     for (const s of await this.server.in(ref.pin).fetchSockets()) {
       const d = s.data;
       const phone = d.pin === ref.pin && !!d.playerId;
-      const hostConsole =
-        d.isHostControl === true &&
-        d.pin === ref.pin &&
-        d.projection === undefined &&
-        d.user?.id === ref.meta.hostUserId;
-      if (phone || hostConsole) s.emit('escape:finale', finale);
+      if (phone || isHostConsole(d, ref.pin, ref.meta.hostUserId)) s.emit('escape:finale', finale);
       else s.emit('escape:screen-finale', screen);
     }
   }

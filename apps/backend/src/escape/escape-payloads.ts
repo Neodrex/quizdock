@@ -403,7 +403,7 @@ export function screenFinaleOf(finale: EscapeFinale, v: RunView): EscapeScreenFi
       stageClearedAt: [...r.stageClearedAt],
       hintsUsed: r.hintsUsed,
       hintPenaltyS: r.hintPenaltyS,
-      members: r.members.map(String),
+      members: [...r.members],
     })),
     awards: {
       fastest: a.fastest,

@@ -212,6 +212,66 @@ export function screenTests(ctx: EscapeContext): void {
         .filter(([e]) => e === 'escape:screen-finale')
         .flatMap(([, f]) => (f as EscapeScreenFinale).ranking.flatMap((r) => r.members));
       expect([kind, members.sort()]).toEqual([kind, [...nicknames].sort()]);
+      // Once running, the board carries no roster.
+      const running = frames.filter(
+        ([e, b]) => e === 'escape:board' && (b as EscapeBoard).phase !== 'forming',
+      );
+      expect([kind, running.length > 0]).toEqual([kind, true]);
+      for (const [, b] of running) expect([kind, (b as EscapeBoard).roster]).toEqual([kind, []]);
     }
+  });
+
+  it('a host console that also joined as a spectator is a screen: board only, the screen finale', async () => {
+    const room = await runningRoom(ctx, { players: 2, teams: 2 });
+    const { pin, host } = room;
+    const both = ctx.h.connectHost();
+    expect(await both.emitWithAck('host:attach', { pin })).toMatchObject({ ok: true });
+    expect(await both.emitWithAck('spectator:join', { pin })).toEqual({ ok: true });
+    const seen = record(both);
+    const board = nextEvent<EscapeBoard>(both, 'escape:board');
+    expect(await both.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    await board;
+    // Team traffic and host frames go to the host room: it must not be in it.
+    expect(await host.emitWithAck('escape:hint', { pin })).toEqual({ ok: true, released: 2 });
+    const sf = screenFinaleOn(both);
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    await sf;
+    await settle(100);
+    expect(screenLeaksIn(seen, ctx.vault)).toEqual([]);
+  });
+
+  it('while forming, a phone that drops shows as disconnected on the lobby board', async () => {
+    const host = ctx.h.connectHost();
+    const pin = await createEscape(host, ctx.templateId);
+    expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    const screen = ctx.h.connect();
+    await screen.emitWithAck('spectator:join', { pin });
+    expect(await screen.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    const here = nextEvent<EscapeBoard>(screen, 'escape:board', {
+      where: (b) => b.roster.some((r) => r.nickname === 'Cleo' && r.connected),
+    });
+    const cleo = await joinAndSync(ctx.h, pin, 'Cleo');
+    await here;
+    const gone = nextEvent<EscapeBoard>(screen, 'escape:board', {
+      where: (b) => b.roster.some((r) => r.nickname === 'Cleo' && !r.connected),
+    });
+    cleo.socket.disconnect();
+    expect((await gone).roster).toEqual([{ teamId: null, nickname: 'Cleo', connected: false }]);
+  });
+
+  it('the screen finale says which team timed out', async () => {
+    const { pin, host, screen } = await runningRoom(ctx, { players: 2, teams: 2 });
+    expect(
+      await host.emitWithAck('escape:adjust-time', { pin, deltaS: -3600, teamId: 't1' }),
+    ).toEqual({ ok: true });
+    await settle(150);
+    const sf = screenFinaleOn(screen);
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    const { ranking } = await sf;
+    expect(ranking.find((r) => r.teamId === 't1')).toMatchObject({
+      timedOut: true,
+      escaped: false,
+    });
+    expect(ranking.find((r) => r.teamId === 't2')).toMatchObject({ timedOut: false });
   });
 }
