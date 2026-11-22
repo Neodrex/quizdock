@@ -16,6 +16,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Drawer } from '@/components/ui/drawer';
 import { useMediaQuery } from '@/lib/use-media-query';
 import { cn } from '@/lib/utils';
+import { mediaSrc } from '../clue-list';
 import { formatDelta } from '../escape-reducer';
 import { type HostCommands, TeamActions, UnlockButton } from './host-actions';
 import { type HintSource, type HostLockView, nextHintOf, stageOf } from './host-reducer';
@@ -92,6 +93,20 @@ function LockRow({
         </div>
       ) : null}
     </li>
+  );
+}
+
+/**
+ * A clue's body: text, or a media link only when its address is one this app may
+ * open (`mediaSrc`, as on the phones); anything else stays plain text.
+ */
+function ClueBody({ kind, body }: { kind: string; body: string }) {
+  const src = kind === 'text' ? null : mediaSrc(body);
+  if (!src) return <p className="break-words whitespace-pre-line">{body}</p>;
+  return (
+    <a href={src} target="_blank" rel="noreferrer" className="break-all underline">
+      {body}
+    </a>
   );
 }
 
@@ -237,18 +252,7 @@ export function TeamDetail({
                   <Badge variant="muted" className="self-start">
                     {c.roleId ? roleName(c.roleId) : t('host.detail.clueEveryone')}
                   </Badge>
-                  {c.kind === 'text' ? (
-                    <p className="break-words whitespace-pre-line">{c.body}</p>
-                  ) : (
-                    <a
-                      href={c.body}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="break-all underline"
-                    >
-                      {c.body}
-                    </a>
-                  )}
+                  <ClueBody kind={c.kind} body={c.body} />
                 </li>
               ))}
             </ul>

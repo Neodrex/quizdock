@@ -124,6 +124,31 @@ describe('TeamDetail', () => {
     );
   });
 
+  it('a media clue links only to an address the app may open; a javascript: body stays text', () => {
+    const base = outlineOf();
+    const lobbyStage = base.stages[0]!;
+    const outline = outlineOf({
+      stages: [
+        {
+          ...lobbyStage,
+          clues: [
+            { id: 'c-js', roleId: null, kind: 'image', body: 'javascript:alert(1)' },
+            { id: 'c-ok', roleId: null, kind: 'image', body: 'https://example.com/map.png' },
+          ],
+        },
+        ...base.stages.slice(1),
+      ],
+    });
+    drawEn(<TeamDetail outline={outline} team={lobby} commands={commands()} />);
+    const bad = screen.getByText('javascript:alert(1)');
+    expect(bad.closest('a')).toBeNull();
+    expect(document.querySelector('a[href^="javascript:"]')).toBeNull();
+    expect(screen.getByText('https://example.com/map.png').closest('a')).toHaveAttribute(
+      'href',
+      'https://example.com/map.png',
+    );
+  });
+
   it('extra time says the score is unchanged', () => {
     draw(hostTeamOf({ adjustMs: 120_000 }));
     expect(screen.getByText('Extra time given: +2:00 (score unchanged)')).toBeInTheDocument();
