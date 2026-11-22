@@ -26,8 +26,12 @@ async function shareLink(
     } else {
       note(t('control.shareByHand', { url }));
     }
-  } catch {
-    // Share sheet closed, or refused: nothing to say.
+  } catch (e) {
+    // Share sheet closed by the host: nothing to say. Any other refusal (the
+    // clipboard blocked, say): the address to copy by hand.
+    if (!(e instanceof DOMException && e.name === 'AbortError')) {
+      note(t('control.shareByHand', { url }));
+    }
   }
 }
 

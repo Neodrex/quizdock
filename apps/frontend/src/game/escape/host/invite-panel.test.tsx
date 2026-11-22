@@ -66,6 +66,29 @@ describe('InvitePanel', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Link copied');
   });
 
+  it('a refused clipboard gives the address to copy by hand', async () => {
+    const writeText = vi.fn(async () => {
+      throw new DOMException('Write permission denied.', 'NotAllowedError');
+    });
+    Object.assign(navigator, { share: undefined, clipboard: { writeText } });
+    drawEn(<InvitePanel pin={PIN} view={view} onJoinUrl={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    expect(await screen.findByRole('status')).toHaveTextContent(URL);
+    expect(screen.getByRole('status')).not.toHaveTextContent('Link copied');
+  });
+
+  it('a share sheet closed by the host says nothing', async () => {
+    const share = vi.fn(async () => {
+      throw new DOMException('Share canceled.', 'AbortError');
+    });
+    Object.assign(navigator, { share });
+    drawEn(<InvitePanel pin={PIN} view={view} onJoinUrl={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    await waitFor(() => expect(share).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
   it('then the address to copy by hand', async () => {
     Object.assign(navigator, { share: undefined, clipboard: undefined });
     drawEn(<InvitePanel pin={PIN} view={view} onJoinUrl={vi.fn()} />);
