@@ -81,6 +81,21 @@ describe('HintPanel', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('a hint asked for is not asked again before the next state offers another', async () => {
+    const askHint = vi.fn().mockResolvedValue({ ok: true });
+    drawEn(<HintPanel state={withHints()} hintTags={{}} canPlay askHint={askHint} />);
+    fireEvent.click(hintButton());
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Get the hint' }));
+    });
+    // The state still offers h3: a second ask in that gap sends nothing.
+    fireEvent.click(hintButton());
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Get the hint' }));
+    });
+    expect(askHint).toHaveBeenCalledTimes(1);
+  });
+
   it('a free hint says so in the confirmation', () => {
     drawEn(
       <HintPanel

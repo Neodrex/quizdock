@@ -300,4 +300,22 @@ describe('escape phone recovery', () => {
     await act(() => vi.advanceTimersByTimeAsync(3 * (8_000 + SYNC_RETRY_MS)));
     expect(events().filter((e) => e === 'escape:sync')).toHaveLength(2);
   });
+
+  it('6b. a sync timing out while the socket is down: nothing goes before player:reconnect', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    storeSession();
+    acks.set('escape:sync', () => 'no-ack');
+    await load();
+    await waitFor(() => expect(attachAndSync()).toEqual(['player:reconnect', 'escape:sync']));
+    sock().connected = false;
+    fire('disconnect', 'transport close');
+    const before = events().length;
+    await act(() => vi.advanceTimersByTimeAsync(3 * (8_000 + SYNC_RETRY_MS)));
+    expect(attachAndSync(before)).toEqual([]);
+    acks.delete('escape:sync');
+    sock().connected = true;
+    act(() => sock().ioHandlers.get('reconnect')?.());
+    fire('connect');
+    await waitFor(() => expect(attachAndSync(before)).toEqual(['player:reconnect', 'escape:sync']));
+  });
 });

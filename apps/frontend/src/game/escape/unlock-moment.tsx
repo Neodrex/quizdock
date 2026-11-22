@@ -84,7 +84,7 @@ export function UnlockMoment({
   return (
     <motion.div
       // A fresh overlay plays again; it never stacks on the last one.
-      key={`${overlay.kind}:${overlay.unlockText}`}
+      key={`${overlay.kind}:${overlay.kind === 'stage' ? overlay.stageIndex : ''}:${overlay.unlockText}`}
       {...shared}
       aria-hidden
       initial={level === 'full' ? { opacity: 0, scale: 0.92 } : { opacity: 0 }}

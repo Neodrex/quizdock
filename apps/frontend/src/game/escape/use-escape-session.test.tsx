@@ -14,6 +14,7 @@ const { fakeSocket, listeners, emitted, acks } = vi.hoisted(() => {
     emitted,
     acks,
     fakeSocket: {
+      connected: true,
       on: (e: string, cb: (p: unknown) => void) => {
         if (!listeners.has(e)) listeners.set(e, new Set());
         listeners.get(e)!.add(cb);
@@ -39,6 +40,12 @@ vi.mock('../game-client', async (orig) => ({
   ensureGameSocket: () => Promise.resolve(fakeSocket),
   loadPlayerSession: () => loadPlayerSession(),
 }));
+
+// The real record, its reads counted.
+vi.mock('./escape-record', async (orig) => {
+  const real = await orig<typeof import('./escape-record')>();
+  return { ...real, loadEscapeRecord: vi.fn(real.loadEscapeRecord) };
+});
 
 import { loadEscapeRecord, saveEscapeRecord } from './escape-record';
 import {
@@ -66,6 +73,7 @@ const state = (over: Partial<EscapePlayerState> = {}): EscapePlayerState => ({
     stageIndex: 0,
     stageCount: 1,
     escaped: false,
+    escapedMs: null,
     timedOut: false,
     hintPenaltyS: 0,
     remainingMs: 60_000,
@@ -73,7 +81,6 @@ const state = (over: Partial<EscapePlayerState> = {}): EscapePlayerState => ({
   },
   view: null,
   nextHint: null,
-  escapedMs: null,
   ...over,
 });
 
@@ -110,6 +117,7 @@ describe('useEscapeSession', () => {
     });
   });
   afterEach(() => {
+    fakeSocket.connected = true;
     listeners.clear();
     emitted.length = 0;
     acks.clear();
@@ -189,6 +197,36 @@ describe('useEscapeSession', () => {
       expect(sent('escape:sync')).toHaveLength(2);
     });
 
+    it('with the socket down at the timeout, waits for the next attach (never ahead of the reconnect)', async () => {
+      vi.useFakeTimers();
+      acks.set('escape:sync', () => 'no-ack');
+      const { rerender } = mount(seam({ attachSeq: 1 }));
+      await flush();
+      expect(sent('escape:sync')).toHaveLength(1);
+      fakeSocket.connected = false;
+      await act(() => vi.advanceTimersByTimeAsync(3 * (ACK_TIMEOUT_MS + SYNC_RETRY_MS)));
+      expect(sent('escape:sync')).toHaveLength(1);
+      // The socket is back, but the player is not attached again yet.
+      fakeSocket.connected = true;
+      await act(() => vi.advanceTimersByTimeAsync(3 * (ACK_TIMEOUT_MS + SYNC_RETRY_MS)));
+      expect(sent('escape:sync')).toHaveLength(1);
+      acks.delete('escape:sync');
+      rerender(seam({ attachSeq: 2 })); // player:reconnect accepted
+      await flush();
+      expect(sent('escape:sync')).toHaveLength(2);
+    });
+
+    it('a retry due while the socket is down is not sent', async () => {
+      vi.useFakeTimers();
+      acks.set('escape:sync', () => 'no-ack');
+      mount(seam({ attachSeq: 1 }));
+      await flush();
+      await act(() => vi.advanceTimersByTimeAsync(ACK_TIMEOUT_MS));
+      fakeSocket.connected = false; // dropped between the timeout and the retry
+      await act(() => vi.advanceTimersByTimeAsync(3 * (ACK_TIMEOUT_MS + SYNC_RETRY_MS)));
+      expect(sent('escape:sync')).toHaveLength(1);
+    });
+
     it('a refusal is not retried', async () => {
       vi.useFakeTimers();
       acks.set('escape:sync', () => ({ ok: false, error: { code: 'escape.not_found' } }));
@@ -196,6 +234,51 @@ describe('useEscapeSession', () => {
       await flush();
       await act(() => vi.advanceTimersByTimeAsync(3 * (ACK_TIMEOUT_MS + SYNC_RETRY_MS)));
       expect(sent('escape:sync')).toHaveLength(1);
+    });
+  });
+
+  describe('the record lookup with no session', () => {
+    const noSession = (attachSeq = 0) =>
+      seam({ attachSeq, view: { status: 'no-session', state: null, totalQuestions: 0 } });
+
+    it('checks the record first: the finale, final, and the check is over', async () => {
+      saveEscapeRecord({
+        pin: PIN,
+        gameId: GAME,
+        playerId: 'p1',
+        sessionToken: 'old',
+        teamId: 't1',
+      });
+      acks.set('escape:results', () => ({ ok: true, finale }));
+      const { result } = mount(noSession());
+      expect(result.current.checkingRecord).toBe(true);
+      await flush();
+      expect(result.current.checkingRecord).toBe(false);
+      expect(result.current.ui.finale).toEqual(finale);
+      expect(result.current.ui.ended).toBe('final');
+    });
+
+    it('without a record there is nothing to check', () => {
+      const { result } = mount(noSession());
+      expect(result.current.checkingRecord).toBe(false);
+    });
+
+    it('does not read the storage on each render while it checks', async () => {
+      saveEscapeRecord({
+        pin: PIN,
+        gameId: GAME,
+        playerId: 'p1',
+        sessionToken: 'old',
+        teamId: 't1',
+      });
+      acks.set('escape:results', () => 'no-ack'); // the check stays open
+      const { result, rerender } = mount(noSession());
+      await flush();
+      expect(result.current.checkingRecord).toBe(true);
+      vi.mocked(loadEscapeRecord).mockClear();
+      for (let i = 0; i < 5; i++) rerender(noSession());
+      expect(loadEscapeRecord).not.toHaveBeenCalled();
+      expect(result.current.checkingRecord).toBe(true);
     });
   });
 

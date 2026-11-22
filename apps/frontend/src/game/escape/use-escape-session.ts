@@ -138,6 +138,9 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
       void ensureGameSocket('guest', pin).then((sock) => {
         if (!live) return;
         socketRef.current = sock;
+        // Down: socket.io would buffer the sync and flush it ahead of player:reconnect,
+        // when the server would take the phone for a screen. The next attach syncs.
+        if (!sock.connected) return;
         const seen = statesRef.current;
         emitWithAckOrError(sock, 'escape:sync', { pin }).then(
           // A quiz shown meanwhile wins: that room is not (or no longer) an escape run.
@@ -146,7 +149,12 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
             if (!live) return;
             if (e.code === 'escape.not_found') setActive(false);
             // No answer at all (an ack timeout, no code): again, unless a state came meanwhile.
-            else if (!e.code && statesRef.current === seen && !quizOnRef.current) {
+            else if (
+              !e.code &&
+              statesRef.current === seen &&
+              !quizOnRef.current &&
+              sock.connected
+            ) {
               retry = setTimeout(sync, SYNC_RETRY_MS);
             }
           },
@@ -251,22 +259,26 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
   // No session here (a reload after the room ended, a refused reconnect): this PIN's
   // record may still hold results, looked up before the nickname form shows (§1.4).
   const noSession = session.view.status === 'no-session';
-  const [lookupDone, setLookupDone] = useState(false);
+  // `unknown` until the effect looked: read once here, so a record shows no form first.
+  const [lookup, setLookup] = useState<'unknown' | 'checking' | 'done'>(() =>
+    loadEscapeRecord(pin) ? 'unknown' : 'done',
+  );
   useEffect(() => {
     if (!noSession) {
-      setLookupDone(false);
+      setLookup('unknown');
       return;
     }
     if (!loadEscapeRecord(pin)) {
-      setLookupDone(true);
+      setLookup('done');
       return;
     }
     let live = true;
+    setLookup('checking');
     void resultsFromRecord().then((finale) => {
       if (!live) return;
       // The room is gone: the finale is final.
       if (finale) dispatch({ type: 'gameEnded' });
-      setLookupDone(true);
+      setLookup('done');
     });
     return () => {
       live = false;
@@ -274,7 +286,7 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
     // `resultsFromRecord` reads the record each time: no dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noSession, pin]);
-  const checkingRecord = noSession && !lookupDone && loadEscapeRecord(pin) !== null;
+  const checkingRecord = noSession && lookup !== 'done';
 
   return {
     active,

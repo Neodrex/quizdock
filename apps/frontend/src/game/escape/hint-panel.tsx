@@ -31,6 +31,8 @@ export function HintPanel({
   const [failed, setFailed] = useState(false);
   // Set before the re-render: a second tap on Confirm in the same frame sends nothing.
   const inFlight = useRef(false);
+  // The hint last asked for: until a state offers the next, asking again would pay twice.
+  const asked = useRef<string | null>(null);
 
   const hints = [...(state.view?.hints ?? [])].reverse();
   const next = state.nextHint;
@@ -38,13 +40,17 @@ export function HintPanel({
   if (!hints.length && !next) return null;
 
   const confirm = async () => {
-    if (!next || inFlight.current) return;
+    if (!next || inFlight.current || asked.current === next.id) {
+      if (next && asked.current === next.id) setAsking(false);
+      return;
+    }
     inFlight.current = true;
     setPending(true);
     setFailed(false);
     try {
       // A refusal (a teammate took it first: `no-hint`) closes too; the announcer says why.
       await askHint(next.id);
+      asked.current = next.id;
       setAsking(false);
     } catch {
       setFailed(true);

@@ -112,6 +112,18 @@ describe('UnlockMoment', () => {
     expect(vibrate).toHaveBeenCalledTimes(2);
   });
 
+  it('two stages with the same unlock text each play their moment', () => {
+    const { rerender } = drawEn(<Page overlay={stage} onClose={vi.fn()} />);
+    const first = screen.getByTestId('unlock-moment');
+    rerender(
+      <I18nextProvider i18n={en}>
+        <Page overlay={{ ...stage, stageIndex: 1 }} onClose={vi.fn()} />
+      </I18nextProvider>,
+    );
+    expect(screen.getByText('Stage 3 unlocked')).toBeInTheDocument();
+    expect(screen.getByTestId('unlock-moment')).not.toBe(first);
+  });
+
   it('without vibration support nothing breaks', () => {
     // @ts-expect-error: a browser with no Vibration API
     delete navigator.vibrate;
