@@ -609,6 +609,7 @@ export function useGameSession(pin: string, role: LiveRole, opts: { follow?: boo
             (res: { ok: boolean; pairingCode?: string }) => {
               if (!active) return;
               if (!res.ok) patch({ status: 'error', error: refusedText(res) });
+              if (res.ok) setAttachSeq((n) => n + 1);
               setPairingCode(res.pairingCode ?? null);
             },
           );

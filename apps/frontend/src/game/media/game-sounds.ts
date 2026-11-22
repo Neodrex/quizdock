@@ -219,8 +219,8 @@ export function synthClick(at: number, freq: number): () => void {
 
 /** The countdown: tic on the second, tac on the half, over its last seconds. */
 const COUNTDOWN_S = 5;
-const TIC_HZ = 1800;
-const TAC_HZ = 1100;
+export const TIC_HZ = 1800;
+export const TAC_HZ = 1100;
 
 /** Decoded samples and tracks, fetched once per URL. */
 const decoded = new Map<string, Promise<AudioBuffer | null>>();
@@ -243,7 +243,7 @@ export function loadSound(url: string): Promise<AudioBuffer | null> {
  * Plays an effect: its sample when the room gave one, else the synthesised one —
  * now, or at `at` on the context's clock. Returns how to cancel it before it starts.
  */
-function playEffect(
+export function playEffect(
   url: string | null,
   synth: (at?: number) => (() => void) | void,
   at?: number,

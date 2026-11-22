@@ -246,5 +246,20 @@ describe('useGameSession', () => {
       await waitFor(() => expect(result.current.view.status).toBe('error'));
       expect(result.current.attachSeq).toBe(0);
     });
+
+    it('counts each accepted spectator:join, the first and after a reconnect', async () => {
+      const { result } = renderHook(() => useGameSession('482913', 'spectator'));
+      await waitFor(() => expect(result.current.attachSeq).toBe(1));
+      act(() => managerListeners.get('reconnect')?.());
+      expect(emitted.filter((e) => e.event === 'spectator:join')).toHaveLength(2);
+      expect(result.current.attachSeq).toBe(2);
+    });
+
+    it('is not bumped by a refused spectator:join', async () => {
+      setAckOk(false);
+      const { result } = renderHook(() => useGameSession('482913', 'spectator'));
+      await waitFor(() => expect(result.current.view.status).toBe('error'));
+      expect(result.current.attachSeq).toBe(0);
+    });
   });
 });
