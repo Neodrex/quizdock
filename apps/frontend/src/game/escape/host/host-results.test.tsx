@@ -5,7 +5,6 @@ import { refusalError } from '../../game-client';
 import { drawEn } from '../test-fixtures';
 import { SAMPLE_ANSWERS, finaleOf } from './host-fixtures';
 import { HostResults, type ResultsCommands } from './host-results';
-import { BOM } from './results-csv';
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ to, children, className }: { to: string; children: ReactNode; className?: string }) => (
@@ -87,14 +86,15 @@ describe('HostResults', () => {
     expect(clicked[0].download).toMatch(/^vault-heist-\d{4}-\d{2}-\d{2}\.csv$/);
     expect(clicked[0].href).toBe('blob:results');
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:results');
-    // jsdom's Blob has no text(): read its bytes, the BOM kept.
+    // jsdom's Blob has no text(): read its bytes, the BOM kept (exactly one).
     const text = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onload = () =>
         resolve(new TextDecoder('utf-8', { ignoreBOM: true }).decode(reader.result as ArrayBuffer));
       reader.readAsArrayBuffer(blobs[0]);
     });
-    expect(text.startsWith(BOM)).toBe(true);
+    expect(text.startsWith('\ufeff')).toBe(true);
+    expect(text.startsWith('\ufeff\ufeff')).toBe(false);
     expect(text).toContain('Place;Team;Escaped;Score');
     for (const a of SAMPLE_ANSWERS) expect(text.toLowerCase()).not.toContain(a);
   });

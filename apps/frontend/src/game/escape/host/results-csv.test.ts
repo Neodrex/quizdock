@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SAMPLE_ANSWERS, finaleOf } from './host-fixtures';
-import {
-  BOM,
-  type ResultsCsvLabels,
-  resultsCsv,
-  resultsFilename,
-  resultsRows,
-} from './results-csv';
+import { type ResultsCsvLabels, resultsCsv, resultsFilename, resultsRows } from './results-csv';
 
 const labels: ResultsCsvLabels = {
   place: 'Place',
@@ -80,10 +74,11 @@ describe('results CSV', () => {
     ]);
   });
 
-  it('starts with a BOM; quotes are doubled; a formula-like name gets a leading quote', () => {
+  it('has no BOM of its own; quotes are doubled; a formula-like name gets a leading quote', () => {
     const csv = resultsCsv(finaleOf(), labels, 3);
-    expect(csv.startsWith(BOM)).toBe(true);
-    const lines = csv.slice(BOM.length).split('\r\n');
+    // downloadCsv adds the one BOM.
+    expect(csv.startsWith('\ufeff')).toBe(false);
+    const lines = csv.split('\r\n');
     expect(lines).toHaveLength(3);
     expect(lines[0]).toBe(
       'Place;Team;Escaped;Score;Stages cleared;Stage 1;Stage 2;Stage 3;Hints;Paid hints;Hint penalty (s);Extra time (s);Host unlocks;Members',
@@ -96,9 +91,7 @@ describe('results CSV', () => {
     (name) => {
       const finale = finaleOf();
       finale.ranking[0] = { ...finale.ranking[0], name, members: [name] };
-      const [, row] = resultsCsv(finale, labels, 3)
-        .slice(BOM.length)
-        .split(/\r\n(?=\d)/);
+      const [, row] = resultsCsv(finale, labels, 3).split(/\r\n(?=\d)/);
       const cells = row.split(';');
       expect(cells[1].replace(/^"/, '').startsWith(`'`)).toBe(true);
       expect(cells.at(-1)!.replace(/^"/, '').startsWith(`'`)).toBe(true);

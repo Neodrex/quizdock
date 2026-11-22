@@ -4,13 +4,14 @@ import { Download, RotateCcw, Trophy } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { downloadCsv } from '@/lib/csv';
 import { cn } from '@/lib/utils';
 import type { GameSocket } from '../../game-client';
 import { BackToLobbyButton } from '../../room-components';
 import { EscapeFinaleView } from '../escape-finale';
 import { formatDelta } from '../escape-reducer';
 import type { EscapeHostUi } from './host-reducer';
-import { downloadResults, type ResultsCsvLabels, resultsCsv, resultsFilename } from './results-csv';
+import { type ResultsCsvLabels, resultsCsv, resultsFilename } from './results-csv';
 
 /**
  * The run's results for the host (M5 Task 5.15): the ranking and awards the teams
@@ -123,7 +124,7 @@ export function HostResults({
   const [againFailed, setAgainFailed] = useState(false);
 
   const download = () =>
-    downloadResults(resultsFilename(finale.title), resultsCsv(finale, labels, stageCount));
+    downloadCsv(resultsFilename(finale.title), resultsCsv(finale, labels, stageCount));
   const run = async (send: () => Promise<unknown>, again = false) => {
     setError(null);
     setAgainFailed(false);

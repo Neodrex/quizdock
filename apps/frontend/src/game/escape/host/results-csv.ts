@@ -6,11 +6,9 @@ import { formatClock } from '../team-timer';
  * The run's results as CSV (M5 §1.8), built on the client from `EscapeFinale`: what
  * the ranking holds, never an answer. Cells go through the app's CSV writer (`;`,
  * RFC 4180 quotes, and a `'` before a text cell that starts with `= + - @`, a tab or a
- * carriage return, so a team or player name cannot run as a formula). UTF-8 with a
- * BOM, for Excel.
+ * carriage return, so a team or player name cannot run as a formula). Saved with
+ * `downloadCsv`, which adds the UTF-8 BOM for Excel.
  */
-
-export const BOM = '﻿';
 
 /** The column titles, in the console's language. */
 export interface ResultsCsvLabels {
@@ -75,13 +73,13 @@ export function resultsRows(
   return [header, ...rows];
 }
 
-/** The file's text, BOM first. */
+/** The file's text (no BOM: `downloadCsv` adds it). */
 export function resultsCsv(
   finale: EscapeFinale,
   labels: ResultsCsvLabels,
   stageCount: number,
 ): string {
-  return BOM + toCsv(resultsRows(finale, labels, stageCount));
+  return toCsv(resultsRows(finale, labels, stageCount));
 }
 
 /** `<title>-<yyyy-mm-dd>.csv`, the date in the host's own time zone. */
@@ -89,16 +87,4 @@ export function resultsFilename(title: string, day: Date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   const date = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
   return csvFilename(title, date);
-}
-
-/** Saves the CSV: a Blob, clicked through an `a[download]`. */
-export function downloadResults(filename: string, csv: string): void {
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
 }
