@@ -173,6 +173,8 @@ export interface EscapePlayerState {
         stageIndex: number;
         stageCount: number;
         escaped: boolean;
+        /** Run time (ms) at the team's escape, without hint penalties; null until it escapes. */
+        escapedMs: number | null;
         timedOut: boolean;
         hintPenaltyS: number;
       })

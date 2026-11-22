@@ -73,6 +73,7 @@ const state = (over: Partial<EscapePlayerState> = {}): EscapePlayerState => ({
   },
   view: null,
   nextHint: null,
+  escapedMs: null,
   ...over,
 });
 

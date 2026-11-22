@@ -106,6 +106,7 @@ const stage = (index: number, roles = ['lookout']): EscapePlayerState => ({
     stageIndex: index,
     stageCount: 3,
     escaped: false,
+    escapedMs: null,
     timedOut: false,
     hintPenaltyS: 0,
     remainingMs: 600_000,

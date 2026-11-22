@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import type { ZodType } from 'zod';
 import { GameState } from '../src';
 import {
@@ -14,6 +14,7 @@ import {
   escapeSubmitSchema,
   escapeTeamsSchema,
   escapeUnlockSchema,
+  type EscapePlayerState,
 } from '../src/escape-live';
 
 const pin = '123456';
@@ -75,5 +76,13 @@ describe('escape live schemas', () => {
 describe('GameState', () => {
   it('has an escape state', () => {
     expect(GameState.Escape).toBe('ESCAPE');
+  });
+});
+
+describe('EscapePlayerState', () => {
+  it("gives the team's run time at its escape, or null", () => {
+    expectTypeOf<NonNullable<EscapePlayerState['team']>['escapedMs']>().toEqualTypeOf<
+      number | null
+    >();
   });
 });

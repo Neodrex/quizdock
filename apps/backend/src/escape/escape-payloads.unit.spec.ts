@@ -164,6 +164,7 @@ describe('playerStateOf', () => {
       stageIndex: 0,
       stageCount: 4,
       escaped: false,
+      escapedMs: null,
       timedOut: false,
       hintPenaltyS: 0,
       remainingMs: 2_280_000,
@@ -179,6 +180,14 @@ describe('playerStateOf', () => {
       { id: 'a', name: 'Crew A', memberCount: 3 },
       { id: 'b', name: 'Crew B', memberCount: 1 },
     ]);
+  });
+
+  it('gives an escaped team its run time at the escape, which later states keep', () => {
+    const done = { ...teamA, escapedAt: 90_000 };
+    const state = playerStateOf(view(done), 'p1');
+    expect(state.team).toMatchObject({ escaped: true, escapedMs: 90_000, deadlineAt: null });
+    expect(state.clock.elapsedMs).toBe(120_000);
+    expect(leaksIn(state, tpl, { roles: done.roles.p1 })).toEqual([]);
   });
 
   it('has no view before the start or without a team', () => {

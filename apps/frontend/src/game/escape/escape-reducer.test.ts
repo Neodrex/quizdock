@@ -44,6 +44,7 @@ const team = (over: Partial<Team> = {}): Team => ({
   stageIndex: 0,
   stageCount: 3,
   escaped: false,
+  escapedMs: null,
   timedOut: false,
   hintPenaltyS: 0,
   remainingMs: 1_800_000,

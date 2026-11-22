@@ -123,6 +123,7 @@ export function playerStateOf(v: RunView, playerId: string): EscapePlayerState {
       stageIndex: rec.team.stageIndex,
       stageCount: tpl.stages.length,
       escaped: rec.team.escapedAt !== null,
+      escapedMs: rec.team.escapedAt,
       timedOut: rec.timedOut,
       hintPenaltyS: rec.team.hintPenaltyS,
     },

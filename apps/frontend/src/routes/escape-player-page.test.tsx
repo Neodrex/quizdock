@@ -94,6 +94,22 @@ describe('EscapePlayer by phase', () => {
     expect(screen.getByRole('heading', { name: "Time's up" })).toBeInTheDocument();
   });
 
+  it("escaped: the team's time is the one at the escape, even long after (a reload)", () => {
+    draw({
+      state: state({
+        clock: {
+          serverNow: 1_000_000_000,
+          paused: false,
+          elapsedMs: 2_000_000,
+          limitMs: 3_600_000,
+        },
+        team: team({ escaped: true, escapedMs: 1_234_000, deadlineAt: null }),
+        view: view({ escaped: true }),
+      }),
+    });
+    expect(screen.getByText('Red Foxes escaped in 20:34')).toBeInTheDocument();
+  });
+
   it('the finale, with the room closed once the game ended', () => {
     draw({ state: state({ phase: 'finale' }), finale, ended: 'final' });
     expect(screen.getByRole('heading', { name: 'Vault Heist' })).toBeInTheDocument();

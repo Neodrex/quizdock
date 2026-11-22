@@ -53,11 +53,7 @@ export function EscapePlayer({
     (minutes) => dispatch({ type: 'clockWarning', minutes }),
   );
 
-  // The escape as this phone saw it: the run's time then, and the last unlock text.
-  const [escapedAt, setEscapedAt] = useState<{ gameId: string; ms: number } | null>(null);
-  if (state && team?.escaped && escapedAt?.gameId !== state.gameId) {
-    setEscapedAt({ gameId: state.gameId, ms: state.clock.elapsedMs });
-  }
+  // The last stage's unlock text, as this phone saw the escape.
   const [lastUnlock, setLastUnlock] = useState<string | null>(null);
   if (ui.overlay?.kind === 'escaped' && ui.overlay.unlockText !== lastUnlock) {
     setLastUnlock(ui.overlay.unlockText);
@@ -90,7 +86,7 @@ export function EscapePlayer({
       <EscapedView
         state={state}
         unlockText={lastUnlock}
-        timeMs={escapedAt?.gameId === state.gameId ? escapedAt.ms : state.clock.elapsedMs}
+        timeMs={team.escapedMs ?? state.clock.elapsedMs}
       />
     );
   } else if (team.timedOut) {
@@ -173,7 +169,7 @@ export function EscapedView({
   state: EscapePlayerState;
   /** The last stage's unlock text, when this phone saw the escape. */
   unlockText: string | null;
-  /** The run's time at the escape. */
+  /** The run's time at the escape (`team.escapedMs`). */
   timeMs: number;
 }) {
   const { t } = useTranslation('escape');

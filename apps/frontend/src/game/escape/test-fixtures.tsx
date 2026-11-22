@@ -50,6 +50,7 @@ export const team = (over: Partial<Team> = {}): Team => ({
   stageIndex: 1,
   stageCount: 4,
   escaped: false,
+  escapedMs: null,
   timedOut: false,
   hintPenaltyS: 0,
   remainingMs: 600_000,
