@@ -38,6 +38,7 @@ vi.mock('./game-client', () => ({
   ensureGameSocket: () => Promise.resolve(fakeSocket),
   loadPlayerSession: () => loadPlayerSession(),
   clearPlayerSession: () => clearPlayerSession(),
+  refusalOf: () => null,
 }));
 
 import { useGameSession } from './use-game-session';
@@ -229,6 +230,21 @@ describe('useGameSession', () => {
       act(() => managerListeners.get('reconnect')?.());
       expect(emitted.filter((e) => e.event === 'player:reconnect')).toHaveLength(2);
       expect(result.current.attachSeq).toBe(1);
+    });
+
+    it('counts each accepted host:attach, the first and after a reconnect', async () => {
+      const { result } = renderHook(() => useGameSession('482913', 'host'));
+      await waitFor(() => expect(result.current.attachSeq).toBe(1));
+      act(() => managerListeners.get('reconnect')?.());
+      expect(emitted.filter((e) => e.event === 'host:attach')).toHaveLength(2);
+      expect(result.current.attachSeq).toBe(2);
+    });
+
+    it('is not bumped by a refused host:attach', async () => {
+      setAckOk(false);
+      const { result } = renderHook(() => useGameSession('482913', 'host'));
+      await waitFor(() => expect(result.current.view.status).toBe('error'));
+      expect(result.current.attachSeq).toBe(0);
     });
   });
 });

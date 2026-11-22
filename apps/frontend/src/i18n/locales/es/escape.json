@@ -137,5 +137,9 @@
     },
     "closed": "La sala está cerrada",
     "joinAnother": "Unirse a otra sala"
+  },
+  "host": {
+    "nav": "Salas de escape",
+    "console": "Consola del escape room"
   }
 }

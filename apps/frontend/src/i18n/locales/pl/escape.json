@@ -143,5 +143,9 @@
     },
     "closed": "Pokój jest zamknięty",
     "joinAnother": "Dołącz do innego pokoju"
+  },
+  "host": {
+    "nav": "Escape roomy",
+    "console": "Konsola escape roomu"
   }
 }

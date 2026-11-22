@@ -137,5 +137,9 @@
     },
     "closed": "La salle est fermée",
     "joinAnother": "Rejoindre un autre salon"
+  },
+  "host": {
+    "nav": "Escape games",
+    "console": "Console de l’escape game"
   }
 }

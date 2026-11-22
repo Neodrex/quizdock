@@ -98,6 +98,14 @@ export const liveRoute = createRoute({
   component: LivePage,
 });
 
+/** The host's escape templates, and a room opened from one (M5). */
+export const escapeRoomsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/escape',
+  beforeLoad: requireAuth,
+  component: lazyRouteComponent(() => import('./routes/escape-rooms-page'), 'EscapeRoomsPage'),
+});
+
 /** Un modèle du catalogue : son aperçu, et ce qu'on peut en faire. */
 export const templateRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -440,6 +448,7 @@ export const routeTree = rootRoute.addChildren([
   communityPreviewRoute,
   templateRoute,
   liveRoute,
+  escapeRoomsRoute,
   profileRoute,
   setupRoute,
   adminRoute.addChildren([

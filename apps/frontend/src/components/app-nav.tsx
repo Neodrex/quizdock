@@ -109,6 +109,15 @@ function NavLinks({ stacked = false, onNavigate }: { stacked?: boolean; onNaviga
       >
         {t('nav.quizzes')}
       </Link>
+      {/* Escape rooms: the host's templates and the rooms opened from them (M5). */}
+      <Link
+        to="/escape"
+        className={className}
+        activeProps={{ className: current }}
+        onClick={onNavigate}
+      >
+        {t('escape:host.nav')}
+      </Link>
       {/* What was played, room by room: a teacher's way back to the results. */}
       <Link
         to="/history"

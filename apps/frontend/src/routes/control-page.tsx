@@ -96,6 +96,8 @@ import { ScaledStage } from '../game/slide-stage';
 import { joinBase, joinHostLabel, joinUrlFor } from '../game/join-url';
 import { JoinAddressPicker } from '../game/join-address-picker';
 import { type GameView, type RosterPlayer, useGameSession } from '../game/use-game-session';
+import { useEscapeHost } from '../game/escape/host/use-escape-host';
+import { EscapeConsole } from './escape-console-page';
 import { ScreenSurface } from './screen-page';
 import { PageLoading } from '@/components/ui/loading';
 import { CheckboxField } from '@/components/ui/checkbox-field';
@@ -126,12 +128,17 @@ const CONSOLE_SECTION =
 export function ControlPage() {
   const { pin } = useParams({ from: '/session/$pin/console' });
   const session = useGameSession(pin, 'host');
+  const escape = useEscapeHost(pin, session);
   return (
     <>
       <ConnectionLost lost={session.view.connectionLost} />
       {/* A hook for override.css, with the game's state (no box: the layout is the page's). */}
       <div className="qd-console contents" data-state={session.view.state ?? 'none'}>
-        <HostConsole pin={pin} session={session} />
+        {escape.active ? (
+          <EscapeConsole pin={pin} session={session} />
+        ) : (
+          <HostConsole pin={pin} session={session} />
+        )}
       </div>
     </>
   );

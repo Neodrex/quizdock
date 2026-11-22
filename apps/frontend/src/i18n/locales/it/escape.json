@@ -137,5 +137,9 @@
     },
     "closed": "La stanza è chiusa",
     "joinAnother": "Entra in un'altra stanza"
+  },
+  "host": {
+    "nav": "Escape room",
+    "console": "Console dell’escape room"
   }
 }
