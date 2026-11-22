@@ -27,7 +27,9 @@ import type {
 import type {
   EscapeTemplateContentDto,
   EscapeTemplateDetailDto,
-  EscapeTemplateListItemDto
+  EscapeTemplateListItemDto,
+  EscapeTemplatesControllerCreateSamplesParams,
+  EscapeTemplatesControllerPublishParams
 } from '../model';
 
 import { customFetch } from '../../http';
@@ -263,17 +265,24 @@ export type escapeTemplatesControllerCreateSamplesResponseSuccess = (escapeTempl
 
 export type escapeTemplatesControllerCreateSamplesResponse = (escapeTemplatesControllerCreateSamplesResponseSuccess)
 
-export const getEscapeTemplatesControllerCreateSamplesUrl = () => {
+export const getEscapeTemplatesControllerCreateSamplesUrl = (params?: EscapeTemplatesControllerCreateSamplesParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/escape-templates/samples`
+  return stringifiedParams.length > 0 ? `/api/v1/escape-templates/samples?${stringifiedParams}` : `/api/v1/escape-templates/samples`
 }
 
-export const escapeTemplatesControllerCreateSamples = async ( options?: Parameters<typeof customFetch>[1]): Promise<escapeTemplatesControllerCreateSamplesResponse> => {
+export const escapeTemplatesControllerCreateSamples = async (params?: EscapeTemplatesControllerCreateSamplesParams, options?: Parameters<typeof customFetch>[1]): Promise<escapeTemplatesControllerCreateSamplesResponse> => {
 
-  return customFetch<escapeTemplatesControllerCreateSamplesResponse>(getEscapeTemplatesControllerCreateSamplesUrl(),
+  return customFetch<escapeTemplatesControllerCreateSamplesResponse>(getEscapeTemplatesControllerCreateSamplesUrl(params),
   {
     ...options,
     method: 'POST'
@@ -289,8 +298,8 @@ export const escapeTemplatesControllerCreateSamples = async ( options?: Paramete
 export const getEscapeTemplatesControllerCreateSamplesMutationKey = () => ['escapeTemplatesControllerCreateSamples'] as const;
 
 export const getEscapeTemplatesControllerCreateSamplesMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>, TError,void, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>, TError,EscapeTemplatesControllerCreateSamplesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>, TError,EscapeTemplatesControllerCreateSamplesMutationVariables, TContext> => {
 
 const mutationKey = getEscapeTemplatesControllerCreateSamplesMutationKey();
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -302,10 +311,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>, EscapeTemplatesControllerCreateSamplesMutationVariables> = (props) => {
+          const {params} = props ?? {};
 
-
-          return  escapeTemplatesControllerCreateSamples(requestOptions)
+          return  escapeTemplatesControllerCreateSamples(params,requestOptions)
         }
 
 
@@ -318,14 +327,14 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type EscapeTemplatesControllerCreateSamplesMutationResult = NonNullable<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>>
 
     export type EscapeTemplatesControllerCreateSamplesMutationError = unknown
-
+    export type EscapeTemplatesControllerCreateSamplesMutationVariables = {params?: EscapeTemplatesControllerCreateSamplesParams}
 
     export const useEscapeTemplatesControllerCreateSamples = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>, TError,EscapeTemplatesControllerCreateSamplesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof escapeTemplatesControllerCreateSamples>>,
         TError,
-        void,
+        EscapeTemplatesControllerCreateSamplesMutationVariables,
         TContext
       > => {
       return useMutation(getEscapeTemplatesControllerCreateSamplesMutationOptions(options), queryClient);
@@ -621,17 +630,26 @@ export type escapeTemplatesControllerPublishResponseSuccess = (escapeTemplatesCo
 
 export type escapeTemplatesControllerPublishResponse = (escapeTemplatesControllerPublishResponseSuccess)
 
-export const getEscapeTemplatesControllerPublishUrl = (id: string,) => {
+export const getEscapeTemplatesControllerPublishUrl = (id: string,
+    params?: EscapeTemplatesControllerPublishParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/escape-templates/${id}/publish`
+  return stringifiedParams.length > 0 ? `/api/v1/escape-templates/${id}/publish?${stringifiedParams}` : `/api/v1/escape-templates/${id}/publish`
 }
 
-export const escapeTemplatesControllerPublish = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<escapeTemplatesControllerPublishResponse> => {
+export const escapeTemplatesControllerPublish = async (id: string,
+    params?: EscapeTemplatesControllerPublishParams, options?: Parameters<typeof customFetch>[1]): Promise<escapeTemplatesControllerPublishResponse> => {
 
-  return customFetch<escapeTemplatesControllerPublishResponse>(getEscapeTemplatesControllerPublishUrl(id),
+  return customFetch<escapeTemplatesControllerPublishResponse>(getEscapeTemplatesControllerPublishUrl(id,params),
   {
     ...options,
     method: 'POST'
@@ -661,9 +679,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof escapeTemplatesControllerPublish>>, EscapeTemplatesControllerPublishMutationVariables> = (props) => {
-          const {id} = props ?? {};
+          const {id,params} = props ?? {};
 
-          return  escapeTemplatesControllerPublish(id,requestOptions)
+          return  escapeTemplatesControllerPublish(id,params,requestOptions)
         }
 
 
@@ -676,7 +694,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type EscapeTemplatesControllerPublishMutationResult = NonNullable<Awaited<ReturnType<typeof escapeTemplatesControllerPublish>>>
 
     export type EscapeTemplatesControllerPublishMutationError = unknown
-    export type EscapeTemplatesControllerPublishMutationVariables = {id: string}
+    export type EscapeTemplatesControllerPublishMutationVariables = {id: string;params?: EscapeTemplatesControllerPublishParams}
 
     export const useEscapeTemplatesControllerPublish = <TError = unknown,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof escapeTemplatesControllerPublish>>, TError,EscapeTemplatesControllerPublishMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

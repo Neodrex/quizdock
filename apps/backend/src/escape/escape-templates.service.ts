@@ -33,6 +33,21 @@ export interface EscapeTemplateListItem {
   stageCount: number | null;
 }
 
+/** A detail as the list shows it: the picker's fields, no content (the host console's reads). */
+export function summaryOf(d: EscapeTemplateDetail): EscapeTemplateListItem {
+  return {
+    id: d.id,
+    title: d.title,
+    status: d.status,
+    version: d.version,
+    updatedAt: d.updatedAt,
+    mode: d.content.mode,
+    difficulty: d.content.difficulty,
+    targetMinutes: d.content.targetMinutes,
+    stageCount: d.content.stages.length,
+  };
+}
+
 /** A client's content, checked against the shared schema: a 400 with the zod issues. */
 function parseInput(content: unknown): EscapeTemplateContent {
   const parsed = escapeTemplateContentSchema.safeParse(content);

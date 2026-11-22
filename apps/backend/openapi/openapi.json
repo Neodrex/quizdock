@@ -2021,7 +2021,20 @@
     "/api/v1/escape-templates/samples": {
       "post": {
         "operationId": "EscapeTemplatesController_createSamples",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "view",
+            "required": false,
+            "in": "query",
+            "description": "summary: answer the list item(s) (no content) instead of the detail",
+            "schema": {
+              "enum": [
+                "summary"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "description": "",
@@ -2160,6 +2173,18 @@
             "required": true,
             "in": "path",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "view",
+            "required": false,
+            "in": "query",
+            "description": "summary: answer the list item(s) (no content) instead of the detail",
+            "schema": {
+              "enum": [
+                "summary"
+              ],
               "type": "string"
             }
           }

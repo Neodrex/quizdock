@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import type { User } from '@prisma/client';
@@ -13,7 +14,18 @@ import {
   EscapeTemplateDetailDto,
   EscapeTemplateListItemDto,
 } from './dto/escape-template.dto';
-import { EscapeTemplatesService } from './escape-templates.service';
+import { EscapeTemplatesService, summaryOf } from './escape-templates.service';
+
+/**
+ * `?view=summary`: the answer is the list item (no content, so no answers), for the
+ * host console's picker (M5 owner question 1). Without it, the detail as before.
+ */
+const summaryQuery = {
+  name: 'view',
+  required: false,
+  enum: ['summary'],
+  description: 'summary: answer the list item(s) (no content) instead of the detail',
+} as const;
 
 /** A host's escape templates (host role, the global guard's default). */
 @ApiTags('escape-templates')
@@ -37,8 +49,10 @@ export class EscapeTemplatesController {
   /** Adds the sample templates as drafts; titles the user already has are skipped. */
   @Post('samples')
   @ApiCreatedResponse({ type: EscapeTemplateDetailDto, isArray: true })
-  createSamples(@CurrentUser() user: User) {
-    return this.templates.createSamples(user.id);
+  @ApiQuery(summaryQuery)
+  async createSamples(@CurrentUser() user: User, @Query('view') view?: string) {
+    const created = await this.templates.createSamples(user.id);
+    return view === 'summary' ? created.map(summaryOf) : created;
   }
 
   @Get(':id')
@@ -68,8 +82,10 @@ export class EscapeTemplatesController {
   @Post(':id/publish')
   @HttpCode(200)
   @ApiOkResponse({ type: EscapeTemplateDetailDto })
-  publish(@CurrentUser() user: User, @Param('id') id: string) {
-    return this.templates.publish(user.id, id);
+  @ApiQuery(summaryQuery)
+  async publish(@CurrentUser() user: User, @Param('id') id: string, @Query('view') view?: string) {
+    const published = await this.templates.publish(user.id, id);
+    return view === 'summary' ? summaryOf(published) : published;
   }
 
   @Post(':id/unpublish')

@@ -81,6 +81,42 @@ describe('EscapeTemplatesController', () => {
     expect(res.body).toEqual(items);
   });
 
+  it('publish and samples with ?view=summary answer the list item, never the content', async () => {
+    const detail = {
+      id: 'e1',
+      title: 'T',
+      status: 'published',
+      version: 1,
+      createdAt: new Date('2026-11-22T09:00:00.000Z'),
+      updatedAt: new Date('2026-11-22T10:00:00.000Z'),
+      content,
+    };
+    const summary = {
+      id: 'e1',
+      title: 'T',
+      status: 'published',
+      version: 1,
+      updatedAt: '2026-11-22T10:00:00.000Z',
+      mode: 'roles',
+      difficulty: 'standard',
+      targetMinutes: 35,
+      stageCount: content.stages.length,
+    };
+    service.publish.mockResolvedValueOnce(detail);
+    const published = await request(app.getHttpServer())
+      .post('/escape-templates/e1/publish?view=summary')
+      .set(as('host'))
+      .expect(200);
+    expect(published.body).toEqual(summary);
+    service.createSamples.mockResolvedValueOnce([{ ...detail, status: 'draft' }]);
+    const samples = await request(app.getHttpServer())
+      .post('/escape-templates/samples?view=summary')
+      .set(as('host'))
+      .expect(201);
+    expect(samples.body).toEqual([{ ...summary, status: 'draft' }]);
+    expect(JSON.stringify([published.body, samples.body])).not.toContain('answer');
+  });
+
   it("calls each route's service with the current user's id", async () => {
     const http = () => request(app.getHttpServer());
     await http().get('/escape-templates').set(as('host')).expect(200);
