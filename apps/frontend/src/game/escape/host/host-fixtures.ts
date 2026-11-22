@@ -159,3 +159,14 @@ export const hostStateOf = (over: Partial<EscapeHostState> = {}): EscapeHostStat
     ...over,
   };
 };
+
+/** The Vault Heist answers (backend sample): no console text may hold one. */
+export const SAMPLE_ANSWERS = [
+  '0417',
+  'falcon',
+  'copper',
+  'midnight',
+  'lights out',
+  '314',
+  'open sesame',
+];
