@@ -4,9 +4,9 @@ import {
   type EscapePlayerState,
   type EscapeSubmitAck,
   type EscapeTeamUpdate,
-  GameState,
 } from '@quiz-dock/contracts';
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { SYNC_RETRY_MS, useEscapeMode, useEscapeSync } from './escape-sync';
 import {
   ensureGameSocket,
   emitWithAckOrError,
@@ -20,17 +20,7 @@ import { type EscapeAction, escapeReducer, initialEscapeUi } from './escape-redu
 /** How long a phone waits for the finale after `game:ended` before fetching it (§1.4). */
 export const FINALE_GRACE_MS = 3000;
 
-/** The wait before a sync that got no answer (an ack timeout) is sent again. */
-export const SYNC_RETRY_MS = 2000;
-
-/** The quiz states an escape room also goes through; any other means a quiz is on. */
-const ESCAPE_ROOM_STATES: ReadonlySet<GameState> = new Set([
-  GameState.Lobby,
-  GameState.Escape,
-  GameState.Podium,
-  GameState.Ended,
-  GameState.HostDisconnected,
-]);
+export { SYNC_RETRY_MS };
 
 /** What the hook needs of the quiz session (`useGameSession`). */
 export interface EscapeSessionSeam {
@@ -47,7 +37,7 @@ type Listener = (p: never) => void;
  */
 export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
   const [ui, dispatch] = useReducer(escapeReducer, initialEscapeUi);
-  const [active, setActive] = useState(false);
+  const { active, setActive, quizOnRef } = useEscapeMode(session.view);
   const socketRef = useRef<GameSocket | null>(null);
   const stateRef = useRef<EscapePlayerState | null>(null);
   // Bumped on each escape:state: a state that came makes a sync with no answer moot.
@@ -118,61 +108,19 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pin]);
 
-  // A quiz is on in this room: no escape run to follow.
-  const { state: quizState, totalQuestions } = session.view;
-  const quizOn = totalQuestions > 0 || (quizState !== null && !ESCAPE_ROOM_STATES.has(quizState));
-  const quizOnRef = useRef(quizOn);
-  quizOnRef.current = quizOn;
-
   // Sync once the player is in the room: before that the server would take the phone for a screen.
-  const { attachSeq } = session;
-  useEffect(() => {
-    if (attachSeq === 0 || quizOnRef.current) return;
+  useEscapeSync(pin, 'guest', session.attachSeq, 0, {
+    quizOnRef,
+    heardRef: statesRef,
+    socketRef,
+    setActive,
     // A join into a new session: the last run's record (and its token) is not this player's.
-    const s = loadPlayerSession();
-    const record = loadEscapeRecord(pin);
-    if (record && s?.pin === pin && s.sessionToken !== record.sessionToken) clearEscapeRecord();
-    let live = true;
-    let retry: ReturnType<typeof setTimeout> | undefined;
-    const sync = () =>
-      void ensureGameSocket('guest', pin).then((sock) => {
-        if (!live) return;
-        socketRef.current = sock;
-        // Down: socket.io would buffer the sync and flush it ahead of player:reconnect,
-        // when the server would take the phone for a screen. The next attach syncs.
-        if (!sock.connected) return;
-        const seen = statesRef.current;
-        emitWithAckOrError(sock, 'escape:sync', { pin }).then(
-          // A quiz shown meanwhile wins: that room is not (or no longer) an escape run.
-          () => live && !quizOnRef.current && setActive(true),
-          (e: { code?: string }) => {
-            if (!live) return;
-            if (e.code === 'escape.not_found') setActive(false);
-            // No answer at all (an ack timeout, no code): again, unless a state came meanwhile.
-            else if (
-              !e.code &&
-              statesRef.current === seen &&
-              !quizOnRef.current &&
-              sock.connected
-            ) {
-              retry = setTimeout(sync, SYNC_RETRY_MS);
-            }
-          },
-        );
-      });
-    sync();
-    return () => {
-      live = false;
-      clearTimeout(retry);
-    };
-  }, [pin, attachSeq]);
-
-  // The room went (back) to a quiz.
-  useEffect(() => {
-    if (totalQuestions > 0 || (quizState !== null && !ESCAPE_ROOM_STATES.has(quizState))) {
-      setActive(false);
-    }
-  }, [quizState, totalQuestions]);
+    before: () => {
+      const s = loadPlayerSession();
+      const record = loadEscapeRecord(pin);
+      if (record && s?.pin === pin && s.sessionToken !== record.sessionToken) clearEscapeRecord();
+    },
+  });
 
   const fetchResults = useCallback(
     async (gameId: string, sessionToken: string | undefined): Promise<EscapeFinale | null> => {

@@ -1,6 +1,7 @@
 import type { EscapeTeamUpdate } from '@quiz-dock/contracts';
 import { describe, expect, it } from 'vitest';
-import { boardOf, GAME, hostStateOf, hostTeamOf, outlineOf } from '../test-fixtures';
+import { GAME } from '../test-fixtures';
+import { boardOf, hostStateOf, hostTeamOf, outlineOf } from './host-fixtures';
 import {
   type EscapeHostAction,
   type EscapeHostUi,
