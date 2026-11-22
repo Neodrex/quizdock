@@ -48,9 +48,104 @@ const ENTRIES = ['routes/escape-console-page.tsx', 'routes/escape-rooms-page.tsx
 
 const src = resolve(process.cwd(), 'src');
 
-/** The code without its comments (line and block). */
-const code = (text: string) =>
-  text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+/** Where a `/` starts a regex literal rather than a division: after these, or a keyword. */
+const BEFORE_REGEX = new Set([
+  '',
+  '(',
+  ',',
+  '=',
+  ':',
+  '[',
+  '!',
+  '&',
+  '|',
+  '?',
+  '{',
+  '}',
+  ';',
+  '+',
+  '-',
+  '*',
+  '%',
+  '<',
+  '>',
+  '~',
+  '^',
+]);
+const REGEX_KEYWORDS = /\b(return|typeof|case|do|else|in|of|new|delete|void|throw|yield|await)$/;
+
+/**
+ * The code without its comments (line and block). A small scanner: `//` or `/*` inside
+ * a string, a template literal or a regex literal is code, not a comment.
+ */
+function code(text: string): string {
+  let out = '';
+  let i = 0;
+  // Open template literals: the `${` depth of each, innermost last.
+  const templates: number[] = [];
+  const last = () => out.trimEnd().slice(-1);
+  const quoted = (q: string) => {
+    const start = i++;
+    while (i < text.length && text[i] !== q && text[i] !== '\n') i += text[i] === '\\' ? 2 : 1;
+    i++;
+    out += text.slice(start, i);
+  };
+  /** A template literal's text from `i`, up to its end or a `${`. */
+  const templateText = () => {
+    const start = i;
+    while (i < text.length && text[i] !== '`' && !(text[i] === '$' && text[i + 1] === '{')) {
+      i += text[i] === '\\' ? 2 : 1;
+    }
+    if (text[i] === '`') {
+      i++;
+      out += text.slice(start, i);
+    } else {
+      i += 2;
+      out += text.slice(start, i);
+      templates.push(0);
+    }
+  };
+  while (i < text.length) {
+    const c = text[i];
+    const n = text[i + 1];
+    if (c === '/' && n === '/') {
+      while (i < text.length && text[i] !== '\n') i++;
+    } else if (c === '/' && n === '*') {
+      const end = text.indexOf('*/', i + 2);
+      i = end < 0 ? text.length : end + 2;
+    } else if (c === "'" || c === '"') {
+      quoted(c);
+    } else if (c === '`') {
+      out += c;
+      i++;
+      templateText();
+    } else if (c === '/' && (BEFORE_REGEX.has(last()) || REGEX_KEYWORDS.test(out.trimEnd()))) {
+      const start = i++;
+      let inClass = false;
+      while (i < text.length && text[i] !== '\n' && (inClass || text[i] !== '/')) {
+        if (text[i] === '\\') i++;
+        else if (text[i] === '[') inClass = true;
+        else if (text[i] === ']') inClass = false;
+        i++;
+      }
+      i++;
+      out += text.slice(start, i);
+    } else if (templates.length && (c === '{' || c === '}')) {
+      out += c;
+      i++;
+      if (c === '{') templates[templates.length - 1]++;
+      else if (templates[templates.length - 1] > 0) templates[templates.length - 1]--;
+      else {
+        templates.pop();
+        templateText();
+      }
+    } else {
+      out += c;
+      i++;
+    }
+  }
+  return out;
+}
 
 /** Every rule a console file breaks; `rel` is its path under `src/`. */
 function violations(rel: string, source: string): string[] {
@@ -73,8 +168,11 @@ function violations(rel: string, source: string): string[] {
   return out;
 }
 
-/** The local files `file` imports (relative and `@/` paths), resolved to disk. */
-function importsOf(file: string): string[] {
+/** Source files a specifier may name: as written, a `.js` one's TypeScript file, an index. */
+const CANDIDATES = ['', '.ts', '.tsx', '/index.ts', '/index.tsx'];
+
+/** The local files `file` imports or re-exports (relative and `@/` paths, `root` = `src`). */
+function importsOf(file: string, root: string): string[] {
   const text = code(readFileSync(file, 'utf8'));
   const specs = [
     ...text.matchAll(/\bfrom\s+['"]([^'"]+)['"]/g),
@@ -84,21 +182,26 @@ function importsOf(file: string): string[] {
   const out: string[] = [];
   for (const spec of specs) {
     const base = spec.startsWith('@/')
-      ? join(src, spec.slice(2))
+      ? join(root, spec.slice(2))
       : spec.startsWith('.')
         ? resolve(dirname(file), spec)
         : null;
     if (!base) continue;
-    const hit = ['', '.ts', '.tsx', '/index.ts', '/index.tsx']
-      .map((ext) => base + ext)
+    // ESM style: `./x.js` names `./x.ts` (or `.tsx`).
+    const bases = /\.jsx?$/.test(base) ? [base, base.replace(/\.jsx?$/, '')] : [base];
+    const hit = bases
+      .flatMap((b) => CANDIDATES.map((ext) => b + ext))
       .find((p) => existsSync(p) && statSync(p).isFile() && /\.tsx?$/.test(p));
     if (hit) out.push(hit);
   }
   return out;
 }
 
-/** Every local file reachable from the entries; generated API files are not walked. */
-function graph(entries: string[]): string[] {
+/**
+ * Every local file reachable from the entries; generated API files are not walked.
+ * `root`: what `@/` stands for.
+ */
+function graph(entries: string[], root = src): string[] {
   const seen = new Set<string>();
   const todo = [...entries];
   while (todo.length) {
@@ -106,7 +209,7 @@ function graph(entries: string[]): string[] {
     if (seen.has(f)) continue;
     seen.add(f);
     if (f.includes(`${join('api', 'generated')}`)) continue;
-    todo.push(...importsOf(f));
+    todo.push(...importsOf(f, root));
   }
   return [...seen].filter((f) => !f.includes(join('api', 'generated')));
 }
@@ -137,7 +240,20 @@ describe('the host console never reads an answer', () => {
 
   it('strips comments only', () => {
     expect(code('a // the answer\nb /* answers */ c').trim()).toBe('a \nb  c');
-    expect(code("const u = 'http://x';")).toBe("const u = 'http://x';");
+    // `//` and `/*` inside strings, templates and regexes are code.
+    for (const kept of [
+      "const u = 'http://x'; lock.answer;",
+      'const u = "a // b"; lock.answer;',
+      'const u = `x // ${a ? `y /* ${b} */` : 1} // z`; lock.answer;',
+      'const re = /[\'"]\\/\\//g; lock.answer;',
+      'const a = b / c; lock.answer; // d',
+    ]) {
+      expect(code(kept)).toContain('lock.answer');
+    }
+    expect(code("x('//'); y; // the answer")).toBe("x('//'); y; ");
+    expect(violations('game/escape/host/x.ts', "const u = 'http://x'; lock.answer;")).toEqual([
+      'answer keys',
+    ]);
   });
 
   it.each(scanned.map((p) => [rel(p), p]))('%s', (name, path) => {
@@ -182,14 +298,40 @@ describe('the host console never reads an answer', () => {
     it('a violation in a file outside host/ that the console imports', () => {
       const dir = mkdtempSync(join(tmpdir(), 'no-answers-'));
       try {
-        writeFileSync(join(dir, 'entry.tsx'), "import { helper } from './lib/helper';\n");
+        // Every way in: a relative path, a `.js` specifier, `@/`, a folder's index, `export *`.
+        writeFileSync(
+          join(dir, 'entry.tsx'),
+          [
+            "import { helper } from './lib/helper';",
+            "import { esm } from './lib/esm.js';",
+            "import { alias } from '@/lib/alias';",
+            "import { indexed } from './folder';",
+            '',
+          ].join('\n'),
+        );
         mkdirSync(join(dir, 'lib'));
+        mkdirSync(join(dir, 'folder'));
         writeFileSync(
           join(dir, 'lib/helper.ts'),
           "export const helper = () => fetch('/escape-templates/x');\n",
         );
-        const found = graph([join(dir, 'entry.tsx')]).map((p) => relative(dir, p));
-        expect(found).toEqual(['entry.tsx', join('lib', 'helper.ts')]);
+        writeFileSync(join(dir, 'lib/esm.ts'), 'export const esm = 1;\n');
+        writeFileSync(join(dir, 'lib/alias.ts'), 'export const alias = 1;\n');
+        writeFileSync(join(dir, 'folder/index.ts'), "export * from './deep';\n");
+        writeFileSync(join(dir, 'folder/deep.tsx'), 'export const indexed = 1;\n');
+        const found = graph([join(dir, 'entry.tsx')], dir)
+          .map((p) => relative(dir, p))
+          .sort();
+        expect(found).toEqual(
+          [
+            'entry.tsx',
+            join('folder', 'deep.tsx'),
+            join('folder', 'index.ts'),
+            join('lib', 'alias.ts'),
+            join('lib', 'esm.ts'),
+            join('lib', 'helper.ts'),
+          ].sort(),
+        );
         expect(
           violations('lib/helper.ts', readFileSync(join(dir, 'lib/helper.ts'), 'utf8')),
         ).toEqual(['raw /escape-templates/ URL']);
