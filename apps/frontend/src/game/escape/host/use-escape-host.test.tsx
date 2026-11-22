@@ -146,6 +146,34 @@ describe('useEscapeHost', () => {
     expect(sent('escape:sync')).toHaveLength(1);
   });
 
+  it.each([
+    ['an ok', { ok: true }],
+    ['a refusal', { ok: false, error: { code: 'escape.not_found' } }],
+  ])('%s answered after the hold began changes nothing', async (_, answer) => {
+    let answerSync: (r: unknown) => void = () => {};
+    acks.set('escape:sync', (_p, ack) => {
+      answerSync = ack;
+      return 'hold';
+    });
+    const holdRef = { current: false };
+    const setActive = vi.fn();
+    renderHook(() =>
+      useEscapeSync(PIN, 'host', 1, 0, {
+        quizOnRef: { current: false },
+        heardRef: { current: 0 },
+        socketRef: { current: null },
+        setActive,
+        holdRef,
+      }),
+    );
+    await flush();
+    expect(sent('escape:sync')).toHaveLength(1);
+    // Back to the lobby, then escape:open: the old room's answer is moot.
+    holdRef.current = true;
+    await act(async () => answerSync(answer));
+    expect(setActive).not.toHaveBeenCalled();
+  });
+
   it('{ok:true} turns it on; escape.not_found keeps it off', async () => {
     const on = mount(seam({ attachSeq: 1 }));
     await flush();

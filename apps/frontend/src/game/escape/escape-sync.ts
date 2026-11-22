@@ -86,11 +86,13 @@ export function useEscapeSync(
         // when the server would not know the socket yet. The next attach syncs.
         if (!sock.connected) return;
         const seen = heardRef.current;
+        // A hold begun while the sync was out: its answer is moot (the hold's end syncs).
+        const held = () => !live || !!optsRef.current.holdRef?.current;
         emitWithAckOrError(sock, 'escape:sync', { pin }).then(
           // A quiz shown meanwhile wins: that room is not (or no longer) an escape run.
-          () => live && !quizOnRef.current && setActive(true),
+          () => !held() && !quizOnRef.current && setActive(true),
           (e: { code?: string }) => {
-            if (!live) return;
+            if (held()) return;
             if (e.code === 'escape.not_found') setActive(false);
             // No answer at all (an ack timeout, no code): again, unless a view came meanwhile.
             else if (!e.code && heardRef.current === seen && !quizOnRef.current && sock.connected) {
