@@ -485,6 +485,33 @@ describe('playerView', () => {
     const v = playerView(tplAll, team(), 'p1');
     expect(v.locks.find((l) => l.id === 'pick')?.options?.map((o) => o.id)).toEqual(['o1', 'o2']);
   });
+  describe('digits', () => {
+    const withCode = (answer: string): EscapeTemplate => ({
+      ...tplAll,
+      stages: [
+        {
+          ...tplAll.stages[0],
+          locks: [{ id: 'pad', label: 'Pad', kind: 'code', answer }, ...tplAll.stages[0].locks],
+        },
+      ],
+    });
+    const lockOf = (t: EscapeTemplate, id: string) =>
+      playerView(t, newTeam(t, 'a', 'A', ['p1', 'p2']), 'p1').locks.find((l) => l.id === id)!;
+
+    it('marks a code lock whose answer is all digits', () => {
+      expect(lockOf(withCode('0417'), 'pad').digits).toBe(true);
+      // Separators are dropped when checking, so a number pad still opens it.
+      expect(lockOf(withCode('04-17'), 'pad').digits).toBe(true);
+    });
+    it('leaves the key out for a code with letters', () => {
+      expect('digits' in lockOf(withCode('A7B'), 'pad')).toBe(false);
+    });
+    it('never sets it on phrase, choice, sequence or combined locks', () => {
+      for (const id of ['say', 'pick', 'seq', 'duo']) {
+        expect('digits' in lockOf(withCode('0417'), id)).toBe(false);
+      }
+    });
+  });
   describe('sequence items', () => {
     const withSeq = (ids: string[], order: string[] = ids): EscapeTemplate => ({
       ...tpl,

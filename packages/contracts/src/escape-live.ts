@@ -100,6 +100,8 @@ export interface EscapePlayerLockView {
   /** Combined: the role ids this player may enter, and which parts are already in. */
   myParts?: string[];
   partsDone?: string[];
+  /** Code: the answer is digits only, so the phone may show a number pad. */
+  digits?: true;
 }
 
 /** Mirrors the backend's PlayerView: everything one phone may know of its stage. */

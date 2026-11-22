@@ -313,6 +313,8 @@ export interface PlayerLockView {
   /** Combined: the role ids this player may enter, and which parts are already in. */
   myParts?: string[];
   partsDone?: string[];
+  /** Code: the answer is digits only, so the phone may show a number pad. */
+  digits?: true;
 }
 
 export interface PlayerView {
@@ -358,6 +360,9 @@ export function playerView(tpl: EscapeTemplate, team: TeamState, playerId: strin
           };
         case 'sequence':
           return { ...base, items: shuffledItems(l, team.id) };
+        case 'code':
+          // Says only "digits", as a real padlock does; separators are dropped when checking.
+          return /^\d+$/.test(normalizeCode(l.answer)) ? { ...base, digits: true } : base;
         case 'combined':
           return {
             ...base,
