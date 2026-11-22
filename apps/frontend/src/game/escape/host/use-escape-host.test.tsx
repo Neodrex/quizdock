@@ -41,7 +41,7 @@ import { SYNC_RETRY_MS } from '../escape-sync';
 import { GAME } from '../test-fixtures';
 import { hostStateOf, hostTeamOf, outlineOf } from './host-fixtures';
 import { loadHostRecord, saveHostRecord } from './host-record';
-import { type EscapeHostSeam, useEscapeHost } from './use-escape-host';
+import { type EscapeHostSeam, LOBBY_WAIT_MS, useEscapeHost } from './use-escape-host';
 import { useNow } from './use-now';
 
 const PIN = '482913';
@@ -284,6 +284,53 @@ describe('useEscapeHost', () => {
       { event: 'escape:open', payload: { pin: PIN, templateId: 'tpl-vh' } },
     ]);
     // Then the new run's view.
+    expect(sent('escape:sync')).toHaveLength(syncs + 1);
+    expect(result.current.ui.pending.runAgain).toBe(false);
+  });
+
+  it('runAgain: host:back-to-lobby refused syncs again, and the lobby wait rejects quietly', async () => {
+    vi.useFakeTimers();
+    acks.set('host:back-to-lobby', () => ({ ok: false, error: { code: 'game.wrong_state' } }));
+    const { result } = mount(withState(GameState.Podium));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    fire('escape:outline', outlineOf());
+    const syncs = sent('escape:sync').length;
+    await act(async () => {
+      await expect(result.current.runAgain()).rejects.toMatchObject({ code: 'game.wrong_state' });
+    });
+    expect(sent('escape:open')).toEqual([]);
+    // The console reads the room again instead of staying on the old finale.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(sent('escape:sync')).toHaveLength(syncs + 1);
+    expect(result.current.ui.pending.runAgain).toBe(false);
+    // The lobby wait times out later with nobody listening: no unhandled rejection.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(LOBBY_WAIT_MS + 1);
+    });
+    expect(listeners.get('game:state')).toBeUndefined();
+  });
+
+  it('runAgain: escape:open refused syncs again', async () => {
+    acks.set('escape:open', () => ({ ok: false, error: { code: 'escape_template.invalid' } }));
+    const { result, rerender } = mount(withState(GameState.Podium));
+    await flush();
+    fire('escape:outline', outlineOf());
+    const syncs = sent('escape:sync').length;
+    let done!: Promise<unknown>;
+    await act(async () => {
+      done = result.current.runAgain();
+    });
+    rerender(withState(GameState.Lobby));
+    fire('game:state', { state: GameState.Lobby, questionIndex: -1, totalQuestions: 0 });
+    await act(async () => {
+      await expect(done).rejects.toMatchObject({ code: 'escape_template.invalid' });
+    });
+    await flush();
+    // The resync is refused in a quiz lobby, which hands the room back to the quiz console.
     expect(sent('escape:sync')).toHaveLength(syncs + 1);
     expect(result.current.ui.pending.runAgain).toBe(false);
   });

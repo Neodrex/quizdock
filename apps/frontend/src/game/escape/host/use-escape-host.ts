@@ -193,13 +193,16 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
       holdRef.current = true;
       try {
         const lobby = lobbyOn(sock, LOBBY_WAIT_MS);
+        // A refused back-to-lobby leaves the wait to time out with nobody awaiting it.
+        lobby.catch(() => {});
         await emitWithAckOrError(sock, 'host:back-to-lobby', { pin });
         await lobby;
         await hostCommand(sock, 'escape:open', { pin, templateId });
       } finally {
         holdRef.current = false;
+        // Read the room again either way: the new run, or (refused) what the room is now.
+        setResync((n) => n + 1);
       }
-      setResync((n) => n + 1);
       return { ok: true as const };
     });
 
