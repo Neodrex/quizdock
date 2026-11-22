@@ -268,11 +268,39 @@ async function readable(view) {
   );
 }
 
+/**
+ * The race's lanes: each team name whole (the check's names are short: an ellipsis is
+ * a squeeze), and the stage segments lined up across lanes (same left and width).
+ */
+async function lanesLineUp(view) {
+  const r = await spage.evaluate(() => {
+    const lanes = [...document.querySelectorAll('li[data-lane]')];
+    if (lanes.length < 2) return null;
+    const cut = lanes
+      .map((li) => li.querySelector('[data-lane-name]'))
+      .filter((n) => n && n.scrollWidth > n.clientWidth + 1)
+      .map((n) => n.textContent);
+    const segs = lanes.map((li) =>
+      [...li.querySelectorAll('[data-testid="stage-segment"]')].map((e) => {
+        const b = e.getBoundingClientRect();
+        return [Math.round(b.left), Math.round(b.width)];
+      }),
+    );
+    const first = JSON.stringify(segs[0]);
+    const off = segs.filter((x) => JSON.stringify(x) !== first).length;
+    return { cut, off };
+  });
+  if (!r) return;
+  check(!r.cut.length, `${view}: team names in full (${r.cut.join(', ') || 'all'})`);
+  check(r.off === 0, `${view}: the stages line up across lanes`);
+}
+
 async function view(name) {
   await shot(spage, name);
   await keepText();
   await fits(name);
   await readable(name);
+  await lanesLineUp(name);
 }
 
 const phaseIs = (p) =>
