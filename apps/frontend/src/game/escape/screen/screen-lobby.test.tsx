@@ -110,6 +110,13 @@ describe('ScreenLobby', () => {
     expect(screen.getByText('2 players in the room')).toBeInTheDocument();
   });
 
+  it('before teams exist: the players are listed by nickname as they join', () => {
+    draw(forming({ teams: [], unassigned: 2, roster: [entry('Ana', null), entry('Ben', null)] }));
+    const waiting = screen.getByRole('list', { name: 'Waiting for a team' });
+    expect(within(waiting).getByText('Ana')).toBeInTheDocument();
+    expect(within(waiting).getByText('Ben')).toBeInTheDocument();
+  });
+
   it('from 13 teams, a card shows 3 names and counts the rest', () => {
     const teams = Array.from({ length: 13 }, (_, i) =>
       summaryOf({ id: `t${i}`, name: `Team ${i}` }),

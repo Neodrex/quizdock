@@ -102,7 +102,8 @@ export function ScreenLobby({
               </ul>
             </>
           )}
-          {lobby.waiting.length > 0 && lobby.teams.length > 0 && <Waiting names={lobby.waiting} />}
+          {/* Before teams exist too: the room sees each player arrive (owner answer 1). */}
+          {lobby.waiting.length > 0 && <Waiting names={lobby.waiting} />}
         </div>
       </div>
     </section>
