@@ -19,6 +19,9 @@ import { formatClock } from '../team-timer';
  * has none to leak.
  */
 
+/** How a hint was released: free on time, asked by the team, or given by the host. */
+export type HintSource = Extract<EscapeTeamUpdate, { kind: 'hint' }>['source'];
+
 /** One command of the console, busy from its send until its answer. */
 export type CommandKey =
   | 'teams'
@@ -52,6 +55,8 @@ export interface EscapeHostUi {
   pending: Partial<Record<CommandKey, boolean>>;
   /** `final`: the results read back after the room closed (read-only). */
   ended: 'none' | 'final';
+  /** How each hint was released, per team id then hint id, as heard (not after a reload). */
+  hintSources: Record<string, Record<string, HintSource>>;
   /** The next message id (feed and polite share it). */
   seq: number;
 }
@@ -79,6 +84,7 @@ export const initialEscapeHostUi: EscapeHostUi = {
   pending: {},
   ended: 'none',
   seq: 1,
+  hintSources: {},
 };
 
 /** Feed lines kept (the console's sessionStorage keeps as many, §1.5). */
@@ -246,6 +252,8 @@ function onTeamUpdate(ui: EscapeHostUi, u: EscapeTeamUpdate, now: number): Escap
         now,
       );
     case 'hint': {
+      const sources = { ...ui.hintSources[team.id], [u.hintId]: u.source };
+      ui = { ...ui, hintSources: { ...ui.hintSources, [team.id]: sources } };
       if (u.source === 'timer') return line(ui, team.id, 'host.feed.hintFree', { team: name }, now);
       const seconds = hintOf(o, u.hintId)?.penaltyS ?? 0;
       const key = u.source === 'host' ? 'host.feed.hintGiven' : 'host.feed.hintAsked';

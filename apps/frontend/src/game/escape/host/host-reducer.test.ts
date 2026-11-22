@@ -204,6 +204,21 @@ describe('escapeHostReducer: the feed', () => {
     });
   });
 
+  it('keeps how each hint was released, per team; a new run forgets it', () => {
+    const ui = run(
+      ready(),
+      update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h1', source: 'host' }),
+      update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h2', source: 'timer' }),
+      update({ teamId: 't2', kind: 'hint', hintId: 'lobby-h1', source: 'request' }),
+    );
+    expect(ui.hintSources).toEqual({
+      t1: { 'lobby-h1': 'host', 'lobby-h2': 'timer' },
+      t2: { 'lobby-h1': 'request' },
+    });
+    const next = hostStateOf({ gameId: 'f'.repeat(32) });
+    expect(run(ui, { type: 'host', state: next, now: NOW }).hintSources).toEqual({});
+  });
+
   it('time gives "+2:00" or "−1:00"; time-up is said', () => {
     const ui = ready();
     expect(
