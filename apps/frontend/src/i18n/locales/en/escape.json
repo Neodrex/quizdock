@@ -363,6 +363,18 @@
         "yes": "yes",
         "no": "no"
       }
+    },
+    "header": {
+      "pin": "PIN {{pin}}",
+      "clock": "{{elapsed}} of {{limit}}",
+      "clockLabel": "Run time",
+      "phase": {
+        "forming": "Lobby",
+        "running": "Running",
+        "finale": "Results"
+      },
+      "paused": "Paused",
+      "loading": "Loading the escape room…"
     }
   }
 }

@@ -377,6 +377,18 @@
         "yes": "да",
         "no": "нет"
       }
+    },
+    "header": {
+      "pin": "PIN {{pin}}",
+      "clock": "{{elapsed}} из {{limit}}",
+      "clockLabel": "Время игры",
+      "phase": {
+        "forming": "Лобби",
+        "running": "Идёт игра",
+        "finale": "Результаты"
+      },
+      "paused": "Пауза",
+      "loading": "Загрузка квест-комнаты…"
     }
   }
 }

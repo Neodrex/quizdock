@@ -356,6 +356,18 @@
         "yes": "はい",
         "no": "いいえ"
       }
+    },
+    "header": {
+      "pin": "PIN {{pin}}",
+      "clock": "{{elapsed}} / {{limit}}",
+      "clockLabel": "プレイ時間",
+      "phase": {
+        "forming": "ロビー",
+        "running": "進行中",
+        "finale": "結果"
+      },
+      "paused": "一時停止中",
+      "loading": "脱出ゲームを読み込み中…"
     }
   }
 }

@@ -135,7 +135,7 @@ export function ControlPage() {
       {/* A hook for override.css, with the game's state (no box: the layout is the page's). */}
       <div className="qd-console contents" data-state={session.view.state ?? 'none'}>
         {escape.active ? (
-          <EscapeConsole pin={pin} session={session} />
+          <EscapeConsole pin={pin} session={session} escape={escape} />
         ) : (
           <HostConsole pin={pin} session={session} />
         )}

@@ -363,6 +363,18 @@
         "yes": "ja",
         "no": "nein"
       }
+    },
+    "header": {
+      "pin": "PIN {{pin}}",
+      "clock": "{{elapsed}} von {{limit}}",
+      "clockLabel": "Spielzeit",
+      "phase": {
+        "forming": "Lobby",
+        "running": "Läuft",
+        "finale": "Ergebnisse"
+      },
+      "paused": "Pausiert",
+      "loading": "Escape-Room wird geladen…"
     }
   }
 }

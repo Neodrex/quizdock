@@ -239,6 +239,30 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
     }
   }, [pin, setActive]);
 
+  // Back in the finale phase (a reload, a reconnect): escape:finale is not replayed, so
+  // read the results by the room, once per run.
+  const phase = ui.board?.phase;
+  const gameId = ui.host?.gameId ?? null;
+  const haveFinale = !!ui.finale && ui.finale.gameId === gameId;
+  const readRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (phase !== 'finale' || !gameId || haveFinale || readRef.current === gameId) return;
+    readRef.current = gameId;
+    void (async () => {
+      try {
+        const sock = socketRef.current ?? (await ensureGameSocket('host', pin));
+        const res = await emitWithAckOrError<{ finale: EscapeFinale }>(sock, 'escape:results', {
+          gameId,
+        });
+        finaleRef.current = true;
+        dispatch({ type: 'finale', finale: res.finale });
+      } catch {
+        // Not marked read: the next change of phase or run tries again.
+        readRef.current = null;
+      }
+    })();
+  }, [phase, gameId, haveFinale, pin]);
+
   // host:attach refused (the room is gone): a record of this PIN still has the results.
   const refused = session.view.status === 'error';
   useEffect(() => {

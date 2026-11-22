@@ -370,6 +370,18 @@
         "yes": "sí",
         "no": "no"
       }
+    },
+    "header": {
+      "pin": "PIN {{pin}}",
+      "clock": "{{elapsed}} de {{limit}}",
+      "clockLabel": "Tiempo de juego",
+      "phase": {
+        "forming": "Sala de espera",
+        "running": "En curso",
+        "finale": "Resultados"
+      },
+      "paused": "En pausa",
+      "loading": "Cargando la sala de escape…"
     }
   }
 }

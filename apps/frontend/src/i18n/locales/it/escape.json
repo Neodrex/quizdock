@@ -370,6 +370,18 @@
         "yes": "sì",
         "no": "no"
       }
+    },
+    "header": {
+      "pin": "PIN {{pin}}",
+      "clock": "{{elapsed}} su {{limit}}",
+      "clockLabel": "Tempo di gioco",
+      "phase": {
+        "forming": "Sala d’attesa",
+        "running": "In corso",
+        "finale": "Risultati"
+      },
+      "paused": "In pausa",
+      "loading": "Caricamento dell’escape room…"
     }
   }
 }

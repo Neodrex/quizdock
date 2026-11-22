@@ -281,17 +281,22 @@ export function TeamDetailPanel({
   hintSources,
   commands,
   onClose,
+  disabled,
 }: {
   outline: EscapeHostOutline;
   team: EscapeHostTeam | null;
   hintSources?: Record<string, HintSource>;
   commands: HostCommands;
   onClose: () => void;
+  /** The connection is down: its actions would be refused (the sheet is outside the page). */
+  disabled?: boolean;
 }) {
   const laptop = useMediaQuery(LAPTOP);
   if (!team) return null;
   const detail = (
-    <TeamDetail outline={outline} team={team} hintSources={hintSources} commands={commands} />
+    <fieldset disabled={disabled} className="contents">
+      <TeamDetail outline={outline} team={team} hintSources={hintSources} commands={commands} />
+    </fieldset>
   );
   if (laptop) {
     return (

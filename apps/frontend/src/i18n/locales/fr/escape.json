@@ -370,6 +370,18 @@
         "yes": "oui",
         "no": "non"
       }
+    },
+    "header": {
+      "pin": "PIN {{pin}}",
+      "clock": "{{elapsed}} sur {{limit}}",
+      "clockLabel": "Temps de jeu",
+      "phase": {
+        "forming": "Salle d’attente",
+        "running": "En cours",
+        "finale": "Résultats"
+      },
+      "paused": "En pause",
+      "loading": "Chargement de l’escape game…"
     }
   }
 }

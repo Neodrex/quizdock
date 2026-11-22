@@ -39,7 +39,7 @@ vi.mock('../../game-client', async (orig) => ({
 
 import { SYNC_RETRY_MS, useEscapeSync } from '../escape-sync';
 import { GAME } from '../test-fixtures';
-import { hostStateOf, hostTeamOf, outlineOf } from './host-fixtures';
+import { boardOf, hostStateOf, hostTeamOf, outlineOf } from './host-fixtures';
 import { loadHostRecord, saveHostRecord } from './host-record';
 import { type EscapeHostSeam, LOBBY_WAIT_MS, useEscapeHost } from './use-escape-host';
 import { useNow } from './use-now';
@@ -424,6 +424,33 @@ describe('useEscapeHost', () => {
     ]);
     expect(result.current.active).toBe(true);
     expect(result.current.ui).toMatchObject({ finale, ended: 'final' });
+  });
+
+  it('a sync in the finale phase (no finale replayed) reads the results by the room, once', async () => {
+    acks.set('escape:results', () => ({ ok: true, finale }));
+    const { result } = mount(withState(GameState.Podium));
+    await flush();
+    fire('escape:outline', outlineOf());
+    const ended = hostStateOf({ board: boardOf({ phase: 'finale' }) });
+    fire('escape:host', ended);
+    await flush();
+    fire('escape:host', ended);
+    await flush();
+    expect(sent('escape:results')).toEqual([
+      { event: 'escape:results', payload: { gameId: GAME } },
+    ]);
+    // The room is still open: the results come with their actions.
+    expect(result.current.ui).toMatchObject({ finale, ended: 'none' });
+  });
+
+  it('a finale that came with the sync is not read again', async () => {
+    const { result } = mount(withState(GameState.Podium));
+    await flush();
+    fire('escape:finale', finale);
+    fire('escape:host', hostStateOf({ board: boardOf({ phase: 'finale' }) }));
+    await flush();
+    expect(sent('escape:results')).toEqual([]);
+    expect(result.current.ui.finale).toBe(finale);
   });
 
   it('a refused attach without a record reads nothing', async () => {

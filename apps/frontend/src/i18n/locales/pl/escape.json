@@ -377,6 +377,18 @@
         "yes": "tak",
         "no": "nie"
       }
+    },
+    "header": {
+      "pin": "PIN {{pin}}",
+      "clock": "{{elapsed}} z {{limit}}",
+      "clockLabel": "Czas gry",
+      "phase": {
+        "forming": "Poczekalnia",
+        "running": "W toku",
+        "finale": "Wyniki"
+      },
+      "paused": "Wstrzymano",
+      "loading": "Wczytywanie escape roomu…"
     }
   }
 }

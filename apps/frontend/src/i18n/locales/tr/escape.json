@@ -363,6 +363,18 @@
         "yes": "evet",
         "no": "hayır"
       }
+    },
+    "header": {
+      "pin": "PIN {{pin}}",
+      "clock": "{{elapsed}} / {{limit}}",
+      "clockLabel": "Oyun süresi",
+      "phase": {
+        "forming": "Bekleme salonu",
+        "running": "Devam ediyor",
+        "finale": "Sonuçlar"
+      },
+      "paused": "Duraklatıldı",
+      "loading": "Kaçış odası yükleniyor…"
     }
   }
 }

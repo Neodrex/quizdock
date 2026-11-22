@@ -356,6 +356,18 @@
         "yes": "是",
         "no": "否"
       }
+    },
+    "header": {
+      "pin": "PIN {{pin}}",
+      "clock": "{{elapsed}} / {{limit}}",
+      "clockLabel": "游戏时间",
+      "phase": {
+        "forming": "等候室",
+        "running": "进行中",
+        "finale": "结果"
+      },
+      "paused": "已暂停",
+      "loading": "正在加载密室逃脱…"
     }
   }
 }

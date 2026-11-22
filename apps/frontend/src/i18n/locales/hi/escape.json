@@ -363,6 +363,18 @@
         "yes": "हाँ",
         "no": "नहीं"
       }
+    },
+    "header": {
+      "pin": "PIN {{pin}}",
+      "clock": "{{limit}} में से {{elapsed}}",
+      "clockLabel": "खेल का समय",
+      "phase": {
+        "forming": "लॉबी",
+        "running": "चल रहा है",
+        "finale": "परिणाम"
+      },
+      "paused": "रुका हुआ",
+      "loading": "एस्केप रूम लोड हो रहा है…"
     }
   }
 }
