@@ -21,6 +21,9 @@ const AWARDS: (keyof Awards)[] = ['fastest', 'fewestHints', 'teamwork', 'photoFi
 export const UNDER_PODIUM_MAX = 4;
 export const FINALE_ROWS = 14;
 const NARROW = '(max-aspect-ratio: 3/2)';
+/** The podium's scale with no list under it (three teams or fewer): 13.8 em × 1.5 and
+ *  the awards still fit the 26.25 em under the title. */
+const BIG_PODIUM = 1.5;
 
 export interface FinaleList {
   /** The podium and the awards beside the list, not above and under it. */
@@ -102,12 +105,15 @@ function Results({ finale }: { finale: EscapeScreenFinale }) {
   const podium = finale.ranking.slice(0, 3);
   const listed = finale.ranking.slice(3, 3 + layout.listed);
   const rows = Math.max(1, Math.ceil(listed.length / layout.columns));
+  const big = finale.ranking.length <= 3;
   const podiumList = (
     <>
       <h2 className="sr-only">{t('screen.finale.podium')}</h2>
       <ol
         data-testid="podium"
         data-layout={layout.side ? 'column' : 'row'}
+        // Three teams or fewer: nothing under the podium but the awards, so it grows.
+        style={big ? { fontSize: `${BIG_PODIUM}em` } : undefined}
         className={cn(
           'flex shrink-0 gap-[1em]',
           // Stretched to one height: a step below the winner starts lower by its margin,
@@ -159,7 +165,10 @@ function Results({ finale }: { finale: EscapeScreenFinale }) {
       </div>
     );
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col gap-[0.8em]">
+    <div
+      data-testid="finale-results"
+      className={cn('flex min-h-0 w-full flex-1 flex-col gap-[0.8em]', big && 'justify-center')}
+    >
       {podiumList}
       {ranked}
       {more}

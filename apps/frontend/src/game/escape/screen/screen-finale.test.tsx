@@ -72,6 +72,24 @@ describe('ScreenFinale', () => {
     expect(steps.map((s) => s.dataset.place)).toEqual(['1', '2', '3']);
   });
 
+  it('two teams: #1 comes first in the page (read first), drawn on the right', () => {
+    draw(screenFinaleOf());
+    const steps = within(screen.getByTestId('podium')).getAllByTestId('podium-step');
+    expect(steps.map((s) => s.dataset.place)).toEqual(['1', '2']);
+    expect(steps[0].className).toContain('order-2');
+    expect(steps[1].className).toContain('order-1');
+  });
+
+  it('three teams or fewer: a bigger podium, centred in the room left', () => {
+    const { unmount } = draw(screenFinaleOf());
+    const podium = screen.getByTestId('podium');
+    expect(podium.style.fontSize).toBe('1.5em');
+    expect(screen.getByTestId('finale-results').className).toContain('justify-center');
+    unmount();
+    draw(five);
+    expect(screen.getByTestId('podium').style.fontSize).toBe('');
+  });
+
   it('the podium: place, score, escape time, hints, penalty and members', () => {
     draw(five);
     const [red, blue] = screen.getAllByTestId('podium-step');
