@@ -69,8 +69,10 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
       finaleRef.current = true;
       const record = syncedRef.current ? loadScreenRecord(pin) : null;
       syncedRef.current = false;
-      const replayed = !!record && record.gameId === finale.gameId && record.replayed;
-      saveScreenRecord(pin, { gameId: finale.gameId, replayed, finale });
+      // Kept as replayed from the start: a reload in the middle of the replay shows the
+      // standings (§1.6, the replay runs once); this page still plays it unless the
+      // record already said so.
+      saveScreenRecord(pin, { gameId: finale.gameId, replayed: true, finale });
       dispatch({ type: 'screenFinale', finale, record });
     };
     const events: [string, Listener][] = [

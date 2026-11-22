@@ -199,14 +199,14 @@ describe('useEscapeScreen', () => {
   });
 
   describe('the finale and its record', () => {
-    it('saves the screen finale in the record; replayDone marks it replayed', async () => {
+    it('saves the screen finale in the record, replayed from its start (a reload mid-replay does not replay)', async () => {
       const finale = screenFinaleOf();
       const { result } = mount(at(GameState.Escape));
       await flush();
       fire('escape:screen-finale', finale);
       expect(result.current.ui.finale).toEqual(finale);
       expect(result.current.ui.replay).toBe('pending');
-      expect(loadScreenRecord(PIN)).toMatchObject({ gameId: GAME, replayed: false, finale });
+      expect(loadScreenRecord(PIN)).toMatchObject({ gameId: GAME, replayed: true, finale });
       act(() => result.current.replayDone());
       expect(result.current.ui.replay).toBe('done');
       expect(loadScreenRecord(PIN)?.replayed).toBe(true);
@@ -229,7 +229,8 @@ describe('useEscapeScreen', () => {
       fire('escape:screen-finale', finale);
       fire('escape:screen-finale', finale);
       expect(result.current.ui.replay).toBe('pending');
-      expect(loadScreenRecord(PIN)?.replayed).toBe(false);
+      // Kept as replayed already: a reload during this replay shows the standings.
+      expect(loadScreenRecord(PIN)?.replayed).toBe(true);
     });
 
     it('game:ended with a matching record keeps the finale and says the room closed', async () => {

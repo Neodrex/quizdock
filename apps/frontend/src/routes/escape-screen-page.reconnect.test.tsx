@@ -267,14 +267,39 @@ describe('escape big screen recovery', () => {
     expect(screen.queryByRole('button', { name: /Activer le son/ })).toBeNull();
   });
 
-  it('4 and 5. a reload in the finale shows the standings at once; "Show the finale again" replays', async () => {
+  it('4. a reload in the finale: the standings at once, no second replay', async () => {
     saveScreenRecord(PIN, { gameId: GAME, replayed: true, finale: screenFinaleOf() });
     await load();
     await sync(boardOf({ phase: 'finale' }), { ...escapeRoom, state: 'PODIUM' });
     fire('escape:screen-finale', screenFinaleOf());
     expect(await screen.findByTestId('podium')).toBeInTheDocument();
     expect(screen.queryByTestId('split-replay')).toBeNull();
+  });
 
+  it('4b. a reload while the replay plays: the finale comes back without replaying', async () => {
+    const page = await load();
+    await sync(running());
+    fire('escape:board', boardOf({ phase: 'finale' }));
+    fire('escape:screen-finale', screenFinaleOf());
+    const clock = await screen.findByTestId('replay-clock');
+    const start = clock.textContent;
+    // Part of the race plays out, not all of it.
+    await waitFor(() => expect(screen.getByTestId('replay-clock').textContent).not.toBe(start));
+    expect(screen.queryByTestId('podium')).toBeNull();
+
+    await reload(page);
+    await sync(boardOf({ phase: 'finale' }), { ...escapeRoom, state: 'PODIUM' });
+    fire('escape:screen-finale', screenFinaleOf());
+    expect(await screen.findByTestId('podium')).toBeInTheDocument();
+    expect(screen.queryByTestId('split-replay')).toBeNull();
+  });
+
+  it('5. "Show the finale again" on the console: a new screen finale replays', async () => {
+    saveScreenRecord(PIN, { gameId: GAME, replayed: true, finale: screenFinaleOf() });
+    await load();
+    await sync(boardOf({ phase: 'finale' }), { ...escapeRoom, state: 'PODIUM' });
+    fire('escape:screen-finale', screenFinaleOf());
+    expect(await screen.findByTestId('podium')).toBeInTheDocument();
     // The host pushes the finale again from the console.
     fire('escape:screen-finale', screenFinaleOf());
     expect(await screen.findByTestId('split-replay')).toBeInTheDocument();
