@@ -405,6 +405,24 @@
       "pickOnPhone": "Wybierz drużynę na telefonie",
       "waiting": "Czekają na drużynę",
       "teams": "Drużyny"
+    },
+    "track": {
+      "label": "Wyścig",
+      "place": "#{{place}}",
+      "placeLabel": "Miejsce {{place}}",
+      "stageOf": "Etap {{stage}} z {{count}}",
+      "hints_one": "{{count}} podpowiedź",
+      "hints_few": "{{count}} podpowiedzi",
+      "hints_many": "{{count}} podpowiedzi",
+      "hints_other": "{{count}} podpowiedzi",
+      "escaped": "Uciekła w {{time}}",
+      "timeUp": "Koniec czasu",
+      "more_one": "i jeszcze {{count}} drużyna",
+      "more_few": "i jeszcze {{count}} drużyny",
+      "more_many": "i jeszcze {{count}} drużyn",
+      "more_other": "i jeszcze {{count}} drużyny",
+      "atStage": "Etap {{stage}}: {{teams}}",
+      "escapedCount": "Uciekły: {{count}}"
     }
   }
 }

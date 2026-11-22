@@ -378,6 +378,18 @@
       "pickOnPhone": "在手機上選擇你的隊伍",
       "waiting": "等待分隊",
       "teams": "隊伍"
+    },
+    "track": {
+      "label": "比賽",
+      "place": "#{{place}}",
+      "placeLabel": "第 {{place}} 名",
+      "stageOf": "第 {{stage}} 關，共 {{count}} 關",
+      "hints_other": "{{count}} 次提示",
+      "escaped": "用時 {{time}} 逃脫",
+      "timeUp": "時間到",
+      "more_other": "另有 {{count}} 支隊伍",
+      "atStage": "第 {{stage}} 關：{{teams}}",
+      "escapedCount": "已逃脫：{{count}}"
     }
   }
 }

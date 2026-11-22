@@ -387,6 +387,20 @@
       "pickOnPhone": "Pick your team on your phone",
       "waiting": "Waiting for a team",
       "teams": "Teams"
+    },
+    "track": {
+      "label": "Race",
+      "place": "#{{place}}",
+      "placeLabel": "Place {{place}}",
+      "stageOf": "Stage {{stage}} of {{count}}",
+      "hints_one": "{{count}} hint",
+      "hints_other": "{{count}} hints",
+      "escaped": "Escaped {{time}}",
+      "timeUp": "Time up",
+      "more_one": "and {{count}} more team",
+      "more_other": "and {{count}} more teams",
+      "atStage": "Stage {{stage}}: {{teams}}",
+      "escapedCount": "Escaped: {{count}}"
     }
   }
 }

@@ -396,6 +396,22 @@
       "pickOnPhone": "Scegli la tua squadra sul telefono",
       "waiting": "In attesa di una squadra",
       "teams": "Squadre"
+    },
+    "track": {
+      "label": "Gara",
+      "place": "#{{place}}",
+      "placeLabel": "Posizione {{place}}",
+      "stageOf": "Fase {{stage}} di {{count}}",
+      "hints_one": "{{count}} indizio",
+      "hints_many": "{{count}} indizi",
+      "hints_other": "{{count}} indizi",
+      "escaped": "Evasa in {{time}}",
+      "timeUp": "Tempo scaduto",
+      "more_one": "e {{count}} altra squadra",
+      "more_many": "e altre {{count}} squadre",
+      "more_other": "e altre {{count}} squadre",
+      "atStage": "Fase {{stage}}: {{teams}}",
+      "escapedCount": "Evase: {{count}}"
     }
   }
 }

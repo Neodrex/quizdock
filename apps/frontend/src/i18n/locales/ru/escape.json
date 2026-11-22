@@ -405,6 +405,24 @@
       "pickOnPhone": "Выберите команду на телефоне",
       "waiting": "Ждут команду",
       "teams": "Команды"
+    },
+    "track": {
+      "label": "Гонка",
+      "place": "#{{place}}",
+      "placeLabel": "Место {{place}}",
+      "stageOf": "Этап {{stage}} из {{count}}",
+      "hints_one": "{{count}} подсказка",
+      "hints_few": "{{count}} подсказки",
+      "hints_many": "{{count}} подсказок",
+      "hints_other": "{{count}} подсказки",
+      "escaped": "Выбралась за {{time}}",
+      "timeUp": "Время вышло",
+      "more_one": "и ещё {{count}} команда",
+      "more_few": "и ещё {{count}} команды",
+      "more_many": "и ещё {{count}} команд",
+      "more_other": "и ещё {{count}} команды",
+      "atStage": "Этап {{stage}}: {{teams}}",
+      "escapedCount": "Выбрались: {{count}}"
     }
   }
 }

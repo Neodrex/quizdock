@@ -396,6 +396,22 @@
       "pickOnPhone": "Choisissez votre équipe sur votre téléphone",
       "waiting": "En attente d'une équipe",
       "teams": "Équipes"
+    },
+    "track": {
+      "label": "Course",
+      "place": "#{{place}}",
+      "placeLabel": "Place {{place}}",
+      "stageOf": "Étape {{stage}} sur {{count}}",
+      "hints_one": "{{count}} indice",
+      "hints_many": "{{count}} indices",
+      "hints_other": "{{count}} indices",
+      "escaped": "Évadée en {{time}}",
+      "timeUp": "Temps écoulé",
+      "more_one": "et {{count}} autre équipe",
+      "more_many": "et {{count}} autres équipes",
+      "more_other": "et {{count}} autres équipes",
+      "atStage": "Étape {{stage}} : {{teams}}",
+      "escapedCount": "Évadées : {{count}}"
     }
   }
 }

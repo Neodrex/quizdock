@@ -387,6 +387,20 @@
       "pickOnPhone": "Wählt euer Team auf dem Handy",
       "waiting": "Wartet auf ein Team",
       "teams": "Teams"
+    },
+    "track": {
+      "label": "Rennen",
+      "place": "#{{place}}",
+      "placeLabel": "Platz {{place}}",
+      "stageOf": "Etappe {{stage}} von {{count}}",
+      "hints_one": "{{count}} Hinweis",
+      "hints_other": "{{count}} Hinweise",
+      "escaped": "Entkommen in {{time}}",
+      "timeUp": "Zeit abgelaufen",
+      "more_one": "und {{count}} weiteres Team",
+      "more_other": "und {{count}} weitere Teams",
+      "atStage": "Etappe {{stage}}: {{teams}}",
+      "escapedCount": "Entkommen: {{count}}"
     }
   }
 }

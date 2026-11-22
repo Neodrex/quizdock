@@ -396,6 +396,22 @@
       "pickOnPhone": "Elige tu equipo en tu móvil",
       "waiting": "Esperando equipo",
       "teams": "Equipos"
+    },
+    "track": {
+      "label": "Carrera",
+      "place": "#{{place}}",
+      "placeLabel": "Puesto {{place}}",
+      "stageOf": "Etapa {{stage}} de {{count}}",
+      "hints_one": "{{count}} pista",
+      "hints_many": "{{count}} pistas",
+      "hints_other": "{{count}} pistas",
+      "escaped": "Escapó en {{time}}",
+      "timeUp": "Se acabó el tiempo",
+      "more_one": "y {{count}} equipo más",
+      "more_many": "y {{count}} equipos más",
+      "more_other": "y {{count}} equipos más",
+      "atStage": "Etapa {{stage}}: {{teams}}",
+      "escapedCount": "Escaparon: {{count}}"
     }
   }
 }

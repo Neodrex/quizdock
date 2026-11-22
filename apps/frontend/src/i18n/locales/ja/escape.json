@@ -378,6 +378,18 @@
       "pickOnPhone": "スマートフォンでチームを選んでください",
       "waiting": "チーム待ち",
       "teams": "チーム"
+    },
+    "track": {
+      "label": "レース",
+      "place": "#{{place}}",
+      "placeLabel": "{{place}}位",
+      "stageOf": "ステージ {{stage}} / {{count}}",
+      "hints_other": "ヒント {{count}}回",
+      "escaped": "{{time}} で脱出",
+      "timeUp": "時間切れ",
+      "more_other": "ほか {{count}} チーム",
+      "atStage": "ステージ {{stage}}：{{teams}}",
+      "escapedCount": "脱出：{{count}}"
     }
   }
 }

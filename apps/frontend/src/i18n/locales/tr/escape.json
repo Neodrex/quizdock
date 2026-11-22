@@ -387,6 +387,20 @@
       "pickOnPhone": "Takımınızı telefonunuzdan seçin",
       "waiting": "Takım bekliyor",
       "teams": "Takımlar"
+    },
+    "track": {
+      "label": "Yarış",
+      "place": "#{{place}}",
+      "placeLabel": "{{place}}. sıra",
+      "stageOf": "Aşama {{stage}} / {{count}}",
+      "hints_one": "{{count}} ipucu",
+      "hints_other": "{{count}} ipucu",
+      "escaped": "{{time}} sürede kaçtı",
+      "timeUp": "Süre doldu",
+      "more_one": "ve {{count}} takım daha",
+      "more_other": "ve {{count}} takım daha",
+      "atStage": "Aşama {{stage}}: {{teams}}",
+      "escapedCount": "Kaçan: {{count}}"
     }
   }
 }

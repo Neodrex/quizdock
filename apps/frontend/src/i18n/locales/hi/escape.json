@@ -387,6 +387,20 @@
       "pickOnPhone": "अपने फ़ोन पर अपनी टीम चुनें",
       "waiting": "टीम की प्रतीक्षा में",
       "teams": "टीमें"
+    },
+    "track": {
+      "label": "दौड़",
+      "place": "#{{place}}",
+      "placeLabel": "स्थान {{place}}",
+      "stageOf": "चरण {{stage}} / {{count}}",
+      "hints_one": "{{count}} संकेत",
+      "hints_other": "{{count}} संकेत",
+      "escaped": "{{time}} में बच निकली",
+      "timeUp": "समय समाप्त",
+      "more_one": "और {{count}} टीम",
+      "more_other": "और {{count}} टीमें",
+      "atStage": "चरण {{stage}}: {{teams}}",
+      "escapedCount": "बच निकलीं: {{count}}"
     }
   }
 }
