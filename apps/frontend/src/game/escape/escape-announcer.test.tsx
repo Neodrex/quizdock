@@ -3,7 +3,7 @@ import { I18nextProvider } from 'react-i18next';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { loadNamespace } from '../../i18n/content-language';
-import { EscapeAnnouncer, SAY_MS } from './escape-announcer';
+import { EscapeAnnouncer, MAX_WAITING, SAY_MS } from './escape-announcer';
 import type { Announcement } from './escape-reducer';
 
 const en = i18n.cloneInstance({ lng: 'en' });
@@ -85,5 +85,32 @@ describe('EscapeAnnouncer', () => {
     wait(0);
     expect(politeRegion()).toHaveTextContent('Das Spiel beginnt. Viel Glück!');
     expect(assertiveRegion()).toHaveTextContent('Die Zeit ist um!');
+  });
+
+  it('keeps at most a few waiting, and says a teammate’s repeated wrong tries once', () => {
+    const { update } = draw([]);
+    const wrong = (id: number) => msg(id, 'announce.teammateWrong', { by: 'Ben' });
+    update([msg(1, 'announce.started'), wrong(2), wrong(3), wrong(4)]);
+    wait(0);
+    expect(politeRegion()).toHaveTextContent('The run has started');
+    wait(SAY_MS);
+    expect(politeRegion()).toHaveTextContent('Ben tried a wrong answer');
+    wait(SAY_MS);
+    expect(politeRegion()).toBeEmptyDOMElement();
+    // A burst: only the newest MAX_WAITING wait, the oldest go.
+    update(
+      Array.from({ length: 12 }, (_, i) =>
+        msg(10 + i, 'announce.lockSolved', { lock: `L${i}`, by: 'Ana' }),
+      ),
+    );
+    const said: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      wait(0);
+      said.push(politeRegion().textContent ?? '');
+      wait(SAY_MS);
+    }
+    expect(said.filter(Boolean)).toHaveLength(1 + MAX_WAITING);
+    expect(said[0]).toBe('Ana opened L0');
+    expect(said.filter(Boolean).at(-1)).toBe('Ana opened L11');
   });
 });

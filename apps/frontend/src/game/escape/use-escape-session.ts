@@ -50,7 +50,11 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
   // The run whose results were already asked for (the finale phase after a reload).
   const fetchedRef = useRef<string | null>(null);
 
-  const me = () => loadPlayerSession()?.playerId ?? loadEscapeRecord(pin)?.playerId ?? null;
+  // My player id: this room's session, or the record when the session is another room's.
+  const me = () => {
+    const s = loadPlayerSession();
+    return s && s.pin === pin ? s.playerId : (loadEscapeRecord(pin)?.playerId ?? null);
+  };
   const tokenFor = useCallback(() => {
     const s = loadPlayerSession();
     return s && s.pin === pin ? s.sessionToken : loadEscapeRecord(pin)?.sessionToken;
@@ -109,6 +113,10 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
   const { attachSeq } = session;
   useEffect(() => {
     if (attachSeq === 0) return;
+    // A join into a new session: the last run's record (and its token) is not this player's.
+    const s = loadPlayerSession();
+    const record = loadEscapeRecord(pin);
+    if (record && s?.pin === pin && s.sessionToken !== record.sessionToken) clearEscapeRecord();
     let live = true;
     void ensureGameSocket('guest', pin).then((sock) => {
       if (!live) return;

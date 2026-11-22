@@ -172,6 +172,8 @@ export function escapeReducer(ui: EscapeUi, a: EscapeAction): EscapeUi {
     case 'teamUpdate':
       return onTeamUpdate(ui, a.update, a.me);
     case 'finale':
+      // A late finale of the room's last run, once a new one is on: not ours.
+      if (ui.state && a.finale.gameId !== ui.state.gameId) return ui;
       return { ...ui, finale: a.finale, ended: ui.ended === 'waiting' ? 'final' : ui.ended };
     case 'gameEnded': {
       if (ui.finale) return { ...ui, ended: 'final' };

@@ -4,6 +4,8 @@ import type { Announcement } from './escape-reducer';
 
 /** How long each polite message stays in its region, at least, before the next. */
 export const SAY_MS = 1000;
+/** Messages kept waiting behind the one being said; in a burst the oldest go. */
+export const MAX_WAITING = 5;
 
 interface Queue {
   current: Announcement | null;
@@ -13,8 +15,21 @@ type QueueAction = { type: 'add'; fresh: Announcement[] } | { type: 'next' };
 
 function queueReducer(q: Queue, a: QueueAction): Queue {
   if (a.type === 'add') {
-    const all = [...q.waiting, ...a.fresh];
-    return q.current ? { ...q, waiting: all } : { current: all[0] ?? null, waiting: all.slice(1) };
+    const all = [...q.waiting];
+    for (const m of a.fresh) {
+      // A teammate's wrong tries in a row are said once.
+      const said = [q.current, ...all].some(
+        (o) =>
+          o &&
+          m.key === 'announce.teammateWrong' &&
+          o.key === m.key &&
+          o.params?.by === m.params?.by,
+      );
+      if (!said) all.push(m);
+    }
+    return q.current
+      ? { ...q, waiting: all.slice(-MAX_WAITING) }
+      : { current: all[0] ?? null, waiting: all.slice(1).slice(-MAX_WAITING) };
   }
   return { current: q.waiting[0] ?? null, waiting: q.waiting.slice(1) };
 }

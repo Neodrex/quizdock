@@ -70,4 +70,20 @@ describe('useTeamClock', () => {
     tick(10_000);
     expect(onWarning).not.toHaveBeenCalled();
   });
+
+  it('a resume after a pause neither warns again nor shows a stale first frame', () => {
+    const onWarning = vi.fn();
+    const start = running(5 * MIN + 1_000);
+    const { result, rerender } = renderHook((c: TeamClockInput) => useTeamClock(c, onWarning), {
+      initialProps: start,
+    });
+    tick(3_000); // 4:58 left: the 5-minute warning went
+    expect(onWarning.mock.calls).toEqual([[5]]);
+    rerender({ deadlineAt: null, remainingMs: 4 * MIN + 58_000, paused: true });
+    tick(10_000);
+    rerender(running(4 * MIN + 58_000));
+    expect(result.current.remainingMs).toBe(4 * MIN + 58_000);
+    tick(2_000);
+    expect(onWarning.mock.calls).toEqual([[5]]);
+  });
 });

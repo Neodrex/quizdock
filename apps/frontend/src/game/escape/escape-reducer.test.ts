@@ -309,6 +309,16 @@ describe('escapeReducer', () => {
       expect(timedOut).toMatchObject({ ended: 'final', finale: null });
     });
 
+    it('drops a finale of another run', () => {
+      const ui = run(
+        { type: 'state', state: stateOf() },
+        { type: 'finale', finale: { ...finale, gameId: 'e'.repeat(32) } },
+      );
+      expect(ui.finale).toBeNull();
+      // With no state yet (a reload into an ended room) the finale is taken as it is.
+      expect(run({ type: 'finale', finale }).finale).toEqual(finale);
+    });
+
     it('game:ended while forming is final: nothing was played', () => {
       expect(run({ type: 'state', state: forming() }, { type: 'gameEnded' }).ended).toBe('final');
     });

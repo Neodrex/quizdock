@@ -25,6 +25,13 @@ export function useTeamClock(
 ): { remainingMs: number; paused: boolean } {
   const { deadlineAt, remainingMs, paused } = input;
   const [now, setNow] = useState(() => serverNow());
+  // A new deadline (a resume, extra time) is counted from now at once: the `now` kept
+  // from before a pause would make the first frame show, and warn on, too much time.
+  const [deadlineSeen, setDeadlineSeen] = useState(deadlineAt);
+  if (deadlineSeen !== deadlineAt) {
+    setDeadlineSeen(deadlineAt);
+    setNow(serverNow());
+  }
 
   useEffect(() => {
     if (deadlineAt === null) return;

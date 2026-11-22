@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { clearPlayerSession, savePlayerSession } from '../game-client';
 import {
+  RECORD_TTL_MS,
   clearEscapeRecord,
   type EscapeRecord,
   loadEscapeRecord,
   saveEscapeRecord,
 } from './escape-record';
 
-const record: EscapeRecord = {
+const record: Omit<EscapeRecord, 'savedAt'> = {
   pin: '482913',
   gameId: '0123456789abcdef0123456789abcdef',
   playerId: 'p1',
@@ -23,7 +24,7 @@ describe('escape record', () => {
 
   it('round trips', () => {
     saveEscapeRecord(record);
-    expect(loadEscapeRecord('482913')).toEqual(record);
+    expect(loadEscapeRecord('482913')).toMatchObject(record);
     clearEscapeRecord();
     expect(loadEscapeRecord('482913')).toBeNull();
   });
@@ -53,6 +54,20 @@ describe('escape record', () => {
     savePlayerSession({ pin: '482913', sessionToken: 'tok', playerId: 'p1', nickname: 'Ana' });
     saveEscapeRecord(record);
     clearPlayerSession();
-    expect(loadEscapeRecord('482913')).toEqual(record);
+    expect(loadEscapeRecord('482913')).toMatchObject(record);
+  });
+
+  it('stamps the save and ignores a record older than its lifetime', () => {
+    vi.useFakeTimers();
+    try {
+      saveEscapeRecord(record);
+      expect(loadEscapeRecord('482913')?.savedAt).toBe(Date.now());
+      vi.advanceTimersByTime(RECORD_TTL_MS - 1);
+      expect(loadEscapeRecord('482913')).not.toBeNull();
+      vi.advanceTimersByTime(2);
+      expect(loadEscapeRecord('482913')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

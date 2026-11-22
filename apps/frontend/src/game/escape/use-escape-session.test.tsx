@@ -142,7 +142,7 @@ describe('useEscapeSession', () => {
     fire('escape:state', state());
     expect(result.current.active).toBe(true);
     expect(result.current.ui.state?.gameId).toBe(GAME);
-    expect(loadEscapeRecord(PIN)).toEqual({
+    expect(loadEscapeRecord(PIN)).toMatchObject({
       pin: PIN,
       gameId: GAME,
       playerId: 'p1',
@@ -256,6 +256,39 @@ describe('useEscapeSession', () => {
     acks.set('escape:results', () => ({ ok: false, error: { code: 'escape.not_found' } }));
     await expect(act(() => result.current.resultsFromRecord())).resolves.toBeNull();
     expect(loadEscapeRecord(PIN)).toBeNull();
+  });
+
+  it('a join into a new session clears the last run’s record; a reconnect keeps it', async () => {
+    saveEscapeRecord({ pin: PIN, gameId: GAME, playerId: 'p1', sessionToken: 'tok', teamId: 't1' });
+    const { rerender } = mount();
+    await flush();
+    rerender(seam({ attachSeq: 1 })); // same token: a reconnect
+    await flush();
+    expect(loadEscapeRecord(PIN)).not.toBeNull();
+    loadPlayerSession.mockReturnValue({
+      pin: PIN,
+      sessionToken: 'new',
+      playerId: 'p9',
+      nickname: 'Cy',
+    });
+    rerender(seam({ attachSeq: 2 })); // markJoined after a fresh join
+    await flush();
+    expect(loadEscapeRecord(PIN)).toBeNull();
+  });
+
+  it('knows me from the record when the player session is another room’s', async () => {
+    saveEscapeRecord({ pin: PIN, gameId: GAME, playerId: 'p1', sessionToken: 'tok', teamId: 't1' });
+    loadPlayerSession.mockReturnValue({
+      pin: '111111',
+      sessionToken: 'x',
+      playerId: 'p2',
+      nickname: 'Ben',
+    });
+    const { result } = mount();
+    await flush();
+    fire('escape:state', state());
+    fire('escape:team-update', { teamId: 't1', kind: 'wrong', by: 'p1' });
+    expect(result.current.ui.polite).toEqual([]);
   });
 
   it('follows only the phone’s events, and lets every one go on unmount', async () => {
