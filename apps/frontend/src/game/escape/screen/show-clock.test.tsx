@@ -64,6 +64,32 @@ describe('ShowClock', () => {
     expect(screen.queryByText('Final minutes')).toBeNull();
   });
 
+  const finalAt = (left: number, limitMs: number) => {
+    const board = running(left);
+    drawEn(<ShowClock board={{ ...board, clock: { ...board.clock, limitMs } }} now={NOW} />);
+    return screen.getByRole('timer').getAttribute('data-final');
+  };
+
+  it.each([
+    ['exactly 5:00 left of a 45-min run', 5 * MIN, 45 * MIN, 'true'],
+    ['5:01 left of a 45-min run', 5 * MIN + 1000, 45 * MIN, 'false'],
+    ['5:00 left of a 30:00 run (5-min threshold)', 5 * MIN, 30 * MIN, 'true'],
+    ['5:01 left of a 30:00 run', 5 * MIN + 1000, 30 * MIN, 'false'],
+    ['5:00 left of a 29:59 run (3-min threshold)', 5 * MIN, 30 * MIN - 1000, 'false'],
+    ['exactly 3:00 left of a 29:59 run', 3 * MIN, 30 * MIN - 1000, 'true'],
+    ['3:01 left of a 29:59 run', 3 * MIN + 1000, 30 * MIN - 1000, 'false'],
+  ])('final minutes at %s: %s', (_, left, limit, final) => {
+    expect(finalAt(left, limit)).toBe(final);
+  });
+
+  it('switches to whole seconds at 10 000 ms, not at 10 001', () => {
+    const { unmount } = drawEn(<ShowClock board={running(10_000)} now={NOW} />);
+    expect(digits()).toHaveTextContent(/^10$/);
+    unmount();
+    drawEn(<ShowClock board={running(10_001)} now={NOW} />);
+    expect(digits()).toHaveTextContent(/^0:11$/);
+  });
+
   it.each([
     ['full', true],
     ['fade', false],
