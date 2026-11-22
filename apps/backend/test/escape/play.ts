@@ -17,7 +17,7 @@ import {
   stateWhere,
   submitAs,
 } from './escape-harness';
-import { leaksIn, receivedLeaks } from './leaks';
+import { leaksIn, receivedLeaks, screenLeaksIn } from './leaks';
 
 /** Submissions: outcomes, events, the wrong-answer limit and concurrent submits (Task 3.10). */
 export function playTests(ctx: EscapeContext): void {
@@ -61,6 +61,7 @@ export function playTests(ctx: EscapeContext): void {
     const bSeen = seen[players.indexOf(b)];
     expect(bSeen.filter(([e]) => e === 'escape:team-update')).toEqual([]);
     expect(receivedLeaks(seen.flat(), ctx.vault)).toEqual([]);
+    expect(screenLeaksIn(seen.at(-1)!, ctx.vault)).toEqual([]);
   });
 
   it('finishing the stage: stage-cleared with its unlock text, an announce, and the board moves one team only', async () => {
@@ -99,6 +100,7 @@ export function playTests(ctx: EscapeContext): void {
     expect((await hostTeam).stageClearedAt).toHaveLength(1);
     expect((await next).view?.title).toBe(ctx.vault.stages[1].title);
     expect(receivedLeaks(seen.flat(), ctx.vault)).toEqual([]);
+    expect(screenLeaksIn(seen.at(-1)!, ctx.vault)).toEqual([]);
   });
 
   it('after wrongMax wrong answers the team waits: a right answer is not checked until the window ends', async () => {
@@ -263,6 +265,7 @@ export function playTests(ctx: EscapeContext): void {
       });
       await state;
       expect(receivedLeaks(seen.flat(), ctx.vault)).toEqual([]);
+      expect(screenLeaksIn(seen.at(-1)!, ctx.vault)).toEqual([]);
     });
 
     it('unlocking the last lock clears the stage; the last stage escapes the team and ends the run', async () => {

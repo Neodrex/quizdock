@@ -129,6 +129,67 @@ export function hostLeaks(seen: [string, unknown][], tpl: EscapeTemplate): strin
   return seen.flatMap(([event, p]) => leaksIn(p, tpl, scope).map((line) => `${event} ${line}`));
 }
 
+/** Frames only phones or the host console get (M6 §1.4). */
+const NOT_FOR_SCREENS = new Set([
+  'escape:state',
+  'escape:team-update',
+  'escape:host',
+  'escape:host-team',
+  'escape:outline',
+  'escape:finale',
+]);
+
+/** Keys of host columns and story lines (M6 §1.4). */
+const SCREEN_SECRET_KEYS = new Set(['unlockText', 'adjustMs', 'hostUnlocks', 'paidHints']);
+
+/**
+ * Leaks in what a screen `record()`ed (M6 §1.4): `leaksIn` with no role and no
+ * released hint (the host's hints included), plus any frame only phones or the
+ * host get, any key of a host column, a story line or a player id, and any
+ * string equal to a stage's unlock text, intro or a clue body (shared ones
+ * too). Nicknames are allowed (owner answer 1) and not checked.
+ *
+ * A `playerId` key counts in escape frames only: upstream's lobby frames
+ * (`game:roster`, `player:joined`, `player:left`) give every socket of the PIN
+ * room the player ids, screens included, as they do for a quiz. That is
+ * GameEngine's, outside the escape files (M6 §1.3); noted in progress.md.
+ */
+export function screenLeaksIn(frames: [string, unknown][], tpl: EscapeTemplate): string[] {
+  const texts = new Map<string, string>();
+  for (const stage of tpl.stages) {
+    texts.set(stage.unlockText, `unlock text of stage ${stage.id}`);
+    texts.set(stage.intro, `intro of stage ${stage.id}`);
+    for (const c of stage.clues) texts.set(c.body, `clue ${c.id}`);
+  }
+  texts.delete('');
+  return frames.flatMap(([event, p]) => {
+    if (NOT_FOR_SCREENS.has(event)) return [`${event}: a frame for phones or the host`];
+    const found = leaksIn(p, tpl).map((line) => `${event} ${line}`);
+    const escape = event.startsWith('escape:');
+    const walk = (value: unknown, path: string): void => {
+      if (typeof value === 'string') {
+        const what = texts.get(value);
+        if (what) found.push(`${event} ${path}: ${what}`);
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.forEach((v, i) => walk(v, `${path}[${i}]`));
+        return;
+      }
+      if (value && typeof value === 'object') {
+        for (const [k, v] of Object.entries(value)) {
+          if (SCREEN_SECRET_KEYS.has(k) || (escape && k === 'playerId')) {
+            found.push(`${event} ${path}.${k}: not for a screen`);
+          }
+          walk(v, `${path}.${k}`);
+        }
+      }
+    };
+    walk(p, '$');
+    return found;
+  });
+}
+
 /** Every typed answer of a template, as written: code, phrase and combined parts. */
 export function answersOf(tpl: EscapeTemplate): string[] {
   return tpl.stages.flatMap((s) =>

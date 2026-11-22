@@ -18,7 +18,7 @@ import {
   stateWhere,
   submitAs,
 } from './escape-harness';
-import { receivedLeaks } from './leaks';
+import { receivedLeaks, screenLeaksIn } from './leaks';
 
 /** End, finale, and a room closed or switched under a run (Task 3.15). */
 export function finaleTests(ctx: EscapeContext): void {
@@ -103,6 +103,7 @@ export function finaleTests(ctx: EscapeContext): void {
       expect(receivedLeaks(seen[i], ctx.vault, p.playerId)).toEqual([]);
     }
     expect(receivedLeaks(screenSeen, ctx.vault)).toEqual([]);
+    expect(screenLeaksIn(screenSeen, ctx.vault)).toEqual([]);
   });
 
   it('E2: a team past its deadline but not yet flagged gets its time-up before the finale', async () => {

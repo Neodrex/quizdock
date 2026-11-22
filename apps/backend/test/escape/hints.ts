@@ -9,7 +9,7 @@ import { escapeKeys } from '../../src/escape/escape.keys';
 import { vaultHeist } from '../../src/escape/samples';
 import { GameService } from '../../src/game/game.service';
 import { RedisService } from '../../src/redis/redis.service';
-import { nextEvent } from '../game-harness';
+import { nextEvent, settle } from '../game-harness';
 import {
   type EscapeContext,
   type SyncedPlayer,
@@ -20,7 +20,7 @@ import {
   stateWhere,
   submitAs,
 } from './escape-harness';
-import { leaksIn, receivedLeaks } from './leaks';
+import { leaksIn, receivedLeaks, screenLeaksIn } from './leaks';
 
 /** Hints on request, by the host and on a timer; stuck warnings; time-up (Task 3.11). */
 export function hintTests(ctx: EscapeContext): void {
@@ -55,6 +55,7 @@ export function hintTests(ctx: EscapeContext): void {
     expect(s.nextHint?.id).toBe(vaultHeist.stages[0].hints[1].id);
     expect(await announce).toMatchObject({ kind: 'hint', teamId: 't1', stageIndex: 0 });
     expect(receivedLeaks(seen.flat(), ctx.vault)).toEqual([]);
+    expect(screenLeaksIn(seen.at(-1)!, ctx.vault)).toEqual([]);
   });
 
   it('the same hint asked from two phones at once is released once; a stale id gives no-hint', async () => {
@@ -70,7 +71,8 @@ export function hintTests(ctx: EscapeContext): void {
   });
 
   it('H2: the host releases the next hint to every team, paid', async () => {
-    const { pin, teams, host } = await runningRoom(ctx, { players: 2, teams: 2 });
+    const { pin, teams, host, screen } = await runningRoom(ctx, { players: 2, teams: 2 });
+    const screenSeen = record(screen);
     const updates = [hintUpdate(teams.t1[0]), hintUpdate(teams.t2[0])];
     expect(await host.emitWithAck('escape:hint', { pin })).toEqual({ ok: true, released: 2 });
     for (const u of await Promise.all(updates)) {
@@ -89,7 +91,10 @@ export function hintTests(ctx: EscapeContext): void {
     expect(await host.emitWithAck('escape:hint', { pin, teamId: 'zz' })).toMatchObject({
       ok: false,
       error: { code: 'escape.team_not_found' },
-    });
+    }); // M6: the hints the host released never reach the screen.
+    await settle(100);
+    expect(screenSeen.some(([e]) => e === 'escape:announce')).toBe(true);
+    expect(screenLeaksIn(screenSeen, ctx.vault)).toEqual([]);
   });
 
   it('H2: a confirmed hint for an unknown team is refused as not found, never as time up', async () => {

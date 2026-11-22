@@ -20,6 +20,7 @@ import {
   type RunningRoom,
   type SyncedPlayer,
   eventually,
+  extraScreens,
   firstStateWhere,
   record,
   runningRoom,
@@ -27,7 +28,7 @@ import {
   stateWhere,
   submitAs,
 } from './escape-harness';
-import { hostLeaks, receivedLeaks, stringsIn } from './leaks';
+import { hostLeaks, receivedLeaks, screenLeaksIn, stringsIn } from './leaks';
 
 /**
  * Task 3.16: one two-team, roles-mode Vault Heist run through sockets only,
@@ -91,6 +92,10 @@ export function vaultHeistRunTests(ctx: EscapeContext): void {
         for (const p of r.players)
           recordings.push({ who: p.playerId, socket: p.socket, seen: record(p.socket) });
         recordings.push({ who: null, socket: r.screen, seen: record(r.screen) });
+        // M6: the other kinds of screen (the host's own window, a paired one, a follow copy).
+        for (const s of Object.values(await extraScreens(ctx.h, _pin, r.host))) {
+          recordings.push({ who: null, socket: s, seen: record(s) });
+        }
         r.host.onAny((e: string, p: unknown) => hostSeen.push([e, p]));
         unseen('lobby-h1');
         timed.push(...r.players.map((p) => update(p, (u) => u.kind === 'hint')));
@@ -386,6 +391,14 @@ export function vaultHeistRunTests(ctx: EscapeContext): void {
     unseen('lobby-h2', 'vault-h2', 'getaway-h1', 'getaway-h2');
     for (const { who, socket, seen } of recordings) {
       expect(receivedLeaks(seen, tpl, who ?? undefined)).toEqual([]);
+      // M6: a screen, the hints the host released included, and nicknames in its finale.
+      if (who === null) {
+        expect(screenLeaksIn(seen, tpl)).toEqual([]);
+        const members = seen
+          .filter(([e]) => e === 'escape:screen-finale')
+          .flatMap(([, f]) => (f as EscapeScreenFinale).ranking.flatMap((r) => r.members));
+        expect(members).toEqual(expect.arrayContaining([...A, ...B].map((p) => p.nickname)));
+      }
       const events = new Set(seen.map(([e]) => e));
       for (const e of ['escape:outline', 'escape:host', 'escape:host-team']) {
         expect(events.has(e)).toBe(false);

@@ -205,6 +205,40 @@ export async function runningRoom(
   return { host, pin, players, teams, screen };
 }
 
+/** The other kinds of screen next to `runningRoom`'s (an unpaired copy), each synced. */
+export interface ExtraScreens {
+  /** The host's own window: signed in as the host, so the projection. */
+  own: Socket;
+  /** A screen on another computer, paired by its code from the console. */
+  paired: Socket;
+  /** A participant's follow copy (`follow: true`). */
+  follow: Socket;
+}
+
+/** Joins and syncs the three other kinds of screen to `pin` (M6). */
+export async function extraScreens(
+  h: GameHarness,
+  pin: string,
+  host: Socket,
+): Promise<ExtraScreens> {
+  const own = h.connectHost();
+  await ok(own.emitWithAck('spectator:join', { pin }), 'own window join');
+  const paired = h.connect();
+  const { pairingCode: code } = (await paired.emitWithAck('spectator:join', { pin })) as {
+    pairingCode?: string;
+  };
+  if (!code) throw new Error('no pairing code for an unpaired screen');
+  const token = nextEvent(paired, 'screen:paired');
+  await ok(host.emitWithAck('host:pair-screen', { pin, code }), 'pair screen');
+  await token;
+  const follow = h.connect();
+  await ok(follow.emitWithAck('spectator:join', { pin, follow: true }), 'follow join');
+  for (const s of [own, paired, follow]) {
+    await ok(s.emitWithAck('escape:sync', { pin }), 'screen sync');
+  }
+  return { own, paired, follow };
+}
+
 async function ok(ack: Promise<unknown>, what: string): Promise<void> {
   const res = (await ack) as { ok?: boolean };
   if (!res.ok) throw new Error(`${what} refused: ${JSON.stringify(res)}`);

@@ -14,6 +14,7 @@ import {
   record,
   runningRoom,
 } from './escape-harness';
+import { screenLeaksIn } from './leaks';
 
 /** GameEngine's private host-absence steps, driven by hand to interleave them. */
 interface HostAbsence {
@@ -143,6 +144,7 @@ export function raceTests(ctx: EscapeContext): void {
       seen.map(([e]) => e).filter((e) => e.startsWith('escape:'));
     expect(escapeEvents(phone)).toEqual([]);
     expect(escapeEvents(board)).toEqual([]);
+    expect(screenLeaksIn(board, ctx.vault)).toEqual([]);
   });
 
   it('a board due for a room that is gone meanwhile is skipped quietly', async () => {
