@@ -256,7 +256,11 @@
     "team_escaped": "该队伍已经逃脱。",
     "team_full": "该队伍已满，请选择其他队伍。",
     "team_not_found": "该队伍已不存在。",
-    "wrong_phase": "游戏的当前阶段无法进行此操作。"
+    "wrong_phase": "游戏的当前阶段无法进行此操作。",
+    "time-up": "该队伍的时间已用完。请先给他们加时。",
+    "escaped": "该队伍已经逃脱：没有可以再打开的了。",
+    "already-solved": "这把锁已经打开了。",
+    "unknown-lock": "这把锁已不在该队伍当前的关卡中。"
   },
   "escape_template": {
     "invalid": "此密室逃脱模板无效。",

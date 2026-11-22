@@ -1,5 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { errorText } from '@/api/error-text';
+import { refusalError } from '../../game-client';
 import { drawEn } from '../test-fixtures';
 import { hostTeamOf, outlineOf } from './host-fixtures';
 import {
@@ -19,6 +21,18 @@ vi.mock('../../room-components', () => ({
 }));
 
 const red = hostTeamOf();
+
+/** Every code the engine can refuse a host run command with (escape.engine.ts, escape-rules.ts). */
+const HOST_REFUSALS = [
+  'escape.wrong_phase',
+  'escape.team_not_found',
+  'escape.team_escaped',
+  'escape.not_found',
+  'escape.time-up',
+  'escape.escaped',
+  'escape.already-solved',
+  'escape.unknown-lock',
+];
 
 function commandsOf(over: Partial<HostCommands> = {}): HostCommands {
   return {
@@ -222,6 +236,33 @@ describe('host actions', () => {
       expect(dialog()).toHaveTextContent('It is marked in the results as opened by the host.');
       fireEvent.click(within(dialog()).getByRole('button', { name: 'Open the lock' }));
       await waitFor(() => expect(commands.unlock).toHaveBeenCalledWith('t1', 'lobby-badge'));
+    });
+  });
+
+  describe('refusals', () => {
+    it('an unlock the server refuses shows its own text, not a generic one', async () => {
+      const commands = commandsOf({
+        unlock: vi.fn(async () => {
+          throw refusalError({ code: 'escape.time-up' });
+        }),
+      });
+      drawEn(
+        <UnlockButton
+          team={red}
+          lock={{ id: 'lobby-badge', label: 'Badge reader' }}
+          commands={commands}
+        />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Open Badge reader for Team Red' }));
+      fireEvent.click(within(dialog()).getByRole('button', { name: 'Open the lock' }));
+      // The refusal's text comes from the app's own language (errors namespace).
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent(errorText('escape.time-up'));
+      expect(alert).not.toHaveTextContent(errorText('error'));
+    });
+
+    it.each(HOST_REFUSALS)('%s has its own text', (code) => {
+      expect(refusalError({ code }).message).not.toBe(errorText('error'));
     });
   });
 

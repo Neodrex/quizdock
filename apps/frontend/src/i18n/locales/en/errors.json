@@ -257,7 +257,11 @@
     "team_escaped": "This team has already escaped.",
     "team_full": "This team is full. Pick another one.",
     "team_not_found": "This team does not exist any more.",
-    "wrong_phase": "Not possible at this point of the game."
+    "wrong_phase": "Not possible at this point of the game.",
+    "time-up": "This team's time is up. Give it more time first.",
+    "escaped": "This team has already escaped: nothing is left to open.",
+    "already-solved": "This lock is already open.",
+    "unknown-lock": "This lock is not on the team's current stage any more."
   },
   "escape_template": {
     "invalid": "This escape template is not valid.",

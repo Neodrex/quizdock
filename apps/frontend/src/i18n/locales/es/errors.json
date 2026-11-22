@@ -258,7 +258,11 @@
     "team_escaped": "Este equipo ya ha escapado.",
     "team_full": "Este equipo está completo. Elige otro.",
     "team_not_found": "Este equipo ya no existe.",
-    "wrong_phase": "No es posible en este momento de la partida."
+    "wrong_phase": "No es posible en este momento de la partida.",
+    "time-up": "El tiempo de este equipo se ha agotado. Dale más tiempo primero.",
+    "escaped": "Este equipo ya ha escapado: no queda nada por abrir.",
+    "already-solved": "Este candado ya está abierto.",
+    "unknown-lock": "Este candado ya no está en la etapa actual del equipo."
   },
   "escape_template": {
     "invalid": "Esta plantilla de juego de escape no es válida.",

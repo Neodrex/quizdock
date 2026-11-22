@@ -257,7 +257,11 @@
     "team_escaped": "Dieses Team ist bereits entkommen.",
     "team_full": "Dieses Team ist voll. Wähle ein anderes.",
     "team_not_found": "Dieses Team gibt es nicht mehr.",
-    "wrong_phase": "In dieser Phase des Spiels nicht möglich."
+    "wrong_phase": "In dieser Phase des Spiels nicht möglich.",
+    "time-up": "Die Zeit dieses Teams ist abgelaufen. Gib ihm zuerst mehr Zeit.",
+    "escaped": "Dieses Team ist bereits entkommen: Es gibt nichts mehr zu öffnen.",
+    "already-solved": "Dieses Schloss ist bereits offen.",
+    "unknown-lock": "Dieses Schloss gehört nicht mehr zur aktuellen Etappe des Teams."
   },
   "escape_template": {
     "invalid": "Diese Escape-Vorlage ist ungültig.",

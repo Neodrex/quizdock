@@ -258,7 +258,11 @@
     "team_escaped": "Cette équipe s’est déjà évadée.",
     "team_full": "Cette équipe est complète. Choisissez-en une autre.",
     "team_not_found": "Cette équipe n’existe plus.",
-    "wrong_phase": "Impossible à ce moment de la partie."
+    "wrong_phase": "Impossible à ce moment de la partie.",
+    "time-up": "Le temps de cette équipe est écoulé. Donnez-lui d’abord du temps.",
+    "escaped": "Cette équipe s’est déjà évadée : il n’y a plus rien à ouvrir.",
+    "already-solved": "Ce cadenas est déjà ouvert.",
+    "unknown-lock": "Ce cadenas ne fait plus partie de l’étape en cours de l’équipe."
   },
   "escape_template": {
     "invalid": "Ce modèle de jeu d’évasion n’est pas valide.",

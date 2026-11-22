@@ -258,7 +258,11 @@
     "team_escaped": "Questa squadra è già evasa.",
     "team_full": "Questa squadra è al completo. Scegline un’altra.",
     "team_not_found": "Questa squadra non esiste più.",
-    "wrong_phase": "Non è possibile in questa fase della partita."
+    "wrong_phase": "Non è possibile in questa fase della partita.",
+    "time-up": "Il tempo di questa squadra è scaduto. Dalle prima altro tempo.",
+    "escaped": "Questa squadra è già evasa: non resta niente da aprire.",
+    "already-solved": "Questo lucchetto è già aperto.",
+    "unknown-lock": "Questo lucchetto non fa più parte della fase attuale della squadra."
   },
   "escape_template": {
     "invalid": "Questo modello di gioco di fuga non è valido.",

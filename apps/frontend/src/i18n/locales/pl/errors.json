@@ -259,7 +259,11 @@
     "team_escaped": "Ta drużyna już uciekła.",
     "team_full": "Ta drużyna jest pełna. Wybierz inną.",
     "team_not_found": "Ta drużyna już nie istnieje.",
-    "wrong_phase": "Na tym etapie gry nie jest to możliwe."
+    "wrong_phase": "Na tym etapie gry nie jest to możliwe.",
+    "time-up": "Czas tej drużyny się skończył. Najpierw daj jej więcej czasu.",
+    "escaped": "Ta drużyna już uciekła: nie ma nic więcej do otwarcia.",
+    "already-solved": "Ta kłódka jest już otwarta.",
+    "unknown-lock": "Tej kłódki nie ma już na obecnym etapie drużyny."
   },
   "escape_template": {
     "invalid": "Ten szablon gry escape jest nieprawidłowy.",

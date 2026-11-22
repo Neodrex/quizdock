@@ -257,7 +257,11 @@
     "team_escaped": "Bu takım zaten kaçtı.",
     "team_full": "Bu takım dolu. Başka bir takım seçin.",
     "team_not_found": "Bu takım artık mevcut değil.",
-    "wrong_phase": "Oyunun bu aşamasında mümkün değil."
+    "wrong_phase": "Oyunun bu aşamasında mümkün değil.",
+    "time-up": "Bu takımın süresi doldu. Önce ona ek süre verin.",
+    "escaped": "Bu takım zaten kaçtı: açılacak bir şey kalmadı.",
+    "already-solved": "Bu kilit zaten açık.",
+    "unknown-lock": "Bu kilit artık takımın mevcut aşamasında değil."
   },
   "escape_template": {
     "invalid": "Bu kaçış oyunu şablonu geçerli değil.",
