@@ -190,6 +190,40 @@
       "make": "分队",
       "open": "开放选队",
       "selfOpen": "玩家在手机上选择自己的队伍。"
+    },
+    "board": {
+      "title": "房间中的队伍",
+      "unassigned": "未分队",
+      "nobody": "还没有人",
+      "offline": "离线",
+      "drag": "拖动 {{name}}",
+      "moveTo": "将 {{name}} 移到…",
+      "ready": "{{total}} 人中 {{connected}} 人在线",
+      "coverage": {
+        "allHeld": "{{roles}}：均已有人担任",
+        "shared": "{{players}} 名玩家担任 {{roles}} 个角色：每人不止一个",
+        "empty": "空队伍",
+        "unheld": "尚无人担任：{{roles}}"
+      },
+      "start": "开始游戏",
+      "startTitle": "仍要开始吗？",
+      "startDescription": "游戏可以开始，但请先检查：",
+      "warnEmpty": "空队伍：{{teams}}",
+      "warnOffline": "离线玩家：{{names}}",
+      "warnUnassigned": "未分队玩家：{{players}}",
+      "startConfirm": "开始",
+      "moveTitle": "将 {{name}} 移到 {{team}}？",
+      "moveRoles": "游戏进行中：{{name}} 的角色将重新分配。",
+      "moveParallel": "游戏进行中：{{name}} 将从新队伍当前的进度加入。",
+      "moveConfirm": "移动",
+      "dnd": {
+        "instructions": "按空格键或回车键拿起玩家。用方向键选择队伍，再按空格键或回车键放下，按 Esc 取消。",
+        "start": "已拿起 {{name}}。",
+        "over": "{{name}} 位于 {{team}} 上方。",
+        "end": "{{name}} 已放入 {{team}}。",
+        "endNowhere": "{{name}} 未移动。",
+        "cancel": "已取消移动 {{name}}。"
+      }
     }
   }
 }

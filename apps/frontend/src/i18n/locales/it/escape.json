@@ -202,6 +202,40 @@
       "make": "Forma le squadre",
       "open": "Apri la scelta della squadra",
       "selfOpen": "I giocatori scelgono la squadra sul telefono."
+    },
+    "board": {
+      "title": "Squadre nella stanza",
+      "unassigned": "Senza squadra",
+      "nobody": "Ancora nessuno",
+      "offline": "Offline",
+      "drag": "Trascina {{name}}",
+      "moveTo": "Sposta {{name}} in…",
+      "ready": "{{connected}} su {{total}} connessi",
+      "coverage": {
+        "allHeld": "{{roles}}: tutti coperti",
+        "shared": "{{roles}} ruoli per {{players}} giocatori: ognuno ne ha più di uno",
+        "empty": "Squadra vuota",
+        "unheld": "Ancora scoperti: {{roles}}"
+      },
+      "start": "Avvia la partita",
+      "startTitle": "Avviare comunque?",
+      "startDescription": "La partita può iniziare, ma prima controlla:",
+      "warnEmpty": "Squadre vuote: {{teams}}",
+      "warnOffline": "Giocatori offline: {{names}}",
+      "warnUnassigned": "Giocatori senza squadra: {{players}}",
+      "startConfirm": "Avvia",
+      "moveTitle": "Spostare {{name}} in {{team}}?",
+      "moveRoles": "La partita è in corso: i ruoli di {{name}} verranno ridistribuiti.",
+      "moveParallel": "La partita è in corso: {{name}} entra nella nuova squadra al punto in cui si trova.",
+      "moveConfirm": "Sposta",
+      "dnd": {
+        "instructions": "Per prendere un giocatore, premi spazio o invio. Scegli una squadra con le frecce, poi premi spazio o invio per lasciarlo, o esc per annullare.",
+        "start": "Hai preso {{name}}.",
+        "over": "{{name}} è sopra {{team}}.",
+        "end": "{{name}} lasciato in {{team}}.",
+        "endNowhere": "{{name}} non è stato spostato.",
+        "cancel": "Spostamento di {{name}} annullato."
+      }
     }
   }
 }

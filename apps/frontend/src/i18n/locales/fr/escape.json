@@ -202,6 +202,40 @@
       "make": "Former les équipes",
       "open": "Ouvrir le choix des équipes",
       "selfOpen": "Les joueurs choisissent leur équipe sur leur téléphone."
+    },
+    "board": {
+      "title": "Équipes de la salle",
+      "unassigned": "Sans équipe",
+      "nobody": "Personne pour l’instant",
+      "offline": "Hors ligne",
+      "drag": "Déplacer {{name}}",
+      "moveTo": "Mettre {{name}} dans…",
+      "ready": "{{connected}} sur {{total}} connectés",
+      "coverage": {
+        "allHeld": "{{roles}} : tous tenus",
+        "shared": "{{roles}} rôles pour {{players}} joueurs : chacun en tient plusieurs",
+        "empty": "Équipe vide",
+        "unheld": "Pas encore tenus : {{roles}}"
+      },
+      "start": "Lancer la partie",
+      "startTitle": "Lancer quand même ?",
+      "startDescription": "La partie peut démarrer, mais vérifiez d’abord :",
+      "warnEmpty": "Équipes vides : {{teams}}",
+      "warnOffline": "Joueurs hors ligne : {{names}}",
+      "warnUnassigned": "Joueurs sans équipe : {{players}}",
+      "startConfirm": "Lancer",
+      "moveTitle": "Mettre {{name}} dans {{team}} ?",
+      "moveRoles": "La partie est en cours : les rôles de {{name}} seront redistribués.",
+      "moveParallel": "La partie est en cours : {{name}} rejoint la nouvelle équipe là où elle en est.",
+      "moveConfirm": "Déplacer",
+      "dnd": {
+        "instructions": "Pour prendre un joueur, appuyez sur espace ou entrée. Choisissez une équipe avec les flèches, puis appuyez sur espace ou entrée pour le déposer, ou sur échap pour annuler.",
+        "start": "{{name}} pris.",
+        "over": "{{name}} au-dessus de {{team}}.",
+        "end": "{{name}} déposé dans {{team}}.",
+        "endNowhere": "{{name}} n’a pas bougé.",
+        "cancel": "Déplacement de {{name}} annulé."
+      }
     }
   }
 }

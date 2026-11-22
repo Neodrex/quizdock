@@ -202,6 +202,40 @@
       "make": "Formar equipos",
       "open": "Abrir la elección de equipo",
       "selfOpen": "Los jugadores eligen su equipo en el móvil."
+    },
+    "board": {
+      "title": "Equipos de la sala",
+      "unassigned": "Sin equipo",
+      "nobody": "Todavía no hay nadie",
+      "offline": "Desconectado",
+      "drag": "Arrastrar a {{name}}",
+      "moveTo": "Mover a {{name}} a…",
+      "ready": "{{connected}} de {{total}} conectados",
+      "coverage": {
+        "allHeld": "{{roles}}: todos cubiertos",
+        "shared": "{{roles}} roles para {{players}} jugadores: cada uno tiene más de uno",
+        "empty": "Equipo vacío",
+        "unheld": "Sin cubrir todavía: {{roles}}"
+      },
+      "start": "Empezar la partida",
+      "startTitle": "¿Empezar de todos modos?",
+      "startDescription": "La partida puede empezar, pero revisa esto antes:",
+      "warnEmpty": "Equipos vacíos: {{teams}}",
+      "warnOffline": "Jugadores desconectados: {{names}}",
+      "warnUnassigned": "Jugadores sin equipo: {{players}}",
+      "startConfirm": "Empezar",
+      "moveTitle": "¿Mover a {{name}} a {{team}}?",
+      "moveRoles": "La partida está en curso: los roles de {{name}} se repartirán de nuevo.",
+      "moveParallel": "La partida está en curso: {{name}} se une al nuevo equipo en el punto en que va.",
+      "moveConfirm": "Mover",
+      "dnd": {
+        "instructions": "Para tomar a un jugador, pulsa espacio o intro. Elige un equipo con las flechas y pulsa espacio o intro para soltarlo, o escape para cancelar.",
+        "start": "Has tomado a {{name}}.",
+        "over": "{{name}} está sobre {{team}}.",
+        "end": "{{name}} soltado en {{team}}.",
+        "endNowhere": "{{name}} no se ha movido.",
+        "cancel": "Movimiento de {{name}} cancelado."
+      }
     }
   }
 }

@@ -190,6 +190,40 @@
       "make": "チームを作る",
       "open": "チーム選択を開く",
       "selfOpen": "プレイヤーはスマートフォンでチームを選びます。"
+    },
+    "board": {
+      "title": "ルームのチーム",
+      "unassigned": "未所属",
+      "nobody": "まだ誰もいません",
+      "offline": "オフライン",
+      "drag": "{{name}} をドラッグ",
+      "moveTo": "{{name}} の移動先…",
+      "ready": "{{total}} 人中 {{connected}} 人が接続中",
+      "coverage": {
+        "allHeld": "{{roles}}：すべて担当あり",
+        "shared": "役割 {{roles}} つに対し {{players}} 人：1人で複数を担当",
+        "empty": "メンバーのいないチーム",
+        "unheld": "未担当：{{roles}}"
+      },
+      "start": "ゲームを開始",
+      "startTitle": "このまま開始しますか？",
+      "startDescription": "ゲームは開始できますが、先に確認してください：",
+      "warnEmpty": "メンバーのいないチーム：{{teams}}",
+      "warnOffline": "オフラインのプレイヤー：{{names}}",
+      "warnUnassigned": "チームのないプレイヤー：{{players}}",
+      "startConfirm": "開始",
+      "moveTitle": "{{name}} を {{team}} に移動しますか？",
+      "moveRoles": "ゲーム中です：{{name}} の役割は配り直されます。",
+      "moveParallel": "ゲーム中です：{{name}} は新しいチームの現在の進行状況から参加します。",
+      "moveConfirm": "移動",
+      "dnd": {
+        "instructions": "プレイヤーを持ち上げるにはスペースキーまたは Enter キーを押します。矢印キーでチームを選び、スペースキーまたは Enter キーで置くか、Esc キーで取り消します。",
+        "start": "{{name}} を持ち上げました。",
+        "over": "{{name}} は {{team}} の上にあります。",
+        "end": "{{name}} を {{team}} に置きました。",
+        "endNowhere": "{{name}} は移動しませんでした。",
+        "cancel": "{{name}} の移動を取り消しました。"
+      }
     }
   }
 }

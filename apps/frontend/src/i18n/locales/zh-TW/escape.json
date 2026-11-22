@@ -190,6 +190,40 @@
       "make": "分隊",
       "open": "開放選隊",
       "selfOpen": "玩家在手機上選擇自己的隊伍。"
+    },
+    "board": {
+      "title": "房間中的隊伍",
+      "unassigned": "未分隊",
+      "nobody": "還沒有人",
+      "offline": "離線",
+      "drag": "拖曳 {{name}}",
+      "moveTo": "將 {{name}} 移到…",
+      "ready": "{{total}} 人中 {{connected}} 人在線",
+      "coverage": {
+        "allHeld": "{{roles}}：皆已有人擔任",
+        "shared": "{{players}} 名玩家擔任 {{roles}} 個角色：每人不只一個",
+        "empty": "空隊伍",
+        "unheld": "尚無人擔任：{{roles}}"
+      },
+      "start": "開始遊戲",
+      "startTitle": "仍要開始嗎？",
+      "startDescription": "遊戲可以開始，但請先檢查：",
+      "warnEmpty": "空隊伍：{{teams}}",
+      "warnOffline": "離線玩家：{{names}}",
+      "warnUnassigned": "未分隊玩家：{{players}}",
+      "startConfirm": "開始",
+      "moveTitle": "將 {{name}} 移到 {{team}}？",
+      "moveRoles": "遊戲進行中：{{name}} 的角色將重新分配。",
+      "moveParallel": "遊戲進行中：{{name}} 將從新隊伍目前的進度加入。",
+      "moveConfirm": "移動",
+      "dnd": {
+        "instructions": "按空白鍵或 Enter 鍵拿起玩家。用方向鍵選擇隊伍，再按空白鍵或 Enter 鍵放下，按 Esc 取消。",
+        "start": "已拿起 {{name}}。",
+        "over": "{{name}} 位於 {{team}} 上方。",
+        "end": "{{name}} 已放入 {{team}}。",
+        "endNowhere": "{{name}} 未移動。",
+        "cancel": "已取消移動 {{name}}。"
+      }
     }
   }
 }

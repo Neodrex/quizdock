@@ -208,6 +208,40 @@
       "make": "Utwórz drużyny",
       "open": "Otwórz wybór drużyn",
       "selfOpen": "Gracze wybierają drużynę na telefonie."
+    },
+    "board": {
+      "title": "Drużyny w pokoju",
+      "unassigned": "Bez drużyny",
+      "nobody": "Jeszcze nikogo nie ma",
+      "offline": "Offline",
+      "drag": "Przeciągnij: {{name}}",
+      "moveTo": "Przenieś {{name}} do…",
+      "ready": "Połączeni: {{connected}} z {{total}}",
+      "coverage": {
+        "allHeld": "{{roles}}: wszystkie obsadzone",
+        "shared": "Role: {{roles}}, gracze: {{players}}: każdy ma więcej niż jedną",
+        "empty": "Pusta drużyna",
+        "unheld": "Jeszcze nieobsadzone: {{roles}}"
+      },
+      "start": "Rozpocznij grę",
+      "startTitle": "Rozpocząć mimo to?",
+      "startDescription": "Gra może się zacząć, ale najpierw sprawdź:",
+      "warnEmpty": "Puste drużyny: {{teams}}",
+      "warnOffline": "Gracze offline: {{names}}",
+      "warnUnassigned": "Gracze bez drużyny: {{players}}",
+      "startConfirm": "Rozpocznij",
+      "moveTitle": "Przenieść {{name}} do {{team}}?",
+      "moveRoles": "Gra trwa: role gracza {{name}} zostaną rozdane od nowa.",
+      "moveParallel": "Gra trwa: {{name}} dołącza do nowej drużyny w miejscu, w którym ona jest.",
+      "moveConfirm": "Przenieś",
+      "dnd": {
+        "instructions": "Aby chwycić gracza, naciśnij spację lub Enter. Wybierz drużynę strzałkami, potem naciśnij spację lub Enter, aby upuścić, albo Escape, aby anulować.",
+        "start": "Chwycono: {{name}}.",
+        "over": "{{name}} nad {{team}}.",
+        "end": "{{name}} upuszczony w {{team}}.",
+        "endNowhere": "{{name}} nie został przeniesiony.",
+        "cancel": "Anulowano przenoszenie: {{name}}."
+      }
     }
   }
 }

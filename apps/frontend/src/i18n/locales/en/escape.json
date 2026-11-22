@@ -196,6 +196,40 @@
       "make": "Make teams",
       "open": "Open team choice",
       "selfOpen": "Players pick their team on their phone."
+    },
+    "board": {
+      "title": "Teams in the room",
+      "unassigned": "Unassigned",
+      "nobody": "Nobody here yet",
+      "offline": "Offline",
+      "drag": "Drag {{name}}",
+      "moveTo": "Move {{name}} to…",
+      "ready": "{{connected}} of {{total}} connected",
+      "coverage": {
+        "allHeld": "{{roles}}: all held",
+        "shared": "{{roles}} roles for {{players}} players: each holds more than one",
+        "empty": "Empty team",
+        "unheld": "Not held yet: {{roles}}"
+      },
+      "start": "Start the game",
+      "startTitle": "Start anyway?",
+      "startDescription": "The game can start, but check these first:",
+      "warnEmpty": "Empty teams: {{teams}}",
+      "warnOffline": "Offline players: {{names}}",
+      "warnUnassigned": "Players without a team: {{players}}",
+      "startConfirm": "Start",
+      "moveTitle": "Move {{name}} to {{team}}?",
+      "moveRoles": "The game is on: {{name}}’s roles are dealt again.",
+      "moveParallel": "The game is on: {{name}} joins the new team where it stands.",
+      "moveConfirm": "Move",
+      "dnd": {
+        "instructions": "To pick up a player, press space or enter. Use the arrow keys to choose a team, then press space or enter to drop, or escape to cancel.",
+        "start": "Picked up {{name}}.",
+        "over": "{{name}} is over {{team}}.",
+        "end": "{{name}} dropped on {{team}}.",
+        "endNowhere": "{{name}} was not moved.",
+        "cancel": "Moving {{name}} was cancelled."
+      }
     }
   }
 }

@@ -196,6 +196,40 @@
       "make": "Teams bilden",
       "open": "Teamwahl öffnen",
       "selfOpen": "Die Spieler wählen ihr Team auf dem Handy."
+    },
+    "board": {
+      "title": "Teams im Raum",
+      "unassigned": "Ohne Team",
+      "nobody": "Noch niemand hier",
+      "offline": "Offline",
+      "drag": "{{name}} ziehen",
+      "moveTo": "{{name}} verschieben nach…",
+      "ready": "{{connected}} von {{total}} verbunden",
+      "coverage": {
+        "allHeld": "{{roles}}: alle besetzt",
+        "shared": "{{roles}} Rollen für {{players}} Spieler: jeder hat mehr als eine",
+        "empty": "Leeres Team",
+        "unheld": "Noch nicht besetzt: {{roles}}"
+      },
+      "start": "Spiel starten",
+      "startTitle": "Trotzdem starten?",
+      "startDescription": "Das Spiel kann starten, aber prüfe zuerst:",
+      "warnEmpty": "Leere Teams: {{teams}}",
+      "warnOffline": "Spieler offline: {{names}}",
+      "warnUnassigned": "Spieler ohne Team: {{players}}",
+      "startConfirm": "Starten",
+      "moveTitle": "{{name}} zu {{team}} verschieben?",
+      "moveRoles": "Das Spiel läuft: Die Rollen von {{name}} werden neu verteilt.",
+      "moveParallel": "Das Spiel läuft: {{name}} steigt beim aktuellen Stand des neuen Teams ein.",
+      "moveConfirm": "Verschieben",
+      "dnd": {
+        "instructions": "Drücke Leertaste oder Eingabe, um einen Spieler aufzunehmen. Wähle mit den Pfeiltasten ein Team, dann Leertaste oder Eingabe zum Ablegen oder Escape zum Abbrechen.",
+        "start": "{{name}} aufgenommen.",
+        "over": "{{name}} ist über {{team}}.",
+        "end": "{{name}} bei {{team}} abgelegt.",
+        "endNowhere": "{{name}} wurde nicht verschoben.",
+        "cancel": "Verschieben von {{name}} abgebrochen."
+      }
     }
   }
 }

@@ -196,6 +196,40 @@
       "make": "Takımları kur",
       "open": "Takım seçimini aç",
       "selfOpen": "Oyuncular takımlarını telefonlarından seçer."
+    },
+    "board": {
+      "title": "Odadaki takımlar",
+      "unassigned": "Takımsız",
+      "nobody": "Henüz kimse yok",
+      "offline": "Çevrimdışı",
+      "drag": "{{name}} adlı oyuncuyu sürükle",
+      "moveTo": "{{name}} adlı oyuncuyu taşı…",
+      "ready": "{{total}} kişiden {{connected}} bağlı",
+      "coverage": {
+        "allHeld": "{{roles}}: hepsi üstlenildi",
+        "shared": "{{players}} oyuncuya {{roles}} rol: herkes birden fazla rol üstlenir",
+        "empty": "Boş takım",
+        "unheld": "Henüz üstlenilmedi: {{roles}}"
+      },
+      "start": "Oyunu başlat",
+      "startTitle": "Yine de başlatılsın mı?",
+      "startDescription": "Oyun başlayabilir, ama önce şunlara bakın:",
+      "warnEmpty": "Boş takımlar: {{teams}}",
+      "warnOffline": "Çevrimdışı oyuncular: {{names}}",
+      "warnUnassigned": "Takımı olmayan oyuncular: {{players}}",
+      "startConfirm": "Başlat",
+      "moveTitle": "{{name}}, {{team}} takımına taşınsın mı?",
+      "moveRoles": "Oyun sürüyor: {{name}} adlı oyuncunun rolleri yeniden dağıtılır.",
+      "moveParallel": "Oyun sürüyor: {{name}}, yeni takıma onun kaldığı yerden katılır.",
+      "moveConfirm": "Taşı",
+      "dnd": {
+        "instructions": "Bir oyuncuyu almak için boşluk veya Enter tuşuna basın. Ok tuşlarıyla bir takım seçin, bırakmak için boşluk veya Enter, iptal için Escape tuşuna basın.",
+        "start": "{{name}} alındı.",
+        "over": "{{name}}, {{team}} üzerinde.",
+        "end": "{{name}}, {{team}} takımına bırakıldı.",
+        "endNowhere": "{{name}} taşınmadı.",
+        "cancel": "{{name}} taşıması iptal edildi."
+      }
     }
   }
 }
