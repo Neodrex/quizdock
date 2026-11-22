@@ -123,6 +123,8 @@ export function raceTests(ctx: EscapeContext): void {
   it('a run the room switched away from mid-command sends nothing more (back to the lobby)', async () => {
     const { host, pin, players, screen } = await runningRoom(ctx, { players: 1, teams: 1 });
     const meta = await metaOf(pin);
+    // Events held from setup (escape:start) drain first, so only later ones count.
+    await settle(100);
     const phone = record(players[0].socket);
     const board = record(screen);
     const store = ctx.h.app.get(EscapeStore);

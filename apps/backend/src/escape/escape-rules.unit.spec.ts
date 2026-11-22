@@ -505,6 +505,9 @@ describe('playerView', () => {
     });
     it('leaves the key out for a code with letters', () => {
       expect('digits' in lockOf(withCode('A7B'), 'pad')).toBe(false);
+      // Lower case and diacritics count as letters too, after normalising.
+      expect('digits' in lockOf(withCode('a7b'), 'pad')).toBe(false);
+      expect('digits' in lockOf(withCode('é1'), 'pad')).toBe(false);
     });
     it('never sets it on phrase, choice, sequence or combined locks', () => {
       for (const id of ['say', 'pick', 'seq', 'duo']) {

@@ -31,7 +31,8 @@ describe('EscapeAttempts (Redis)', () => {
     await expect(limiter.blocked(gameId, 'a')).resolves.toBe(0);
     await limiter.count(gameId, 'a');
     const wait = await limiter.blocked(gameId, 'a');
-    expect(wait).toBeGreaterThan(0);
+    // Above 5 s, so the configured 10 s window (not some default) set the TTL.
+    expect(wait).toBeGreaterThan(5000);
     expect(wait).toBeLessThanOrEqual(10_000);
     await expect(limiter.blocked(gameId, 'b')).resolves.toBe(0);
     // The window runs out: shortened here rather than waited for.
