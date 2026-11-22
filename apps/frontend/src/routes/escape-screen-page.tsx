@@ -68,8 +68,10 @@ export function EscapeScreen({
   const { ui, replayDone } = escape;
   const { board, finale } = ui;
   const now = useNow(1000);
-  // The projection plays the room's sound; a participant's copy only with ?sound=1.
-  const audible = role === 'lead' || (role === 'follow' && sound);
+  // The projection plays the room's sound; a participant's copy only with ?sound=1, and
+  // not when the room sends its sound to the projection only (as upstream's copy).
+  const audible =
+    role === 'lead' || (role === 'follow' && sound && view.gameAudioTarget !== 'projection');
   useEscapeScreenSounds(ui, view.sounds, audible, { now, theme: view.theme });
   const { ref, isFullscreen, toggle, supported } = useFullscreen<HTMLDivElement>();
   const cursor = useIdleCursor();

@@ -211,6 +211,19 @@ describe('EscapeScreen', () => {
     expect(sounds.calls.at(-1)!.audible).toBe(true);
   });
 
+  it("a copy asked for sound stays silent when the room's sound plays on the projection only", () => {
+    // As upstream's quiz copy (screen-page.tsx): the remote copy hears only what reaches it.
+    draw(
+      { board: running() },
+      { role: 'follow', sound: true, view: { gameAudioTarget: 'projection' } },
+    );
+    expect(sounds.calls.at(-1)!.audible).toBe(false);
+    expect(screen.queryByTestId('sound-unlock')).toBeNull();
+    sounds.calls.length = 0;
+    draw({ board: running() }, { role: 'lead', view: { gameAudioTarget: 'projection' } });
+    expect(sounds.calls.at(-1)!.audible).toBe(true);
+  });
+
   it('the cursor hides after 3 s without moving, and comes back on a move', () => {
     draw({ board: running() });
     const frame = document.querySelector<HTMLElement>('[data-escape-phase]')!;
