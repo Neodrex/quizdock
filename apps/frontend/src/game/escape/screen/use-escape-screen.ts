@@ -135,6 +135,12 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
     return () => clearTimeout(id);
   }, [until, ui.current?.id]);
 
+  // The run resumed: the banners held during the pause come.
+  const paused = ui.board?.clock.paused ?? false;
+  useEffect(() => {
+    if (!paused) dispatch({ type: 'next', now: Date.now() });
+  }, [paused]);
+
   const gameId = ui.finale?.gameId;
   /** The split-time replay was played: a reload shows the standings straight away. */
   const replayDone = useCallback(() => {

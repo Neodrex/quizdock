@@ -412,6 +412,13 @@
       "more_other": "e altre {{count}} squadre",
       "atStage": "Fase {{stage}}: {{teams}}",
       "escapedCount": "Evase: {{count}}"
+    },
+    "banner": {
+      "stageCleared": "{{team}} ha superato la fase {{stage}}",
+      "stageClearedTitled": "{{team}} ha superato la fase {{stage}}: {{title}}",
+      "escaped": "{{team}} è evasa!",
+      "hint": "{{team}} ha preso un indizio",
+      "timeUp": "Tempo scaduto per {{team}}"
     }
   }
 }

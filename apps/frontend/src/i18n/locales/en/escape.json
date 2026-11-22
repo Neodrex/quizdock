@@ -401,6 +401,13 @@
       "more_other": "and {{count}} more teams",
       "atStage": "Stage {{stage}}: {{teams}}",
       "escapedCount": "Escaped: {{count}}"
+    },
+    "banner": {
+      "stageCleared": "{{team}} cleared stage {{stage}}",
+      "stageClearedTitled": "{{team}} cleared stage {{stage}}: {{title}}",
+      "escaped": "{{team}} escaped!",
+      "hint": "{{team}} took a hint",
+      "timeUp": "Time is up for {{team}}"
     }
   }
 }

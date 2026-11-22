@@ -423,6 +423,13 @@
       "more_other": "и ещё {{count}} команды",
       "atStage": "Этап {{stage}}: {{teams}}",
       "escapedCount": "Выбрались: {{count}}"
+    },
+    "banner": {
+      "stageCleared": "{{team}}: этап {{stage}} пройден",
+      "stageClearedTitled": "{{team}}: этап {{stage}} пройден — {{title}}",
+      "escaped": "{{team}}: выбрались!",
+      "hint": "{{team}}: взята подсказка",
+      "timeUp": "{{team}}: время вышло"
     }
   }
 }

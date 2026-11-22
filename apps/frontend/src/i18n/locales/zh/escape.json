@@ -390,6 +390,13 @@
       "more_other": "另有 {{count}} 支队伍",
       "atStage": "第 {{stage}} 关：{{teams}}",
       "escapedCount": "已逃脱：{{count}}"
+    },
+    "banner": {
+      "stageCleared": "{{team}} 通过了第 {{stage}} 关",
+      "stageClearedTitled": "{{team}} 通过了第 {{stage}} 关：{{title}}",
+      "escaped": "{{team}} 成功逃脱！",
+      "hint": "{{team}} 使用了一个提示",
+      "timeUp": "{{team}} 时间到"
     }
   }
 }

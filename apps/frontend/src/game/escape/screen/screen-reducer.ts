@@ -99,9 +99,13 @@ function onBoard(ui: EscapeScreenUi, board: EscapeBoard): EscapeScreenUi {
   return { ...base, board, stageTitles, finale };
 }
 
-/** Shows the next waiting banner when the current one is done (or none is up). */
+/**
+ * Shows the next waiting banner when the current one is done (or none is up). While the
+ * run is paused the queue waits: the next banner (and its sound) comes on resume.
+ */
 function advance(ui: EscapeScreenUi, now: number): EscapeScreenUi {
   if (ui.current && now < ui.current.until) return ui;
+  if (ui.board?.clock.paused) return ui.current ? { ...ui, current: null } : ui;
   const [next, ...rest] = ui.banners;
   if (!next) return ui.current ? { ...ui, current: null } : ui;
   const shown = { ...next, until: now + next.durationMs };

@@ -412,6 +412,13 @@
       "more_other": "et {{count}} autres équipes",
       "atStage": "Étape {{stage}} : {{teams}}",
       "escapedCount": "Évadées : {{count}}"
+    },
+    "banner": {
+      "stageCleared": "{{team}} a terminé l'étape {{stage}}",
+      "stageClearedTitled": "{{team}} a terminé l'étape {{stage}} : {{title}}",
+      "escaped": "{{team}} s'est évadée !",
+      "hint": "{{team}} a pris un indice",
+      "timeUp": "Temps écoulé pour {{team}}"
     }
   }
 }

@@ -146,6 +146,43 @@ describe('screenReducer: banners', () => {
   });
 });
 
+describe('screenReducer: banners while paused', () => {
+  const paused = (on: boolean) =>
+    boardOf({ clock: { serverNow: NOW, paused: on, elapsedMs: 0, limitMs: 40 * MIN } });
+
+  it('waits until the run resumes, then shows the next banner', () => {
+    const waiting = run([
+      { type: 'board', board: paused(true) },
+      { type: 'announce', announce: announceOf({ kind: 'hint' }), now: NOW },
+    ]);
+    expect(waiting.current).toBeNull();
+    expect(waiting.banners).toHaveLength(1);
+    expect(waiting.polite).toEqual([]);
+    const resumed = run(
+      [
+        {
+          type: 'board',
+          board: { ...paused(false), clock: { ...paused(false).clock, serverNow: NOW + 1 } },
+        },
+        { type: 'next', now: NOW + 5000 },
+      ],
+      waiting,
+    );
+    expect(resumed.current).toMatchObject({ kind: 'hint', until: NOW + 5000 + BANNER_MS });
+  });
+
+  it('lets the banner up at the pause finish its time, and shows no other', () => {
+    const ui = run([
+      { type: 'announce', announce: announceOf({ kind: 'stage-cleared' }), now: NOW },
+      { type: 'announce', announce: announceOf({ kind: 'hint' }), now: NOW },
+      { type: 'board', board: paused(true) },
+      { type: 'next', now: NOW + BANNER_MS },
+    ]);
+    expect(ui.current).toBeNull();
+    expect(ui.banners.map((b) => b.kind)).toEqual(['hint']);
+  });
+});
+
 describe('screenReducer: finale', () => {
   it('sets the finale, replay pending', () => {
     const finale = screenFinaleOf();

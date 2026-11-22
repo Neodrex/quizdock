@@ -401,6 +401,13 @@
       "more_other": "और {{count}} टीमें",
       "atStage": "चरण {{stage}}: {{teams}}",
       "escapedCount": "बच निकलीं: {{count}}"
+    },
+    "banner": {
+      "stageCleared": "{{team}} ने चरण {{stage}} पूरा किया",
+      "stageClearedTitled": "{{team}} ने चरण {{stage}} पूरा किया: {{title}}",
+      "escaped": "{{team}} बच निकली!",
+      "hint": "{{team}} ने एक संकेत लिया",
+      "timeUp": "{{team}} का समय समाप्त"
     }
   }
 }

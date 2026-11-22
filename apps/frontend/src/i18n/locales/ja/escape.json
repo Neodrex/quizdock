@@ -390,6 +390,13 @@
       "more_other": "ほか {{count}} チーム",
       "atStage": "ステージ {{stage}}：{{teams}}",
       "escapedCount": "脱出：{{count}}"
+    },
+    "banner": {
+      "stageCleared": "{{team}} がステージ {{stage}} をクリア",
+      "stageClearedTitled": "{{team}} がステージ {{stage}} をクリア：{{title}}",
+      "escaped": "{{team}} が脱出！",
+      "hint": "{{team}} がヒントを使用",
+      "timeUp": "{{team}} は時間切れ"
     }
   }
 }

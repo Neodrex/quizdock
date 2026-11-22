@@ -401,6 +401,13 @@
       "more_other": "ve {{count}} takım daha",
       "atStage": "Aşama {{stage}}: {{teams}}",
       "escapedCount": "Kaçan: {{count}}"
+    },
+    "banner": {
+      "stageCleared": "{{team}} {{stage}}. aşamayı geçti",
+      "stageClearedTitled": "{{team}} {{stage}}. aşamayı geçti: {{title}}",
+      "escaped": "{{team}} kaçtı!",
+      "hint": "{{team}} bir ipucu aldı",
+      "timeUp": "{{team}} için süre doldu"
     }
   }
 }

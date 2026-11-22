@@ -423,6 +423,13 @@
       "more_other": "i jeszcze {{count}} drużyny",
       "atStage": "Etap {{stage}}: {{teams}}",
       "escapedCount": "Uciekły: {{count}}"
+    },
+    "banner": {
+      "stageCleared": "{{team}} ukończyła etap {{stage}}",
+      "stageClearedTitled": "{{team}} ukończyła etap {{stage}}: {{title}}",
+      "escaped": "{{team}} uciekła!",
+      "hint": "{{team}} wzięła podpowiedź",
+      "timeUp": "Koniec czasu dla: {{team}}"
     }
   }
 }

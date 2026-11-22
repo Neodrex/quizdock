@@ -181,6 +181,21 @@ describe('useEscapeScreen', () => {
       await act(() => vi.advanceTimersByTimeAsync(BANNER_MS + 10));
       expect(result.current.ui.current).toBeNull();
     });
+
+    it('holds the banners while paused, and shows them on resume', async () => {
+      vi.useFakeTimers();
+      const { result } = mount(seam({ attachSeq: 1 }));
+      await flush();
+      const clock = { serverNow: 1_000_000_000, paused: true, elapsedMs: 0, limitMs: 2_400_000 };
+      fire('escape:board', boardOf({ clock }));
+      fire('escape:announce', announceOf({ kind: 'hint' }));
+      expect(result.current.ui.current).toBeNull();
+      fire(
+        'escape:board',
+        boardOf({ clock: { ...clock, serverNow: clock.serverNow + 1, paused: false } }),
+      );
+      expect(result.current.ui.current?.kind).toBe('hint');
+    });
   });
 
   describe('the finale and its record', () => {
