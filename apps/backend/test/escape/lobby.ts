@@ -297,6 +297,22 @@ export function lobbyTests(ctx: EscapeContext): void {
     expect(membersOf(view)).toEqual([['P0', 'P1', 'P2']]);
   });
 
+  it('escape:start deals the roles afresh: players who picked a team one by one get one each', async () => {
+    const { host, pin, players } = await room(3);
+    await hostAfter(host, 'escape:teams', { pin, mode: 'self', count: 1 });
+    // The first to pick held every role in the lobby; the others would only share one.
+    for (const p of players) {
+      expect(await p.socket.emitWithAck('escape:choose-team', { pin, teamId: 't1' })).toEqual({
+        ok: true,
+      });
+    }
+    const running = players.map((p) => stateWhere(p.socket, (s) => s.phase === 'running'));
+    await hostAfter(host, 'escape:start', { pin });
+    const got = await Promise.all(running);
+    for (const s of got) expect(s.view?.roles).toHaveLength(1);
+    expect(new Set(got.map((s) => s.view!.roles[0])).size).toBe(3);
+  });
+
   it('a late joiner in auto formation lands in the smallest team at its first sync', async () => {
     const { host, pin } = await room(3);
     await hostAfter(host, 'escape:teams', { pin, mode: 'auto', count: 2 });

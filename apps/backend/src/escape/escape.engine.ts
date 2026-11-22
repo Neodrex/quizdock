@@ -388,7 +388,11 @@ export class EscapeEngine implements OnModuleDestroy {
       }
       if (!teams.length) throw new BadRequestException('escape.no_players');
       const live = this.pruneAndGetHolders(ref.id, v);
-      const recs = teams.map((t) => fresh({ ...t, roles: rolesFor(tpl, t, live) }));
+      // Roles are dealt afresh (round robin): lobby moves and picks one by one would
+      // otherwise leave the first member with every role and the others sharing one.
+      const recs = teams.map((t) =>
+        fresh({ ...t, roles: rolesFor(tpl, { ...t, roles: {} }, live) }),
+      );
       const now = Date.now();
       const run: EscapeRun = {
         ...ref.run,
