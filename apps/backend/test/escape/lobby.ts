@@ -85,8 +85,9 @@ export function lobbyTests(ctx: EscapeContext): void {
     expect(await board).toMatchObject({ phase: 'forming', title: 'Vault Heist', teams: [] });
   });
 
-  it('the outline shows sequence items in the per-run hash order, not as authored', async () => {
-    // Authored in solution order: the template order would give the answer away.
+  it('the outline orders sequence items by the run hash, whatever the authored order', async () => {
+    // Authored in solution order: the template order would give the answer away, so
+    // the outline must take the run hash instead (it may match by chance, like any shuffle).
     const solved = {
       ...vaultHeist,
       title: 'Solution order',
