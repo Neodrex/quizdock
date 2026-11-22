@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MotionLevel } from '../../motion/level';
 import { drawEn } from '../test-fixtures';
 import { RaceTrack } from './race-track';
+import { laneScaleOf } from './screen-layout';
 import { boardOf, summaryOf } from './screen-fixtures';
 
 const motion = vi.hoisted(() => ({ level: 'full' as MotionLevel }));
@@ -85,6 +86,49 @@ describe('RaceTrack', () => {
     const b = lane('Team Blue');
     expect(within(b).getByText('Time up')).toBeInTheDocument();
     expect(b).toHaveAttribute('data-out', 'true');
+  });
+
+  it('gives every lane the same meta width, so the stages line up whatever it shows', () => {
+    // Red: 2 hints and its own time; Blue: nothing. Sized by content, Blue's segments
+    // were wider than Red's and the stages did not line up across lanes.
+    const fill = (n: number) =>
+      Array.from({ length: n }, (_, i) => summaryOf({ id: `x${i}`, name: `X${i}` }));
+    const { unmount } = draw([
+      red,
+      { ...blue, remainingMs: 42 * MIN, deadlineAt: NOW + 42 * MIN },
+      ...fill(3),
+    ]);
+    const widths = (root: HTMLElement) =>
+      lanes(root).map((li) => li.querySelector<HTMLElement>('[data-lane-meta]')!.className);
+    const wide = widths(document.body);
+    expect(wide[0]).toMatch(/\bw-\[\d+(\.\d+)?em\]/);
+    expect(new Set(wide).size).toBe(1);
+    unmount();
+    draw(
+      Array.from({ length: 20 }, (_, i) =>
+        summaryOf({ id: `t${i}`, name: `T${i}`, hintsUsed: i % 2 }),
+      ),
+    );
+    const dense = widths(document.body);
+    expect(dense[0]).toMatch(/\bw-\[\d+(\.\d+)?em\]/);
+    expect(new Set(dense).size).toBe(1);
+  });
+
+  it('a small race fills the screen: lanes scaled up, the stages on a row of their own', () => {
+    // The stages line up there by their own full-width row, whatever the meta shows.
+    const teams = (n: number) =>
+      Array.from({ length: n }, (_, i) => summaryOf({ id: `t${i}`, name: `Team ${i}` }));
+    const { unmount } = draw(teams(2));
+    const two = screen.getByRole('list', { name: 'Race' });
+    expect(two).toHaveAttribute('data-tall', 'true');
+    expect(two.style.fontSize).toBe(`${laneScaleOf(2)}em`);
+    expect(laneScaleOf(2)).toBeGreaterThan(1);
+    for (const li of lanes(two)) expect(li).toHaveAttribute('data-stacked', 'true');
+    unmount();
+    draw(teams(5));
+    const five = screen.getByRole('list', { name: 'Race' });
+    expect(five).not.toHaveAttribute('data-tall');
+    expect(five.style.fontSize).toBe('');
   });
 
   it('marks a lane with nobody connected as offline', () => {

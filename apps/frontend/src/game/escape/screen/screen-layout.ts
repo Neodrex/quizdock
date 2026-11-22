@@ -41,3 +41,25 @@ export const COLUMN_CLASS: Record<LanesLayout['columns'], string> = {
   3: 'grid-cols-3',
   4: 'grid-cols-4',
 };
+
+/**
+ * Up to this many lanes, the race is small: each lane gets a line for its place, name
+ * and meta and a full-width row of stages under it, scaled up to fill the screen.
+ */
+export const TALL_LANES_MAX = 3;
+/** A tall lane's height (its em, scaled): 1.75 em for the name line, 2.2 em of stages,
+ *  the gap and padding. */
+export const TALL_LANE_EM = 5.2;
+/** A tall lane never grows past this (scaled em): the race is centred instead. */
+export const TALL_LANE_MAX_EM = 7;
+/** The race's height in screen em (see the top of this file). */
+export const RACE_EM = 19.6;
+/** Row gap between wide lanes (em). */
+const LANE_GAP_EM = 0.5;
+
+/** How much a small race scales up: as much as RACE_EM allows, at most 1.6. */
+export function laneScaleOf(lanes: number): number {
+  if (lanes < 1 || lanes > TALL_LANES_MAX) return 1;
+  const fit = (RACE_EM - LANE_GAP_EM * (lanes - 1)) / (TALL_LANE_EM * lanes);
+  return Math.floor(Math.min(1.6, fit) * 20) / 20;
+}
