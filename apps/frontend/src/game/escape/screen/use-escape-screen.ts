@@ -8,7 +8,12 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { GameSocket } from '../../game-client';
 import type { GameView } from '../../use-game-session';
 import { useEscapeMode, useEscapeSync } from '../escape-sync';
-import { loadScreenRecord, markScreenReplayed, saveScreenRecord } from './screen-record';
+import {
+  clearScreenRecord,
+  loadScreenRecord,
+  markScreenReplayed,
+  saveScreenRecord,
+} from './screen-record';
 import { initialScreenUi, screenReducer } from './screen-reducer';
 
 /** What the hook needs of the quiz session (`useGameSession(pin, 'spectator')`). */
@@ -37,6 +42,8 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
   // say was replayed already. Any later one is "Show the finale again".
   const syncedRef = useRef(false);
   const finaleRef = useRef(false);
+  // The run the last board was for: a kept finale of another run is not this room's now.
+  const runRef = useRef<string | null>(null);
   const [resync, setResync] = useState(0);
 
   const { socket } = session;
@@ -45,6 +52,11 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
     const onBoard = (board: EscapeBoard) => {
       heardRef.current += 1;
       if (!quizOnRef.current) setActive(true);
+      if (runRef.current !== board.gameId) {
+        runRef.current = board.gameId;
+        const record = loadScreenRecord(pin);
+        if (record && record.gameId !== board.gameId) clearScreenRecord(pin);
+      }
       dispatch({ type: 'board', board });
     };
     const onAnnounce = (announce: EscapeAnnounce) =>
@@ -102,7 +114,8 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
   useEffect(() => {
     if (!gone) return;
     const record = loadScreenRecord(pin);
-    if (!record) return;
+    // Another run's finale (the storage could not drop it): not this run's standings.
+    if (!record || (runRef.current !== null && record.gameId !== runRef.current)) return;
     if (!finaleRef.current) dispatch({ type: 'screenFinale', finale: record.finale, record });
     dispatch({ type: 'closed' });
     setClosedWithRecord(true);

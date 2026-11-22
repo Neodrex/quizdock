@@ -43,3 +43,12 @@ export function markScreenReplayed(pin: string, gameId: string): void {
   if (!r || r.gameId !== gameId || r.replayed) return;
   saveScreenRecord(pin, { gameId, replayed: true, finale: r.finale });
 }
+
+/** Forgets this PIN's record: another run is on. */
+export function clearScreenRecord(pin: string): void {
+  try {
+    sessionStorage.removeItem(keyOf(pin));
+  } catch {
+    /* ignore */
+  }
+}

@@ -240,6 +240,42 @@ describe('useEscapeScreen', () => {
       expect(result.current.ui.closed).toBe(true);
     });
 
+    it('a finale of the last run never shows for the next one, ended or refused', async () => {
+      const finaleA = screenFinaleOf();
+      const B = 'b'.repeat(32);
+      const { result, rerender } = mount(at(GameState.Escape));
+      await flush();
+      fire('escape:screen-finale', finaleA);
+      rerender(at(GameState.Lobby)); // host:back-to-lobby, run B opens
+      await flush();
+      fire(
+        'escape:board',
+        boardOf({
+          gameId: B,
+          clock: { serverNow: 2, paused: false, elapsedMs: 0, limitMs: 60_000 },
+        }),
+      );
+      expect(loadScreenRecord(PIN)).toBeNull();
+      rerender(at(GameState.Ended)); // the host ends the room mid-run
+      await flush();
+      expect(result.current.ui.finale).toBeNull();
+      expect(result.current.ui.closed).toBe(false);
+    });
+
+    it('a kept finale of another run than the board shown is not used when the room is gone', async () => {
+      saveScreenRecord(PIN, { gameId: GAME, replayed: true, finale: screenFinaleOf() });
+      const { result, rerender } = mount(at(GameState.Escape));
+      await flush();
+      // The storage could not be cleared (private mode): the board still says run B.
+      const removeItem = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {});
+      fire('escape:board', boardOf({ gameId: 'b'.repeat(32) }));
+      rerender(seam({ attachSeq: 1, view: { status: 'error', state: null, totalQuestions: 0 } }));
+      await flush();
+      removeItem.mockRestore();
+      expect(result.current.ui.finale).toBeNull();
+      expect(result.current.ui.closed).toBe(false);
+    });
+
     it('a refused join with no record stays off (upstream error)', async () => {
       const { result } = mount(seam({ view: { status: 'error', state: null, totalQuestions: 0 } }));
       await flush();
