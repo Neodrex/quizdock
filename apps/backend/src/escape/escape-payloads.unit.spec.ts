@@ -280,6 +280,8 @@ describe('host payloads', () => {
     const state = hostStateOf(view());
     expect(state.unassigned).toEqual([{ playerId: 'x', nickname: 'Lone', connected: true }]);
     expect(state.templateVersion).toBe(3);
+    // The run's id: the host record's key for escape:results after the room closed.
+    expect(state.gameId).toBe(view().id);
     expect(state.teams.map((t) => t.id)).toEqual(['a', 'b']);
   });
 

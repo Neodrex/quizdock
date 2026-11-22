@@ -259,6 +259,7 @@ export function hostTeamOf(v: RunView, rec: TeamRecord): EscapeHostTeam {
 
 export function hostStateOf(v: RunView): EscapeHostState {
   return {
+    gameId: v.id,
     board: boardOf(v),
     formation: formationOf(v),
     teams: v.teams.map((r) => hostTeamOf(v, r)),

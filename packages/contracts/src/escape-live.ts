@@ -253,6 +253,8 @@ export interface EscapeHostTeam extends EscapeTeamSummary {
 }
 
 export interface EscapeHostState {
+  /** The run's id: the key for escape:results, and how the console sees a new run. */
+  gameId: string;
   board: EscapeBoard;
   formation: EscapeFormation;
   teams: EscapeHostTeam[];
