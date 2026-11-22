@@ -1,10 +1,18 @@
 import type { EscapeHostState, EscapeHostTeam } from '@quiz-dock/contracts';
-import { act, fireEvent, renderHook, screen, within } from '@testing-library/react';
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  RouterProvider,
+} from '@tanstack/react-router';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { drawEn } from '../test-fixtures';
 import type { HostCommands } from './host-actions';
 import { SAMPLE_ANSWERS, boardOf, hostStateOf, hostTeamOf, outlineOf } from './host-fixtures';
 import { RunGrid, sortTeams, useTeamSelection } from './run-grid';
+import { validateTeamSearch } from './team-search';
 
 const NOW = 1_000_000_000;
 
@@ -90,6 +98,36 @@ function screenIs(laptop: boolean) {
   );
 }
 
+/** A router with the control route's search rule, and a probe of `useTeamSelection`. */
+function selectionRouter(history: ReturnType<typeof createMemoryHistory>) {
+  let picked: string | null = null;
+  function Probe() {
+    const [team, select] = useTeamSelection();
+    picked = team;
+    return (
+      <>
+        <button type="button" onClick={() => select('t3')}>
+          pick t3
+        </button>
+        <button type="button" onClick={() => select(null)}>
+          clear
+        </button>
+      </>
+    );
+  }
+  const root = createRootRoute();
+  const route = createRoute({
+    getParentRoute: () => root,
+    path: '/session/$pin/console',
+    validateSearch: validateTeamSearch,
+    component: Probe,
+  });
+  const start = createRoute({ getParentRoute: () => root, path: '/start' });
+  const router = createRouter({ routeTree: root.addChildren([route, start]), history });
+  render(<RouterProvider router={router as never} />);
+  return { router, picked: () => picked };
+}
+
 const row = (name: string) =>
   screen.getByRole('button', { name: `Show ${name}` }).closest('tr') as HTMLElement;
 
@@ -102,7 +140,6 @@ describe('RunGrid', () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
     localStorage.clear();
-    window.history.replaceState(null, '', '/');
   });
 
   describe('a row per team on a laptop', () => {
@@ -218,14 +255,33 @@ describe('RunGrid', () => {
     expect(onSelect).toHaveBeenCalledWith('t1');
   });
 
-  it('the pick is kept in ?team=, so a reload keeps it', () => {
-    window.history.replaceState(null, '', '/session/123456/console?team=t2');
-    const { result, unmount } = renderHook(() => useTeamSelection());
-    expect(result.current[0]).toBe('t2');
-    act(() => result.current[1]('t3'));
-    expect(window.location.search).toBe('?team=t3');
-    unmount();
-    expect(renderHook(() => useTeamSelection()).result.current[0]).toBe('t3');
+  it('the pick is kept in ?team= (replacing the entry), so a reload keeps it', async () => {
+    vi.useRealTimers();
+    const history = createMemoryHistory({
+      initialEntries: ['/start', '/session/123456/console?team=t2'],
+    });
+    const { router, picked } = selectionRouter(history);
+    await act(() => router.load());
+    expect(picked()).toBe('t2');
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'pick t3' })));
+    expect(router.state.location.search).toEqual({ team: 't3' });
+    expect(picked()).toBe('t3');
+    // Replaced, not pushed: back goes to the page before the console.
+    expect(history.length).toBe(2);
+    // A reload reads the URL.
+    cleanup();
+    const again = selectionRouter(createMemoryHistory({ initialEntries: [history.location.href] }));
+    await act(() => again.router.load());
+    expect(again.picked()).toBe('t3');
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'clear' })));
+    expect(again.router.state.location.search).toEqual({});
+    expect(again.picked()).toBeNull();
+  });
+
+  it('the control route keeps a team id only', () => {
+    expect(validateTeamSearch({ team: 't1', x: 1 })).toEqual({ team: 't1' });
+    expect(validateTeamSearch({ team: '' })).toEqual({});
+    expect(validateTeamSearch({ team: 3 })).toEqual({});
   });
 
   it('sorts by stage, then locks solved, then time left; "by name" is remembered', () => {

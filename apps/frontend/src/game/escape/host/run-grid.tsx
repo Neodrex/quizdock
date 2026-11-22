@@ -1,5 +1,6 @@
 import type { EscapeHostOutline, EscapeHostState, EscapeHostTeam } from '@quiz-dock/contracts';
 import { Check, Pause, WifiOff } from 'lucide-react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +11,7 @@ import { formatDelta } from '../escape-reducer';
 import { formatClock } from '../team-timer';
 import { GiveHintButton, type HostCommands } from './host-actions';
 import { timeOnStageAt } from './host-reducer';
+import type { TeamSearch } from './team-search';
 import { useNow } from './use-now';
 
 /**
@@ -66,19 +68,23 @@ function saveSort(by: GridSort) {
   }
 }
 
-/** The team picked in the grid, kept in the URL's `?team=` so a reload keeps it. */
+/**
+ * The team picked in the grid, kept in the URL's `?team=` (the control route's
+ * `validateTeamSearch`) so a reload keeps it. A pick replaces the history entry.
+ */
 export function useTeamSelection(): [string | null, (id: string | null) => void] {
-  const [selected, setSelected] = useState<string | null>(() =>
-    new URLSearchParams(window.location.search).get('team'),
+  const { team } = useSearch({ strict: false }) as TeamSearch;
+  const navigate = useNavigate();
+  const select = useCallback(
+    (id: string | null) =>
+      void navigate({
+        to: '.',
+        search: (prev: Record<string, unknown>) => ({ ...prev, team: id ?? undefined }),
+        replace: true,
+      }),
+    [navigate],
   );
-  const select = useCallback((id: string | null) => {
-    setSelected(id);
-    const url = new URL(window.location.href);
-    if (id) url.searchParams.set('team', id);
-    else url.searchParams.delete('team');
-    window.history.replaceState(window.history.state, '', url);
-  }, []);
-  return [selected, select];
+  return [team ?? null, select];
 }
 
 /** What one stage of a team shows: done (with its split), current (locks), or ahead. */

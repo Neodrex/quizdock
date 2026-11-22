@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router';
 import { getAuthMode, isAuthenticated, rememberAfterLogin } from './auth/auth-context';
 import { allowsAnonymousParticipants, hasCommunityStore } from './config';
+import { validateTeamSearch } from './game/escape/host/team-search';
 import { CallbackPage } from './routes/callback-page';
 import { ControlPage } from './routes/control-page';
 import { DashboardPage } from './routes/dashboard-page';
@@ -245,6 +246,7 @@ export const controlRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/session/$pin/console',
   beforeLoad: requireAuth,
+  validateSearch: validateTeamSearch,
   component: ControlPage,
   // Another PIN is another room: its page starts afresh.
   remountDeps: ({ params }) => params.pin,
