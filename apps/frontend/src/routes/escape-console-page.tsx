@@ -17,7 +17,7 @@ import { RunGrid, useTeamSelection } from '../game/escape/host/run-grid';
 import { TeamBoard } from '../game/escape/host/team-board';
 import { TeamDetailPanel } from '../game/escape/host/team-detail';
 import type { EscapeHost } from '../game/escape/host/use-escape-host';
-import { useNow } from '../game/escape/host/use-now';
+import { useNow } from '../game/escape/use-now';
 import { formatClock } from '../game/escape/team-timer';
 import type { useGameSession } from '../game/use-game-session';
 

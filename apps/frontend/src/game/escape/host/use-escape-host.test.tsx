@@ -42,7 +42,7 @@ import { GAME } from '../test-fixtures';
 import { boardOf, hostStateOf, hostTeamOf, outlineOf } from './host-fixtures';
 import { loadHostRecord, saveHostRecord } from './host-record';
 import { type EscapeHostSeam, LOBBY_WAIT_MS, useEscapeHost } from './use-escape-host';
-import { useNow } from './use-now';
+import { useNow } from '../use-now';
 
 const PIN = '482913';
 

@@ -12,7 +12,7 @@ import { formatClock } from '../team-timer';
 import { GiveHintButton, type HostCommands } from './host-actions';
 import { timeOnStageAt } from './host-reducer';
 import type { TeamSearch } from './team-search';
-import { useNow } from './use-now';
+import { useNow } from '../use-now';
 
 /**
  * The live dashboard while the run is on (M5 Task 5.11): every team's stages, locks,
