@@ -592,8 +592,10 @@ try {
   const tpl = (await api('GET', '/escape-templates')).find((t) => t.title === TEMPLATE);
   answers = answersOf((await api('GET', `/escape-templates/${tpl.id}`)).content);
 } catch (err) {
-  log('FAIL', 'answers unread:', err);
+  log('answers unread:', err);
 }
+// Without answers every leak check below would pass on nothing.
+check(answers.length > 0, `answers read for the leak checks (${answers.length})`);
 const frames = consoleFrames.join('\n');
 check(consoleFrames.length > 20, `console: ${consoleFrames.length} frames recorded`);
 check(frames.includes('"escape:host"'), 'console: escape:host frames seen');
