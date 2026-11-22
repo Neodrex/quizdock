@@ -70,6 +70,9 @@ function Note({ text }: { text: string | null }) {
   ) : null;
 }
 
+/** A hint as the confirm shows it. */
+type HintView = NonNullable<ReturnType<typeof nextHintOf>>;
+
 /** A team still playing can get a hint or time; escaped or timed out, nothing moves. */
 const playing = (team: Pick<EscapeHostTeam, 'escaped' | 'timedOut'>) =>
   !team.escaped && !team.timedOut;
@@ -92,18 +95,19 @@ export function GiveHintButton({
 }) {
   const { t } = useTranslation('escape');
   const { error, run } = useRun();
-  const [asking, setAsking] = useState(false);
+  // The hint the confirm shows, kept from when it opened: a payload that moves the
+  // team on meanwhile must not change what the host agreed to pay for.
+  const [asking, setAsking] = useState<HintView | null>(null);
   const [note, setNote] = useState<string | null>(null);
-  const next = nextHintOf(outline, team);
   const busy = !!commands.pending.hint;
   const onClick = () => {
     setNote(null);
+    const next = nextHintOf(outline, team);
     if (!next) setNote(t('host.actions.hintNone'));
-    else setAsking(true);
+    else setAsking(next);
   };
-  // The hint the confirm showed: the one the host agrees to pay for.
   const confirm = async (hintId: string) => {
-    setAsking(false);
+    setAsking(null);
     const released = await run(() => commands.hint(team.id, hintId));
     if (released === 0) setNote(t('host.actions.hintNone'));
   };
@@ -124,15 +128,15 @@ export function GiveHintButton({
       <Note text={note} />
       <Alert text={error} />
       <ConfirmDialog
-        open={asking && !!next}
+        open={!!asking}
         title={t('host.actions.hintTeamTitle', { team: team.name })}
-        description={t('host.actions.hintTeamCost', { seconds: next?.penaltyS ?? 0 })}
+        description={t('host.actions.hintTeamCost', { seconds: asking?.penaltyS ?? 0 })}
         confirmLabel={t('host.actions.hintConfirm')}
-        onConfirm={() => next && void confirm(next.id)}
-        onCancel={() => setAsking(false)}
+        onConfirm={() => asking && void confirm(asking.id)}
+        onCancel={() => setAsking(null)}
       >
-        {next ? (
-          <blockquote className="border-l-4 pl-3 text-sm italic">{next.text}</blockquote>
+        {asking ? (
+          <blockquote className="border-l-4 pl-3 text-sm italic">{asking.text}</blockquote>
         ) : null}
       </ConfirmDialog>
     </div>

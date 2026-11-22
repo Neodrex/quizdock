@@ -1,8 +1,9 @@
-import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { errorText } from '@/api/error-text';
 import { refusalError } from '../../game-client';
-import { drawEn } from '../test-fixtures';
+import { drawEn, en } from '../test-fixtures';
 import { hostTeamOf, outlineOf } from './host-fixtures';
 import {
   GiveHintButton,
@@ -77,6 +78,25 @@ describe('host actions', () => {
       expect(dialog()).toHaveTextContent('Look at the plaque.');
       expect(dialog()).toHaveTextContent('It adds 30 s to their score.');
       expect(commands.hint).not.toHaveBeenCalled();
+      fireEvent.click(within(dialog()).getByRole('button', { name: 'Give the hint' }));
+      await waitFor(() => expect(commands.hint).toHaveBeenCalledWith('t1', 'lobby-h1'));
+    });
+
+    it('a payload while the confirm is open keeps the hint shown, and sends its id', async () => {
+      const commands = commandsOf();
+      const draw = (team: typeof red) => (
+        <I18nextProvider i18n={en}>
+          <GiveHintButton outline={outlineOf()} team={team} commands={commands} />
+        </I18nextProvider>
+      );
+      const { rerender } = render(draw(red));
+      fireEvent.click(screen.getByRole('button', { name: 'Give hint' }));
+      expect(dialog()).toHaveTextContent('Look at the plaque.');
+      // A timed hint is released to the team meanwhile: the live next hint moves on.
+      rerender(draw(hostTeamOf({ hintIds: ['lobby-h1'] })));
+      expect(dialog()).toHaveTextContent('Look at the plaque.');
+      expect(dialog()).toHaveTextContent('It adds 30 s to their score.');
+      expect(dialog()).not.toHaveTextContent('The year is the code.');
       fireEvent.click(within(dialog()).getByRole('button', { name: 'Give the hint' }));
       await waitFor(() => expect(commands.hint).toHaveBeenCalledWith('t1', 'lobby-h1'));
     });
