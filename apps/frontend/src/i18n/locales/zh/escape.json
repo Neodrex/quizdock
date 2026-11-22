@@ -71,6 +71,12 @@
     "sendFailed": "发送失败，请检查网络连接。",
     "dragItem": "拖动{{item}}",
     "moveUp": "上移{{item}}",
-    "moveDown": "下移{{item}}"
+    "moveDown": "下移{{item}}",
+    "partFor": "{{role}}部分",
+    "partDone": "{{role}}：已输入",
+    "waitingFor": "等待：{{roles}}"
+  },
+  "locks": {
+    "open_other": "已打开 {{done}}/{{count}} 把锁"
   }
 }

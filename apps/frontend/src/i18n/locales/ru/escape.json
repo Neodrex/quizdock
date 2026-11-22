@@ -80,6 +80,15 @@
     "sendFailed": "Не удалось отправить. Проверьте подключение.",
     "dragItem": "Перетащить «{{item}}»",
     "moveUp": "Переместить «{{item}}» вверх",
-    "moveDown": "Переместить «{{item}}» вниз"
+    "moveDown": "Переместить «{{item}}» вниз",
+    "partFor": "Часть: {{role}}",
+    "partDone": "{{role}}: введено",
+    "waitingFor": "Ждём: {{roles}}"
+  },
+  "locks": {
+    "open_one": "Открыто замков: {{done}} из {{count}}",
+    "open_few": "Открыто замков: {{done}} из {{count}}",
+    "open_many": "Открыто замков: {{done}} из {{count}}",
+    "open_other": "Открыто замков: {{done}} из {{count}}"
   }
 }

@@ -74,6 +74,13 @@
     "sendFailed": "Could not send. Check your connection.",
     "dragItem": "Drag {{item}}",
     "moveUp": "Move {{item}} up",
-    "moveDown": "Move {{item}} down"
+    "moveDown": "Move {{item}} down",
+    "partFor": "{{role}} part",
+    "partDone": "{{role}}: entered",
+    "waitingFor": "Waiting for: {{roles}}"
+  },
+  "locks": {
+    "open_one": "{{done}} of {{count}} lock open",
+    "open_other": "{{done}} of {{count}} locks open"
   }
 }

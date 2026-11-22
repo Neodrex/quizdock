@@ -71,6 +71,12 @@
     "sendFailed": "傳送失敗，請檢查網路連線。",
     "dragItem": "拖曳{{item}}",
     "moveUp": "上移{{item}}",
-    "moveDown": "下移{{item}}"
+    "moveDown": "下移{{item}}",
+    "partFor": "{{role}}部分",
+    "partDone": "{{role}}：已輸入",
+    "waitingFor": "等待：{{roles}}"
+  },
+  "locks": {
+    "open_other": "已開啟 {{done}}/{{count}} 把鎖"
   }
 }

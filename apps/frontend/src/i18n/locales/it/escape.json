@@ -77,6 +77,14 @@
     "sendFailed": "Invio non riuscito. Controlla la connessione.",
     "dragItem": "Trascina {{item}}",
     "moveUp": "Sposta su {{item}}",
-    "moveDown": "Sposta giù {{item}}"
+    "moveDown": "Sposta giù {{item}}",
+    "partFor": "Parte di {{role}}",
+    "partDone": "{{role}}: inserita",
+    "waitingFor": "In attesa di: {{roles}}"
+  },
+  "locks": {
+    "open_one": "{{done}} lucchetto aperto su {{count}}",
+    "open_many": "{{done}} lucchetti aperti su {{count}}",
+    "open_other": "{{done}} lucchetti aperti su {{count}}"
   }
 }

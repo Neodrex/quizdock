@@ -71,6 +71,12 @@
     "sendFailed": "送信できませんでした。接続を確認してください。",
     "dragItem": "{{item}}をドラッグ",
     "moveUp": "{{item}}を上へ",
-    "moveDown": "{{item}}を下へ"
+    "moveDown": "{{item}}を下へ",
+    "partFor": "{{role}}のパート",
+    "partDone": "{{role}}：入力済み",
+    "waitingFor": "待機中：{{roles}}"
+  },
+  "locks": {
+    "open_other": "{{count}}個中{{done}}個の錠が開いています"
   }
 }

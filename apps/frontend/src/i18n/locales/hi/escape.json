@@ -74,6 +74,13 @@
     "sendFailed": "भेजा नहीं जा सका। अपना कनेक्शन जाँचें।",
     "dragItem": "{{item}} खींचें",
     "moveUp": "{{item}} ऊपर ले जाएँ",
-    "moveDown": "{{item}} नीचे ले जाएँ"
+    "moveDown": "{{item}} नीचे ले जाएँ",
+    "partFor": "{{role}} का हिस्सा",
+    "partDone": "{{role}}: दर्ज",
+    "waitingFor": "प्रतीक्षा: {{roles}}"
+  },
+  "locks": {
+    "open_one": "{{count}} में से {{done}} ताला खुला",
+    "open_other": "{{count}} में से {{done}} ताले खुले"
   }
 }

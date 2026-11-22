@@ -51,37 +51,41 @@ const KIND_ICON: Record<EscapePlayerLockView['kind'], LucideIcon> = {
 /** The DOM id of a lock's title: the lock list moves focus there. */
 export const lockTitleId = (lockId: string) => `escape-lock-${lockId}`;
 
-/** A lock's frame: its title and kind, then its input, or "Opened" once solved. */
+/**
+ * A lock's frame: its title and kind, then its input. Once solved it folds to one
+ * line, "Opened". The title takes focus when the lock list moves it here.
+ */
 export function LockCard({ lock, children }: { lock: EscapePlayerLockView; children: ReactNode }) {
   const { t } = useTranslation('escape');
-  const Icon = KIND_ICON[lock.kind];
+  const Icon = lock.solved ? Check : KIND_ICON[lock.kind];
   return (
     <article
       data-solved={lock.solved || undefined}
       className={cn(
-        'bg-card flex flex-col gap-3 rounded-lg border p-4',
-        lock.solved && 'border-success/40 bg-success/5',
+        'bg-card flex flex-col gap-3 rounded-lg border',
+        lock.solved ? 'border-success/40 bg-success/5 px-4 py-3' : 'p-4',
       )}
     >
       <h3
         id={lockTitleId(lock.id)}
         tabIndex={-1}
-        className="flex items-center gap-2 font-semibold focus-visible:outline-none"
+        className="focus:ring-ring flex items-center gap-2 rounded-sm font-semibold focus:ring-2 focus:ring-offset-2 focus:outline-none"
       >
-        <Icon aria-hidden className="text-muted-foreground size-5 shrink-0" />
+        <Icon
+          aria-hidden
+          className={cn('size-5 shrink-0', lock.solved ? 'text-success' : 'text-muted-foreground')}
+        />
         <span className="min-w-0 flex-1">{lock.label}</span>
-        <span className="text-muted-foreground text-xs font-normal">
-          {t(`lock.kind.${lock.kind}`)}
+        <span
+          className={cn(
+            'text-xs',
+            lock.solved ? 'text-success font-medium' : 'text-muted-foreground font-normal',
+          )}
+        >
+          {lock.solved ? t('lock.opened') : t(`lock.kind.${lock.kind}`)}
         </span>
       </h3>
-      {lock.solved ? (
-        <p className="text-success flex items-center gap-2 font-medium">
-          <Check aria-hidden className="size-5" />
-          {t('lock.opened')}
-        </p>
-      ) : (
-        children
-      )}
+      {!lock.solved && children}
     </article>
   );
 }

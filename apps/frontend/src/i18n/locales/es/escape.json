@@ -77,6 +77,14 @@
     "sendFailed": "No se pudo enviar. Revisa tu conexión.",
     "dragItem": "Arrastrar {{item}}",
     "moveUp": "Subir {{item}}",
-    "moveDown": "Bajar {{item}}"
+    "moveDown": "Bajar {{item}}",
+    "partFor": "Parte de {{role}}",
+    "partDone": "{{role}}: introducida",
+    "waitingFor": "Esperando a: {{roles}}"
+  },
+  "locks": {
+    "open_one": "{{done}} de {{count}} cerradura abierta",
+    "open_many": "{{done}} de {{count}} cerraduras abiertas",
+    "open_other": "{{done}} de {{count}} cerraduras abiertas"
   }
 }

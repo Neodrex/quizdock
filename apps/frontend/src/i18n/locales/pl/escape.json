@@ -80,6 +80,15 @@
     "sendFailed": "Nie udało się wysłać. Sprawdź połączenie.",
     "dragItem": "Przeciągnij: {{item}}",
     "moveUp": "Przesuń w górę: {{item}}",
-    "moveDown": "Przesuń w dół: {{item}}"
+    "moveDown": "Przesuń w dół: {{item}}",
+    "partFor": "Część: {{role}}",
+    "partDone": "{{role}}: wpisane",
+    "waitingFor": "Czekamy na: {{roles}}"
+  },
+  "locks": {
+    "open_one": "Otwarte zamki: {{done}} z {{count}}",
+    "open_few": "Otwarte zamki: {{done}} z {{count}}",
+    "open_many": "Otwarte zamki: {{done}} z {{count}}",
+    "open_other": "Otwarte zamki: {{done}} z {{count}}"
   }
 }

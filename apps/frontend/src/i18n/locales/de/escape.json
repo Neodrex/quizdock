@@ -74,6 +74,13 @@
     "sendFailed": "Senden fehlgeschlagen. Prüfe deine Verbindung.",
     "dragItem": "{{item}} ziehen",
     "moveUp": "{{item}} nach oben",
-    "moveDown": "{{item}} nach unten"
+    "moveDown": "{{item}} nach unten",
+    "partFor": "Teil: {{role}}",
+    "partDone": "{{role}}: eingegeben",
+    "waitingFor": "Warten auf: {{roles}}"
+  },
+  "locks": {
+    "open_one": "{{done}} von {{count}} Schloss offen",
+    "open_other": "{{done}} von {{count}} Schlössern offen"
   }
 }

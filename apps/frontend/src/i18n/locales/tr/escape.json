@@ -74,6 +74,13 @@
     "sendFailed": "Gönderilemedi. Bağlantını kontrol et.",
     "dragItem": "{{item}} öğesini sürükle",
     "moveUp": "{{item}} yukarı taşı",
-    "moveDown": "{{item}} aşağı taşı"
+    "moveDown": "{{item}} aşağı taşı",
+    "partFor": "{{role}} kısmı",
+    "partDone": "{{role}}: girildi",
+    "waitingFor": "Beklenenler: {{roles}}"
+  },
+  "locks": {
+    "open_one": "{{count}} kilitten {{done}} tanesi açık",
+    "open_other": "{{count}} kilitten {{done}} tanesi açık"
   }
 }
