@@ -49,6 +49,7 @@ export function useEscapeScreenSounds(
   const unlocked = useAudioUnlocked();
   const room = useMemo(() => withThemeSounds(sounds, theme), [sounds, theme]);
   const on = audible && unlocked && !!room && !room.muted;
+  const ctxRunning = useContextRunning(audible && unlocked);
   const running = () => getMixer()?.ctx.state === 'running';
 
   // The buses follow the room's levels; the host's mute silences both.
@@ -86,14 +87,18 @@ export function useEscapeScreenSounds(
   // The tic-tac on the server's clock, as upstream's countdown: tic on the second, tac on
   // the half, the last tac left out, then the gong on zero. A pause, extra time or the last
   // team out calls off what has not sounded.
+  const countdown = !!room?.countdown;
+  const gongOn = !!room?.gong;
+  const countdownUrl = room?.countdownUrl ?? null;
+  const gongUrl = room?.gongUrl ?? null;
   useEffect(() => {
-    if (!on || !room || !armed || deadlineAt === null) return;
+    if (!on || !ctxRunning || !armed || deadlineAt === null) return;
     const ctx = getMixer()?.ctx;
     if (!ctx || ctx.state !== 'running') return;
     const toCtx = (serverMs: number) => ctx.currentTime + (serverMs - serverNow()) / 1000;
     const clicks: (() => void)[] = [];
     let gong: (() => void) | null = null;
-    if (room.countdown) {
+    if (countdown) {
       const first = deadlineAt - LAST_SECONDS_MS;
       for (let slot = 0; slot < (LAST_SECONDS_MS / 1000) * 2 - 1; slot++) {
         const at = first + slot * 500;
@@ -101,7 +106,7 @@ export function useEscapeScreenSounds(
         const tic = slot % 2 === 0;
         clicks.push(
           playEffect(
-            room.countdownUrl,
+            countdownUrl,
             (when) => synthClick(when ?? toCtx(at), tic ? TIC_HZ : TAC_HZ),
             toCtx(at),
             tic ? 1 : TAC_HZ / TIC_HZ,
@@ -109,8 +114,9 @@ export function useEscapeScreenSounds(
         );
       }
     }
-    if (room.gong) {
-      gong = playEffect(room.gongUrl, synthGong, toCtx(deadlineAt));
+    // Zero gone by (unmuted late), or this zero's gong already sounding: none again.
+    if (gongOn && deadlineAt > serverNow() && gongAt.current !== deadlineAt) {
+      gong = playEffect(gongUrl, synthGong, toCtx(deadlineAt));
       gongAt.current = deadlineAt;
     }
     return () => {
@@ -120,7 +126,7 @@ export function useEscapeScreenSounds(
         gongAt.current = null;
       }
     };
-  }, [on, room, armed, deadlineAt]);
+  }, [on, ctxRunning, armed, deadlineAt, countdown, gongOn, countdownUrl, gongUrl]);
 
   // Tension music: from the final minutes until a pause, the finale or the mute.
   const board = ui.board;
@@ -132,7 +138,8 @@ export function useEscapeScreenSounds(
     !board.clock.paused &&
     finalMinutesOf(board, now);
   const urgent = !!show && show.remainingMs <= URGENT_MS;
-  const trackUrl = on ? (room?.musicUrl ?? null) : null;
+  // Kept through a mute (which holds it), so unmuting picks it up where it was.
+  const trackUrl = audible && unlocked ? (room?.musicUrl ?? null) : null;
 
   const [track, setTrack] = useState<ReturnType<typeof loopTrack> | null>(null);
   useEffect(() => {
@@ -152,24 +159,46 @@ export function useEscapeScreenSounds(
   }, [trackUrl]);
   useEffect(() => {
     if (!track) return;
-    if (musicOn && running()) track.play();
+    if (musicOn && ctxRunning) track.play();
     else track.hold();
-  }, [track, musicOn]);
+  }, [track, musicOn, ctxRunning]);
 
   const bed = useRef<TensionBed | null>(null);
   const bedOn = musicOn && !trackUrl;
   useEffect(() => {
-    if (!bedOn || !running()) return;
+    if (!bedOn || !ctxRunning) return;
     const started = startTensionBed({ fadeInS: TRACK_FADE_S });
     bed.current = started;
     return () => {
       started.stop(TRACK_FADE_S);
       bed.current = null;
     };
-  }, [bedOn]);
+  }, [bedOn, ctxRunning]);
   useEffect(() => {
     bed.current?.setUrgent(urgent);
-  }, [bedOn, urgent]);
+  }, [bedOn, ctxRunning, urgent]);
+}
+
+/**
+ * Whether the page's audio context runs, kept up to date: a context can still be
+ * suspended after the unlock (the browser resumes it later), and what waits for it
+ * (tic-tac, music) starts once it runs.
+ */
+function useContextRunning(active: boolean): boolean {
+  const [isRunning, setRunning] = useState(() => active && getMixer()?.ctx.state === 'running');
+  useEffect(() => {
+    if (!active) {
+      setRunning(false);
+      return;
+    }
+    const ctx = getMixer()?.ctx;
+    if (!ctx) return;
+    const update = () => setRunning(ctx.state === 'running');
+    update();
+    ctx.addEventListener('statechange', update);
+    return () => ctx.removeEventListener('statechange', update);
+  }, [active]);
+  return isRunning;
 }
 
 /**

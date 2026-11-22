@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // A fake Web Audio graph: records the oscillators, their frequencies and the gain ramps.
-const { mixer, oscs, ramps, filters } = vi.hoisted(() => {
+const { mixer, oscs, ramps, filters, ended, disconnected } = vi.hoisted(() => {
+  const ended: (() => void)[] = [];
+  const disconnected = { count: 0 };
+  const disconnect = () => {
+    disconnected.count++;
+  };
   const oscs: { type: string; freq: number[]; started: boolean; stopped: number | null }[] = [];
   const ramps: { to: number; at: number }[] = [];
   const filters: { type: string; freq: number }[] = [];
@@ -21,13 +26,13 @@ const { mixer, oscs, ramps, filters } = vi.hoisted(() => {
   const ctx = {
     state: 'running',
     currentTime: 10,
-    createGain: () => ({ connect: (n: unknown) => n, disconnect: () => undefined, gain: param() }),
+    createGain: () => ({ connect: (n: unknown) => n, disconnect, gain: param() }),
     createBiquadFilter: () => {
       const f = { type: '', freq: 0 };
       filters.push(f);
       return {
         connect: (n: unknown) => n,
-        disconnect: () => undefined,
+        disconnect,
         set type(v: string) {
           f.type = v;
         },
@@ -45,7 +50,7 @@ const { mixer, oscs, ramps, filters } = vi.hoisted(() => {
       oscs.push(o);
       return {
         connect: (n: unknown) => n,
-        disconnect: () => undefined,
+        disconnect,
         set type(v: string) {
           o.type = v;
         },
@@ -58,13 +63,16 @@ const { mixer, oscs, ramps, filters } = vi.hoisted(() => {
         start: () => {
           o.started = true;
         },
+        set onended(f: () => void) {
+          ended.push(f);
+        },
         stop: (at: number) => {
           o.stopped = at;
         },
       };
     },
   };
-  return { mixer: { ctx }, oscs, ramps, filters };
+  return { mixer: { ctx }, oscs, ramps, filters, ended, disconnected };
 });
 
 vi.mock('../../media/audio-mixer', () => ({
@@ -78,6 +86,8 @@ beforeEach(() => {
   oscs.length = 0;
   ramps.length = 0;
   filters.length = 0;
+  ended.length = 0;
+  disconnected.count = 0;
 });
 
 describe('tension bed', () => {
@@ -110,5 +120,13 @@ describe('tension bed', () => {
     ramps.length = 0;
     bed.stop(1.5);
     expect(ramps).toEqual([]);
+  });
+
+  it('lets go of its nodes once they have ended', () => {
+    const bed = startTensionBed({ fadeInS: 1 });
+    bed.stop(1);
+    expect(disconnected.count).toBe(0);
+    ended.forEach((f) => f());
+    expect(disconnected.count).toBeGreaterThanOrEqual(7);
   });
 });

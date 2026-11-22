@@ -15,18 +15,31 @@ const fake = vi.hoisted(() => ({
   levels: [] as [string, number][],
   track: [] as string[],
   bed: [] as string[],
+  tracks: 0,
+  // One context for the page: its state changes tell the hook (a suspended context).
+  ctx: {
+    state: 'running' as AudioContextState,
+    currentTime: 0,
+    listeners: new Set<() => void>(),
+    addEventListener(_: string, l: () => void) {
+      this.listeners.add(l);
+    },
+    removeEventListener(_: string, l: () => void) {
+      this.listeners.delete(l);
+    },
+  },
 }));
 
 vi.mock('../../media/audio-mixer', () => ({
   TRACK_FADE_S: 1.5,
-  getMixer: () => ({ ctx: { state: 'running', currentTime: 0 } }),
+  getMixer: () => ({ ctx: fake.ctx }),
   busInput: () => ({}),
   setRoomLevel: (bus: string, v: number) => fake.levels.push([bus, v]),
   setDeviceMuted: () => undefined,
-  loopTrack: () => ({
-    play: () => fake.track.push('play'),
-    hold: () => fake.track.push('hold'),
-  }),
+  loopTrack: () => {
+    fake.tracks++;
+    return { play: () => fake.track.push('play'), hold: () => fake.track.push('hold') };
+  },
 }));
 vi.mock('../../media/audio-unlock', () => ({
   useAudioUnlocked: () => fake.unlocked,
@@ -125,6 +138,9 @@ const synths = () => fake.effects.map((e) => e.synth);
 const clicks = () => fake.effects.filter((e) => e.synth !== synthGong);
 
 beforeEach(() => {
+  fake.ctx.state = 'running';
+  fake.ctx.listeners.clear();
+  fake.tracks = 0;
   fake.unlocked = true;
   fake.t = NOW;
   fake.effects.length = 0;
@@ -244,6 +260,44 @@ describe('useEscapeScreenSounds: tic-tac', () => {
     expect(fake.effects.filter((e) => e.synth === synthGong)).toHaveLength(1);
   });
 
+  it('a sounds update in the last half second strikes no second gong', () => {
+    const board = running(10_000);
+    const { rerender } = hook({ u: ui({ board }) });
+    fake.t = NOW + 9_700;
+    rerender({ u: ui({ board }), s: { ...SOUNDS, musicLevel: 0.5 }, now: NOW + 9_700 });
+    rerender({ u: ui({ board }), s: { ...SOUNDS, tickUrl: '/x.mp3' }, now: NOW + 9_700 });
+    expect(fake.effects.filter((e) => e.synth === synthGong)).toHaveLength(1);
+  });
+
+  it('a level change earlier leaves the countdown alone', () => {
+    const board = running(10_000);
+    const { rerender } = hook({ u: ui({ board }) });
+    const scheduled = fake.effects.length;
+    rerender({ u: ui({ board }), s: { ...SOUNDS, sfxLevel: 0.2 } });
+    expect(fake.effects).toHaveLength(scheduled);
+    expect(fake.cancelled).toEqual([]);
+  });
+
+  it('unmuted after zero: no late gong', () => {
+    const board = running(10_000);
+    const muted = { ...SOUNDS, muted: true };
+    const { rerender } = hook({ u: ui({ board }), s: muted });
+    fake.t = NOW + 10_200;
+    rerender({ u: ui({ board }), now: NOW + 10_200 });
+    expect(fake.effects.filter((e) => e.synth === synthGong)).toEqual([]);
+  });
+
+  it('a suspended context: the countdown is laid out once it runs', () => {
+    fake.ctx.state = 'suspended';
+    hook({ u: ui({ board: running(10_000) }) });
+    expect(fake.effects).toEqual([]);
+    act(() => {
+      fake.ctx.state = 'running';
+      fake.ctx.listeners.forEach((l) => l());
+    });
+    expect(fake.effects).toHaveLength(20);
+  });
+
   it('a team timing out away from the run clock gets its gong', () => {
     hook({ u: ui({ current: shown({ kind: 'time-up' }) }) });
     expect(synths()).toEqual([synthGong]);
@@ -294,6 +348,49 @@ describe('useEscapeScreenSounds: tension music', () => {
     rerender({ u: ui({ board: running(4 * MIN), finale: screenFinaleOf() }), s });
     expect(fake.track.at(-1)).toBe('hold');
     expect(fake.bed).toEqual([]);
+  });
+});
+
+describe('useEscapeScreenSounds: music lifecycle', () => {
+  it('the bed starts once a suspended context runs', () => {
+    fake.ctx.state = 'suspended';
+    hook({ u: ui({ board: running(2 * MIN) }) });
+    expect(fake.bed).toEqual([]);
+    act(() => {
+      fake.ctx.state = 'running';
+      fake.ctx.listeners.forEach((l) => l());
+    });
+    expect(fake.bed[0]).toBe('start');
+  });
+
+  it('mute holds the track and unmute picks it up where it was', async () => {
+    const s = { ...SOUNDS, musicUrl: '/room/track.mp3' };
+    const { rerender } = hook({ u: ui({ board: running(4 * MIN) }), s });
+    await act(async () => undefined);
+    rerender({ u: ui({ board: running(4 * MIN) }), s: { ...s, muted: true } });
+    expect(fake.track.at(-1)).toBe('hold');
+    rerender({ u: ui({ board: running(4 * MIN) }), s });
+    await act(async () => undefined);
+    expect(fake.track.at(-1)).toBe('play');
+    expect(fake.tracks).toBe(1);
+  });
+
+  it('unmount stops the bed and holds the track', async () => {
+    const bedHook = hook({ u: ui({ board: running(2 * MIN) }) });
+    bedHook.unmount();
+    expect(fake.bed.at(-1)).toBe('stop');
+    const s = { ...SOUNDS, musicUrl: '/room/track.mp3' };
+    const trackHook = hook({ u: ui({ board: running(2 * MIN) }), s });
+    await act(async () => undefined);
+    expect(fake.track.at(-1)).toBe('play');
+    trackHook.unmount();
+    expect(fake.track.at(-1)).toBe('hold');
+  });
+
+  it('a new run stops the last run’s music', () => {
+    const { rerender } = hook({ u: ui({ board: running(2 * MIN) }) });
+    rerender({ u: ui({ board: boardOf({ gameId: 'next-run', phase: 'forming' }) }) });
+    expect(fake.bed.at(-1)).toBe('stop');
   });
 });
 

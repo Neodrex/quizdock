@@ -50,6 +50,9 @@ export function startTensionBed({ fadeInS }: { fadeInS: number }): TensionBed {
   tone.connect(pulse).connect(lowpass).connect(out).connect(level).connect(into);
   tone.start(now);
   lfo.start(now);
+  // Stopped and faded out: the graph is let go of, not left hanging on the bus.
+  const nodes: AudioNode[] = [tone, lfo, depth, pulse, lowpass, out, level];
+  tone.onended = () => nodes.forEach((n) => n.disconnect());
 
   let stopped = false;
   return {
