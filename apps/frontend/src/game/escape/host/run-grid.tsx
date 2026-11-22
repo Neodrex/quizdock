@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { formatDelta } from '../escape-reducer';
 import { formatClock } from '../team-timer';
 import { GiveHintButton, type HostCommands } from './host-actions';
+import { timeOnStageAt } from './host-reducer';
 import { useNow } from './use-now';
 
 /**
@@ -137,10 +138,13 @@ const hintsOf = (team: EscapeHostTeam) =>
 function Status({
   outline,
   team,
+  onStageMs,
   commands,
 }: {
   outline: EscapeHostOutline;
   team: EscapeHostTeam;
+  /** Its time on the stage now (`timeOnStageAt`). */
+  onStageMs: number;
   commands: Pick<HostCommands, 'hint' | 'pending'>;
 }) {
   const { t } = useTranslation('escape');
@@ -157,7 +161,7 @@ function Status({
       // The quick hint is its own control: a tap on it does not pick the team.
       <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <Badge variant="warning">
-          {t('host.grid.stuck', { minutes: Math.floor(team.timeOnStageMs / 60_000) })}
+          {t('host.grid.stuck', { minutes: Math.floor(onStageMs / 60_000) })}
         </Badge>
         <GiveHintButton outline={outline} team={team} commands={commands} compact />
       </div>
@@ -204,12 +208,15 @@ export function RunGrid({
   selected,
   onSelect,
   commands,
+  heardAt,
 }: {
   outline: EscapeHostOutline;
   host: EscapeHostState;
   selected: string | null;
   onSelect: (teamId: string) => void;
   commands: Pick<HostCommands, 'hint' | 'pending'>;
+  /** When each team's payload came (`EscapeHostUi.heardAt`): its time on stage runs on. */
+  heardAt?: Record<string, number>;
 }) {
   const { t } = useTranslation('escape');
   const now = useNow(1000);
@@ -218,6 +225,7 @@ export function RunGrid({
   const teams = sortTeams(host.teams, sort, now);
   const paused = host.board.clock.paused;
   const stages = outline.stages;
+  const onStage = (team: EscapeHostTeam) => timeOnStageAt(team, heardAt, host.board.clock, now);
 
   return (
     <section aria-labelledby="escape-grid" className="flex min-w-0 flex-col gap-3">
@@ -311,7 +319,12 @@ export function RunGrid({
                     {formatClock(timeLeftOf(team, now))}
                   </td>
                   <td className="px-3 py-1">
-                    <Status outline={outline} team={team} commands={commands} />
+                    <Status
+                      outline={outline}
+                      team={team}
+                      onStageMs={onStage(team)}
+                      commands={commands}
+                    />
                   </td>
                 </tr>
               ))}
@@ -362,7 +375,12 @@ export function RunGrid({
                     <dd className="font-mono tabular-nums">{formatClock(timeLeftOf(team, now))}</dd>
                   </div>
                 </dl>
-                <Status outline={outline} team={team} commands={commands} />
+                <Status
+                  outline={outline}
+                  team={team}
+                  onStageMs={onStage(team)}
+                  commands={commands}
+                />
               </article>
             </li>
           ))}

@@ -12,6 +12,7 @@ import {
   nextHintOf,
   readinessOf,
   stageOf,
+  timeOnStageAt,
 } from './host-reducer';
 
 const NOW = 1_000_000_000;
@@ -42,6 +43,21 @@ describe('escapeHostReducer: state', () => {
     const out = run(ui, { type: 'host', state: next, now: NOW });
     expect(out.host).toBe(next);
     expect(out.board).toBe(next.board);
+  });
+
+  it('notes the run time each team was heard at; time on stage runs on from there', () => {
+    const ui = ready();
+    expect(ui.heardAt).toEqual({ t1: 0, t2: 0 });
+    // A minute later (run time 60 s), one team's payload.
+    const later = run(ui, { type: 'hostTeam', team: hostTeamOf(), now: NOW + 60_000 });
+    expect(later.heardAt).toEqual({ t1: 60_000, t2: 0 });
+    const team = hostTeamOf({ timeOnStageMs: 30_000 });
+    expect(timeOnStageAt(team, later.heardAt, later.board!.clock, NOW + 90_000)).toBe(60_000);
+    // Paused: it holds.
+    const clock = { ...later.board!.clock, paused: true, elapsedMs: 60_000 };
+    expect(timeOnStageAt(team, later.heardAt, clock, NOW + 600_000)).toBe(30_000);
+    // Never heard of: as sent.
+    expect(timeOnStageAt(team, {}, later.board!.clock, NOW + 90_000)).toBe(30_000);
   });
 
   it('hostTeam replaces one team by id; an unknown id changes nothing', () => {

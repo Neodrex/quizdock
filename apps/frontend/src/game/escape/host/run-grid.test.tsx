@@ -62,7 +62,7 @@ const commands = (): HostCommands => ({
   end: vi.fn(async () => ({})),
 });
 
-function draw(host = running(), selected: string | null = null) {
+function draw(host = running(), selected: string | null = null, heardAt?: Record<string, number>) {
   const onSelect = vi.fn();
   const utils = drawEn(
     <RunGrid
@@ -71,6 +71,7 @@ function draw(host = running(), selected: string | null = null) {
       selected={selected}
       onSelect={onSelect}
       commands={commands()}
+      heardAt={heardAt}
     />,
   );
   return { onSelect, ...utils };
@@ -176,6 +177,26 @@ describe('RunGrid', () => {
     expect(within(row('Team Red')).getAllByRole('cell')[5]).toHaveTextContent('10:00');
     act(() => vi.advanceTimersByTime(5_000));
     expect(within(row('Team Red')).getAllByRole('cell')[5]).toHaveTextContent('10:00');
+  });
+
+  it('"Stuck N min" moves on between payloads, from when the team\'s payload came', () => {
+    // Blue's payload came at run time 0 (the board clock's serverNow is NOW).
+    draw(running(), null, { t2: 0 });
+    expect(row('Team Blue')).toHaveTextContent('Stuck 6 min');
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(row('Team Blue')).toHaveTextContent('Stuck 7 min');
+  });
+
+  it('"Stuck N min" holds while the run is paused', () => {
+    const paused = running(undefined, {
+      board: boardOf({
+        teams: [red, blue, green],
+        clock: { serverNow: NOW, paused: true, elapsedMs: 0, limitMs: 2_400_000 },
+      }),
+    });
+    draw(paused, null, { t2: 0 });
+    act(() => vi.advanceTimersByTime(120_000));
+    expect(row('Team Blue')).toHaveTextContent('Stuck 6 min');
   });
 
   it('stuck: an amber badge with a quick hint, which does not pick the team', () => {

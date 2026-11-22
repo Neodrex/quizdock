@@ -57,6 +57,11 @@ export interface EscapeHostUi {
   ended: 'none' | 'final';
   /** How each hint was released, per team id then hint id, as heard (not after a reload). */
   hintSources: Record<string, Record<string, HintSource>>;
+  /**
+   * Run time (ms) when each team's `timeOnStageMs` was measured: when its `escape:host`
+   * or `escape:host-team` came. The time on stage runs on from there (`timeOnStageAt`).
+   */
+  heardAt: Record<string, number>;
   /** The next message id (feed and polite share it). */
   seq: number;
 }
@@ -85,6 +90,7 @@ export const initialEscapeHostUi: EscapeHostUi = {
   ended: 'none',
   seq: 1,
   hintSources: {},
+  heardAt: {},
 };
 
 /** Feed lines kept (the console's sessionStorage keeps as many, §1.5). */
@@ -155,6 +161,8 @@ function diffTeam(
 }
 
 function onHost(ui: EscapeHostUi, state: EscapeHostState, now: number): EscapeHostUi {
+  const at = runMsAt(state.board.clock, now);
+  const heardAt = Object.fromEntries(state.teams.map((t) => [t.id, at]));
   // A new run in the room: nothing of the last one carries over but the outline,
   // which the sync sends just before.
   if (ui.host && ui.host.gameId !== state.gameId) {
@@ -164,9 +172,10 @@ function onHost(ui: EscapeHostUi, state: EscapeHostState, now: number): EscapeHo
       outline: ui.outline,
       host: state,
       board: state.board,
+      heardAt,
     };
   }
-  let out: EscapeHostUi = { ...ui, board: state.board };
+  let out: EscapeHostUi = { ...ui, board: state.board, heardAt };
   for (const t of state.teams)
     out = diffTeam(
       out,
@@ -183,7 +192,11 @@ function onHostTeam(ui: EscapeHostUi, team: EscapeHostTeam, now: number): Escape
   // An unknown team waits for the next escape:host.
   if (!host || !prev) return ui;
   const out = diffTeam(ui, prev, team, now);
-  return { ...out, host: { ...host, teams: host.teams.map((t) => (t.id === team.id ? team : t)) } };
+  return {
+    ...out,
+    heardAt: { ...out.heardAt, [team.id]: runMsAt(ui.board?.clock, now) },
+    host: { ...host, teams: host.teams.map((t) => (t.id === team.id ? team : t)) },
+  };
 }
 
 function onBoard(ui: EscapeHostUi, board: EscapeBoard): EscapeHostUi {
@@ -364,6 +377,22 @@ export function coverageOf(outline: EscapeHostOutline, team: EscapeHostTeam): Co
     shared: !empty && team.members.length < roles.length,
     unheld: empty ? [] : roles.filter((r) => r.holders.length === 0).map((r) => r.id),
   };
+}
+
+/**
+ * The team's time on its stage at `now`: as measured in its last payload, plus the
+ * run time since that payload came (pauses excluded), so "Stuck N min" moves on
+ * between payloads.
+ */
+export function timeOnStageAt(
+  team: Pick<EscapeHostTeam, 'id' | 'timeOnStageMs'>,
+  heardAt: Record<string, number> | undefined,
+  clock: EscapeClock | undefined,
+  now: number,
+): number {
+  const at = heardAt?.[team.id];
+  if (at === undefined) return team.timeOnStageMs;
+  return team.timeOnStageMs + Math.max(0, runMsAt(clock, now) - at);
 }
 
 /** Readiness is the connection state (owner question 3): connected of total. */
