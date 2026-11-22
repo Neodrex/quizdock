@@ -419,6 +419,10 @@
       "escaped": "¡{{team}} escapó!",
       "hint": "{{team}} pidió una pista",
       "timeUp": "Se acabó el tiempo para {{team}}"
+    },
+    "clock": {
+      "finalMinutes": "Últimos minutos",
+      "allOut": "Todos los equipos han terminado"
     }
   }
 }

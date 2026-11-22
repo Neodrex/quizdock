@@ -397,6 +397,10 @@
       "escaped": "{{team}} 成功逃脱！",
       "hint": "{{team}} 使用了一个提示",
       "timeUp": "{{team}} 时间到"
+    },
+    "clock": {
+      "finalMinutes": "最后几分钟",
+      "allOut": "所有队伍都已结束"
     }
   }
 }

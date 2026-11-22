@@ -408,6 +408,10 @@
       "escaped": "{{team}} ist entkommen!",
       "hint": "{{team}} hat einen Hinweis genommen",
       "timeUp": "Die Zeit für {{team}} ist abgelaufen"
+    },
+    "clock": {
+      "finalMinutes": "Letzte Minuten",
+      "allOut": "Alle Teams sind fertig"
     }
   }
 }

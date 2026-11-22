@@ -419,6 +419,10 @@
       "escaped": "{{team}} è evasa!",
       "hint": "{{team}} ha preso un indizio",
       "timeUp": "Tempo scaduto per {{team}}"
+    },
+    "clock": {
+      "finalMinutes": "Ultimi minuti",
+      "allOut": "Tutte le squadre sono uscite"
     }
   }
 }

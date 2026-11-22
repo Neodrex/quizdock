@@ -408,6 +408,10 @@
       "escaped": "{{team}} escaped!",
       "hint": "{{team}} took a hint",
       "timeUp": "Time is up for {{team}}"
+    },
+    "clock": {
+      "finalMinutes": "Final minutes",
+      "allOut": "Every team is out"
     }
   }
 }

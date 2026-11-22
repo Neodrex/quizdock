@@ -408,6 +408,10 @@
       "escaped": "{{team}} kaçtı!",
       "hint": "{{team}} bir ipucu aldı",
       "timeUp": "{{team}} için süre doldu"
+    },
+    "clock": {
+      "finalMinutes": "Son dakikalar",
+      "allOut": "Tüm takımlar bitirdi"
     }
   }
 }

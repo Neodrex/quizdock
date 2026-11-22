@@ -397,6 +397,10 @@
       "escaped": "{{team}} が脱出！",
       "hint": "{{team}} がヒントを使用",
       "timeUp": "{{team}} は時間切れ"
+    },
+    "clock": {
+      "finalMinutes": "残りわずか",
+      "allOut": "全チームが終了しました"
     }
   }
 }
