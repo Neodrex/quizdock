@@ -77,7 +77,9 @@
     "moveDown": "{{item}} aşağı taşı",
     "partFor": "{{role}} kısmı",
     "partDone": "{{role}}: girildi",
-    "waitingFor": "Beklenenler: {{roles}}"
+    "waitingFor": "Beklenenler: {{roles}}",
+    "offline": "Bağlantı yok. Yeniden bağlanma bekleniyor…",
+    "escaped": "Takımınız kaçtı"
   },
   "locks": {
     "open_one": "{{count}} kilitten {{done}} tanesi açık",

@@ -108,9 +108,11 @@ const REFUSED: Record<string, string> = {
   'not-your-part': 'lock.notYourPart',
   'already-solved': 'lock.alreadySolved',
 };
-const BLOCKED: Partial<Record<NonNullable<LockBlock>, string>> = {
+const BLOCKED: Record<NonNullable<LockBlock>, string> = {
+  offline: 'lock.offline',
   paused: 'lock.paused',
   'time-up': 'lock.timeUp',
+  escaped: 'lock.escaped',
 };
 
 /**
@@ -237,7 +239,7 @@ export function LockForm({
         type="submit"
         size="lg"
         className="min-h-12 w-full"
-        disabled={disabled || !ready}
+        disabled={disabled || !ready || pending}
         aria-busy={pending || undefined}
       >
         {pending && <Loader2 aria-hidden className="size-4 animate-spin" />}

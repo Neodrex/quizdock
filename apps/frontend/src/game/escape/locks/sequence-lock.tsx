@@ -144,10 +144,11 @@ function SequenceRow({
         type="button"
         variant="ghost"
         size="icon"
-        className="min-h-12 min-w-12"
+        className="min-h-12 min-w-12 aria-disabled:cursor-default aria-disabled:opacity-50"
         aria-label={t('lock.moveUp', { item: label })}
-        disabled={disabled || index === 0}
-        onClick={() => onMove(-1)}
+        disabled={disabled}
+        aria-disabled={index === 0 || undefined}
+        onClick={() => index > 0 && onMove(-1)}
       >
         <ArrowUp className="size-5" />
       </Button>
@@ -155,10 +156,11 @@ function SequenceRow({
         type="button"
         variant="ghost"
         size="icon"
-        className="min-h-12 min-w-12"
+        className="min-h-12 min-w-12 aria-disabled:cursor-default aria-disabled:opacity-50"
         aria-label={t('lock.moveDown', { item: label })}
-        disabled={disabled || last}
-        onClick={() => onMove(1)}
+        disabled={disabled}
+        aria-disabled={last || undefined}
+        onClick={() => !last && onMove(1)}
       >
         <ArrowDown className="size-5" />
       </Button>

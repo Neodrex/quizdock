@@ -77,7 +77,9 @@
     "moveDown": "{{item}} नीचे ले जाएँ",
     "partFor": "{{role}} का हिस्सा",
     "partDone": "{{role}}: दर्ज",
-    "waitingFor": "प्रतीक्षा: {{roles}}"
+    "waitingFor": "प्रतीक्षा: {{roles}}",
+    "offline": "कनेक्शन नहीं है। फिर से जुड़ने की प्रतीक्षा…",
+    "escaped": "आपकी टीम बच निकली है"
   },
   "locks": {
     "open_one": "{{count}} में से {{done}} ताला खुला",

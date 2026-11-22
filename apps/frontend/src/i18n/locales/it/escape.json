@@ -80,7 +80,9 @@
     "moveDown": "Sposta giù {{item}}",
     "partFor": "Parte di {{role}}",
     "partDone": "{{role}}: inserita",
-    "waitingFor": "In attesa di: {{roles}}"
+    "waitingFor": "In attesa di: {{roles}}",
+    "offline": "Nessuna connessione. In attesa di riconnessione…",
+    "escaped": "La tua squadra è evasa"
   },
   "locks": {
     "open_one": "{{done}} lucchetto aperto su {{count}}",

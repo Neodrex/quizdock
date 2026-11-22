@@ -80,7 +80,9 @@
     "moveDown": "Descendre {{item}}",
     "partFor": "Partie {{role}}",
     "partDone": "{{role}} : saisi",
-    "waitingFor": "En attente de : {{roles}}"
+    "waitingFor": "En attente de : {{roles}}",
+    "offline": "Pas de connexion. Reconnexion en cours…",
+    "escaped": "Votre équipe s'est échappée"
   },
   "locks": {
     "open_one": "{{done}} serrure ouverte sur {{count}}",

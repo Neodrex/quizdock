@@ -83,7 +83,9 @@
     "moveDown": "Переместить «{{item}}» вниз",
     "partFor": "Часть: {{role}}",
     "partDone": "{{role}}: введено",
-    "waitingFor": "Ждём: {{roles}}"
+    "waitingFor": "Ждём: {{roles}}",
+    "offline": "Нет соединения. Ждём переподключения…",
+    "escaped": "Ваша команда сбежала"
   },
   "locks": {
     "open_one": "Открыто замков: {{done}} из {{count}}",

@@ -74,7 +74,9 @@
     "moveDown": "下移{{item}}",
     "partFor": "{{role}}部分",
     "partDone": "{{role}}：已輸入",
-    "waitingFor": "等待：{{roles}}"
+    "waitingFor": "等待：{{roles}}",
+    "offline": "無連線，正在等待重新連線…",
+    "escaped": "你的隊伍已經逃脫"
   },
   "locks": {
     "open_other": "已開啟 {{done}}/{{count}} 把鎖"

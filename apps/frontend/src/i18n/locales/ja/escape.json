@@ -74,7 +74,9 @@
     "moveDown": "{{item}}を下へ",
     "partFor": "{{role}}のパート",
     "partDone": "{{role}}：入力済み",
-    "waitingFor": "待機中：{{roles}}"
+    "waitingFor": "待機中：{{roles}}",
+    "offline": "接続がありません。再接続を待っています…",
+    "escaped": "あなたのチームは脱出しました"
   },
   "locks": {
     "open_other": "{{count}}個中{{done}}個の錠が開いています"

@@ -42,6 +42,7 @@ describe('LockCard (shared lock behaviour)', () => {
     fireEvent.click(button());
     expect(submit).toHaveBeenCalledTimes(1);
     expect(button()).toHaveAttribute('aria-busy', 'true');
+    expect(button()).toBeDisabled();
     await act(async () => resolve(ok('lock-solved')));
     expect(button()).not.toHaveAttribute('aria-busy');
   });
@@ -102,6 +103,8 @@ describe('LockCard (shared lock behaviour)', () => {
   it.each<[LockBlock, string]>([
     ['paused', 'The game is paused'],
     ['time-up', "Time's up"],
+    ['offline', 'No connection. Waiting to reconnect…'],
+    ['escaped', 'Your team has escaped'],
   ])('blocked (%s) by the run: its text, input disabled', (block, text) => {
     drawEn(<CodeLock lock={lock()} block={block} submit={vi.fn()} />);
     expect(screen.getByText(text)).toBeInTheDocument();

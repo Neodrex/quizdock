@@ -80,7 +80,9 @@
     "moveDown": "Bajar {{item}}",
     "partFor": "Parte de {{role}}",
     "partDone": "{{role}}: introducida",
-    "waitingFor": "Esperando a: {{roles}}"
+    "waitingFor": "Esperando a: {{roles}}",
+    "offline": "Sin conexión. Esperando para reconectar…",
+    "escaped": "Tu equipo ha escapado"
   },
   "locks": {
     "open_one": "{{done}} de {{count}} cerradura abierta",

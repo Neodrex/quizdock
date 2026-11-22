@@ -77,7 +77,9 @@
     "moveDown": "Move {{item}} down",
     "partFor": "{{role}} part",
     "partDone": "{{role}}: entered",
-    "waitingFor": "Waiting for: {{roles}}"
+    "waitingFor": "Waiting for: {{roles}}",
+    "offline": "No connection. Waiting to reconnect…",
+    "escaped": "Your team has escaped"
   },
   "locks": {
     "open_one": "{{done}} of {{count}} lock open",
