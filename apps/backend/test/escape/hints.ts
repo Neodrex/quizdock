@@ -106,6 +106,10 @@ export function hintTests(ctx: EscapeContext): void {
       await host.emitWithAck('escape:hint', { pin, teamId: 't1', hintId: lobbyH2.id }),
     ).toEqual({ ok: true, released: 1 });
     expect(await update).toMatchObject({ hintId: lobbyH2.id, source: 'host' });
+    // No hint left on the stage: the confirmed one is refused, never `released: 0`.
+    expect(
+      await host.emitWithAck('escape:hint', { pin, teamId: 't1', hintId: lobbyH2.id }),
+    ).toMatchObject({ ok: false, error: { code: 'escape.hint-changed' } });
   });
 
   it('H3: a timed hint is released by the ticker, free, without any request', async () => {
@@ -183,6 +187,10 @@ export function hintTests(ctx: EscapeContext): void {
       ok: true,
       released: 0,
     });
+    // The hint the host confirmed before the time ran out: refused with why, not `released: 0`.
+    expect(
+      await host.emitWithAck('escape:hint', { pin, teamId: 't1', hintId: lobbyH1.id }),
+    ).toMatchObject({ ok: false, error: { code: 'escape.time-up' } });
     await eventually(async () =>
       expect(a.last().team).toMatchObject({ timedOut: true, deadlineAt: null }),
     );

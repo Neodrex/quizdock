@@ -494,7 +494,8 @@ export class EscapeEngine implements OnModuleDestroy {
    * still playing (paused or not). The count of teams that got one. `hintId`
    * (one team): the hint the host confirmed; another next hint (released
    * meanwhile, or a new stage) is refused with `escape.hint-changed`, so the
-   * host never pays for a hint it did not read.
+   * host never pays for a hint it did not read. A confirmed hint for a team
+   * whose time is up is refused with `escape.time-up`.
    */
   async hostHint(
     pin: string,
@@ -513,12 +514,18 @@ export class EscapeEngine implements OnModuleDestroy {
       const released: { rec: TeamRecord; hintId: string }[] = [];
       for (const id of teamId === undefined ? ref.run.teamIds : [teamId]) {
         const rec = stored.get(id);
-        if (!rec || rec.timedOut || isTimedOut(ref.run.clock, rec.team, elapsed)) continue;
+        const timedOut = !rec || rec.timedOut || isTimedOut(ref.run.clock, rec.team, elapsed);
+        // The confirmed hint for one team: say why it was not given, never `released: 0`.
+        if (hintId !== undefined && timedOut) throw new BadRequestException('escape.time-up');
+        if (timedOut) continue;
         const hint = nextHint(tpl, rec.team);
         if (hintId !== undefined && (hint?.id !== hintId || rec.team.escapedAt !== null)) {
           throw new BadRequestException('escape.hint-changed');
         }
         const team = hint ? useHint(tpl, rec.team, hint.id) : rec.team;
+        if (hintId !== undefined && team === rec.team) {
+          throw new BadRequestException('escape.hint-changed');
+        }
         if (hint && team !== rec.team) released.push({ rec: { ...rec, team }, hintId: hint.id });
       }
       if (!released.length) return 0;
