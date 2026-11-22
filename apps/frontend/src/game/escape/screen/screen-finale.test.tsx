@@ -150,6 +150,24 @@ describe('ScreenFinale', () => {
     expect(steps[2].className).not.toContain('border-primary');
   });
 
+  it('the winner stands highest even when a step below carries more lines (a penalty)', () => {
+    // Raised by its own padding, a winner was drawn lower than a second place whose card
+    // had one line more: the others step down instead, on steps stretched to one height.
+    const lined = screenFinaleOf({
+      ranking: [
+        team(1, { teamId: 't1', name: 'Team Red', hintPenaltyS: 0 }),
+        team(2, { hintPenaltyS: 30 }),
+        team(3, { hintPenaltyS: 60 }),
+      ],
+    });
+    draw(lined);
+    expect(screen.getByTestId('podium').className).toContain('items-stretch');
+    const [first, second, third] = screen.getAllByTestId('podium-step');
+    expect(first.className).not.toMatch(/\bmt-/);
+    expect(second.className).toContain('mt-[1.5em]');
+    expect(third.className).toContain('mt-[1.5em]');
+  });
+
   it('a photo finish under a second shows tenths, never "0 s"', () => {
     const close = screenFinaleOf({
       ranking: [team(1, { teamId: 't1', name: 'Team Red' }), team(2, { scoreMs: 1_904_300 })],

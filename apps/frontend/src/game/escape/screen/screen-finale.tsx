@@ -110,7 +110,9 @@ function Results({ finale }: { finale: EscapeScreenFinale }) {
         data-layout={layout.side ? 'column' : 'row'}
         className={cn(
           'flex shrink-0 gap-[1em]',
-          layout.side ? 'flex-col gap-[0.3em]' : 'items-end justify-center',
+          // Stretched to one height: a step below the winner starts lower by its margin,
+          // so the winner stands highest whatever lines the others carry.
+          layout.side ? 'flex-col gap-[0.3em]' : 'items-stretch justify-center',
         )}
       >
         {podium.map((r, i) => (
@@ -288,7 +290,7 @@ function PodiumStep({
         // Three steps of up to 18em, narrower when the screen is (4:3 projectors).
         'bg-card text-card-foreground flex max-w-[18em] min-w-0 flex-1 basis-0 flex-col items-center gap-[0.3em] rounded-[0.6em] border-[0.1em] p-[0.6em] text-center',
         order,
-        team.place === 1 && 'border-primary pb-[1.5em]',
+        team.place === 1 ? 'border-primary' : 'mt-[1.5em]',
       )}
     >
       <Place place={team.place} />
