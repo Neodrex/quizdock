@@ -39,7 +39,7 @@ export function ScreenPanel({
   const openScreen = () => window.open(screenUrl, '_blank', 'noopener,noreferrer');
   const pairScreen = (e: FormEvent) => {
     e.preventDefault();
-    if (!/^\d{4}$/.test(pairCode)) return;
+    if (disabled || !/^\d{4}$/.test(pairCode)) return;
     socket?.emit('host:pair-screen', { pin, code: pairCode }, (res: { ok: boolean }) => {
       setPairResult(res.ok ? 'paired' : 'failed');
       if (res.ok) setPairCode('');
@@ -78,7 +78,9 @@ export function ScreenPanel({
             <ExternalLink className="text-muted-foreground size-3.5" aria-hidden />
           </Button>
         </Tooltip>
+        {/* Portaled, so the fieldset does not reach it: a drop closes it (a new key). */}
         <Popover
+          key={disabled ? 'off' : 'on'}
           align="end"
           className="w-80"
           trigger={({ toggle, open }) => (
@@ -145,7 +147,9 @@ export function ScreenPanel({
           </form>
         </Popover>
       </div>
+      {/* Its dialog is portaled too: a drop closes it the same way. */}
       <RoomSoundsButton
+        key={disabled ? 'off' : 'on'}
         sounds={sounds}
         theme={theme}
         onChange={(patch) => socket?.emit('host:sounds', { pin, ...patch })}

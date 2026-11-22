@@ -1,9 +1,10 @@
 import type { RoomSoundsPayload } from '@quiz-dock/contracts';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockApi } from '../../../test/harness';
-import { drawEn } from '../test-fixtures';
+import { I18nextProvider } from 'react-i18next';
+import { drawEn, en } from '../test-fixtures';
 import { ScreenPanel } from './screen-panel';
 
 const PIN = '482913';
@@ -31,21 +32,26 @@ const socketOf = (ok = true) => ({
   emit: vi.fn((_e: string, _p: unknown, ack?: Ack) => ack?.({ ok })),
 });
 
+let setDisabled: (disabled: boolean) => void = () => {};
 const draw = (over: Partial<Parameters<typeof ScreenPanel>[0]> = {}) => {
   const socket = over.socket ?? socketOf();
   mockApi([]);
-  drawEn(
-    <QueryClientProvider client={new QueryClient()}>
+  const el = (disabled: boolean) => (
+    <QueryClientProvider client={client}>
       <ScreenPanel
         pin={PIN}
         socket={socket as never}
         sounds={SOUNDS}
         theme={null}
-        disabled={false}
+        disabled={disabled}
         {...over}
       />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const client = new QueryClient();
+  const { rerender } = drawEn(el(over.disabled ?? false));
+  // The connection drops or comes back (the panel's own provider stays: drawEn's is above).
+  setDisabled = (d) => rerender(<I18nextProvider i18n={en}>{el(d)}</I18nextProvider>);
   return socket as ReturnType<typeof socketOf>;
 };
 const openPairing = () =>
@@ -113,5 +119,23 @@ describe('ScreenPanel', () => {
   it('everything is off while the connection is down', () => {
     draw({ disabled: true });
     for (const b of screen.getAllByRole('button')) expect(b).toBeDisabled();
+  });
+
+  it('a drop with the pairing popover open: no code can go out, and it closes', () => {
+    const socket = draw();
+    openPairing();
+    fireEvent.change(codeField(), { target: { value: '1234' } });
+    act(() => setDisabled(true));
+    expect(screen.queryByLabelText('Code shown on that screen')).toBeNull();
+    expect(socket.emit).not.toHaveBeenCalled();
+  });
+
+  it("a drop with the room's sound dialog open: it closes", () => {
+    const socket = draw();
+    fireEvent.click(screen.getByRole('button', { name: 'Lobby audio' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    act(() => setDisabled(true));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(socket.emit).not.toHaveBeenCalled();
   });
 });
