@@ -116,6 +116,32 @@
     "teamTime": "{{name}} uciekła w {{time}}",
     "waitingOthers": "Czekamy na pozostałe drużyny",
     "timeUp": "Koniec czasu",
-    "stagesCleared": "Ukończone etapy: {{done}} z {{total}}"
+    "stagesCleared": "Ukończone etapy: {{done}} z {{total}}",
+    "resultsComing": "Wyniki są w drodze…",
+    "loading": "Wczytywanie gry…",
+    "over": "Gra się skończyła"
+  },
+  "hostAway": "Prowadzący wyszedł. Gra toczy się dalej.",
+  "finale": {
+    "ranking": "Ranking",
+    "yourTeam": "Twoja drużyna",
+    "hints_one": "{{count}} podpowiedź",
+    "hints_few": "{{count}} podpowiedzi",
+    "hints_many": "{{count}} podpowiedzi",
+    "hints_other": "{{count}} podpowiedzi",
+    "hintsPaid_one": "{{count}} podpowiedź (płatne: {{paid}})",
+    "hintsPaid_few": "{{count}} podpowiedzi (płatne: {{paid}})",
+    "hintsPaid_many": "{{count}} podpowiedzi (płatne: {{paid}})",
+    "hintsPaid_other": "{{count}} podpowiedzi (płatne: {{paid}})",
+    "stages": "Etapy: {{done}}",
+    "awards": "Nagrody",
+    "award": {
+      "fastest": "Najszybsza",
+      "fewestHints": "Najmniej podpowiedzi",
+      "teamwork": "Praca zespołowa",
+      "photoFinish": "Fotofinisz"
+    },
+    "closed": "Pokój jest zamknięty",
+    "joinAnother": "Dołącz do innego pokoju"
   }
 }

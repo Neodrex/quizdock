@@ -108,6 +108,28 @@
     "teamTime": "{{name}} {{time}} में बच निकली",
     "waitingOthers": "दूसरी टीमों की प्रतीक्षा",
     "timeUp": "समय समाप्त",
-    "stagesCleared": "पूरे किए चरण: {{total}} में से {{done}}"
+    "stagesCleared": "पूरे किए चरण: {{total}} में से {{done}}",
+    "resultsComing": "नतीजे आ रहे हैं…",
+    "loading": "खेल लोड हो रहा है…",
+    "over": "खेल समाप्त हो गया"
+  },
+  "hostAway": "होस्ट चले गए हैं। खेल जारी है।",
+  "finale": {
+    "ranking": "रैंकिंग",
+    "yourTeam": "आपकी टीम",
+    "hints_one": "{{count}} संकेत",
+    "hints_other": "{{count}} संकेत",
+    "hintsPaid_one": "{{count}} संकेत ({{paid}} सशुल्क)",
+    "hintsPaid_other": "{{count}} संकेत ({{paid}} सशुल्क)",
+    "stages": "चरण: {{done}}",
+    "awards": "पुरस्कार",
+    "award": {
+      "fastest": "सबसे तेज़",
+      "fewestHints": "सबसे कम संकेत",
+      "teamwork": "टीमवर्क",
+      "photoFinish": "फ़ोटो फ़िनिश"
+    },
+    "closed": "कमरा बंद हो गया है",
+    "joinAnother": "दूसरे कमरे में शामिल हों"
   }
 }

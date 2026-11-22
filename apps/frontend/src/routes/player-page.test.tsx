@@ -64,6 +64,23 @@ vi.mock('../game/game-client', () => ({
   disconnectGame: () => disconnectGame(),
 }));
 
+// Escape mode, off unless a test turns it on (the quiz screens below never see it).
+const { escapeSession } = vi.hoisted(() => ({ escapeSession: { value: null as unknown } }));
+vi.mock('../game/escape/use-escape-session', async () => {
+  const { initialEscapeUi } = await import('../game/escape/escape-reducer');
+  const off = {
+    active: false,
+    checkingRecord: false,
+    ui: initialEscapeUi,
+    dispatch: () => undefined,
+    submit: vi.fn(),
+    askHint: vi.fn(),
+    chooseTeam: vi.fn(),
+    resultsFromRecord: vi.fn(),
+  };
+  return { useEscapeSession: () => ({ ...off, ...(escapeSession.value as object | null) }) };
+});
+
 const view = (partial: Partial<GameView>): GameView => ({
   status: 'ready',
   error: null,
@@ -1034,6 +1051,64 @@ describe('PlayerPage (client participant)', () => {
         questionIndex: 0,
         answer: ['pic-0', 'pic-3'],
       });
+    });
+  });
+
+  describe('escape mode', () => {
+    const session = { pin: '771122', nickname: 'Ana', sessionToken: 't', playerId: 'p-me' };
+    afterEach(() => {
+      escapeSession.value = null;
+      localStorage.clear();
+    });
+
+    it('keeps the stage when the host leaves, with a note; no big-screen switch, Leave stays', async () => {
+      const { state } = await import('../game/escape/test-fixtures');
+      const { initialEscapeUi } = await import('../game/escape/escape-reducer');
+      loadPlayerSession.mockReturnValue(session);
+      hookState.value = view({ state: GameState.HostDisconnected, hostName: 'Claire' });
+      escapeSession.value = { active: true, ui: { ...initialEscapeUi, state: state() } };
+      renderApp('/join/771122');
+      expect(await screen.findByRole('heading', { name: 'The vault door' })).toBeInTheDocument();
+      expect(
+        screen.getByText("L'animateur s'est absenté. La partie continue."),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/dès que Claire revient/)).toBeNull();
+      expect(screen.queryByRole('group', { name: 'Tes réponses ou le grand écran' })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Quitter' })).toBeInTheDocument();
+    });
+
+    it('no session but a finale from the record: the finale, not the nickname form', async () => {
+      const { initialEscapeUi } = await import('../game/escape/escape-reducer');
+      hookState.value = view({ status: 'no-session' });
+      escapeSession.value = {
+        ui: {
+          ...initialEscapeUi,
+          ended: 'final',
+          finale: {
+            gameId: '0123456789abcdef0123456789abcdef',
+            title: 'Vault Heist',
+            finale: 'Well played.',
+            ranking: [],
+            awards: { fastest: null, fewestHints: null, teamwork: null, photoFinish: null },
+          },
+        },
+      };
+      renderApp('/join/771122');
+      expect(await screen.findByRole('heading', { name: 'Vault Heist' })).toBeInTheDocument();
+      expect(screen.getByText('La salle est fermée')).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Votre pseudo')).toBeNull();
+    });
+
+    it('no session while the record is looked up: no form yet; once refused, the form', async () => {
+      hookState.value = view({ status: 'no-session' });
+      escapeSession.value = { checkingRecord: true };
+      const { unmount } = renderApp('/join/771122');
+      expect(await screen.findByText(/Connexion au salon/)).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Votre pseudo')).toBeNull();
+      unmount();
+      escapeSession.value = { checkingRecord: false };
+      renderApp('/join/771122');
+      expect(await screen.findByPlaceholderText('Votre pseudo')).toBeInTheDocument();
     });
   });
 });

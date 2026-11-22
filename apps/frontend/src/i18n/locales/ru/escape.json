@@ -116,6 +116,32 @@
     "teamTime": "{{name}}: побег за {{time}}",
     "waitingOthers": "Ждём остальные команды",
     "timeUp": "Время вышло",
-    "stagesCleared": "Пройдено этапов: {{done}} из {{total}}"
+    "stagesCleared": "Пройдено этапов: {{done}} из {{total}}",
+    "resultsComing": "Результаты на подходе…",
+    "loading": "Загрузка игры…",
+    "over": "Игра окончена"
+  },
+  "hostAway": "Ведущий отошёл. Игра продолжается.",
+  "finale": {
+    "ranking": "Рейтинг",
+    "yourTeam": "Ваша команда",
+    "hints_one": "{{count}} подсказка",
+    "hints_few": "{{count}} подсказки",
+    "hints_many": "{{count}} подсказок",
+    "hints_other": "{{count}} подсказки",
+    "hintsPaid_one": "{{count}} подсказка (платных: {{paid}})",
+    "hintsPaid_few": "{{count}} подсказки (платных: {{paid}})",
+    "hintsPaid_many": "{{count}} подсказок (платных: {{paid}})",
+    "hintsPaid_other": "{{count}} подсказки (платных: {{paid}})",
+    "stages": "Этапы: {{done}}",
+    "awards": "Награды",
+    "award": {
+      "fastest": "Самая быстрая",
+      "fewestHints": "Меньше всего подсказок",
+      "teamwork": "Командная работа",
+      "photoFinish": "Фотофиниш"
+    },
+    "closed": "Комната закрыта",
+    "joinAnother": "Войти в другую комнату"
   }
 }

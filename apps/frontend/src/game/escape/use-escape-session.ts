@@ -31,7 +31,7 @@ const ESCAPE_ROOM_STATES: ReadonlySet<GameState> = new Set([
 
 /** What the hook needs of the quiz session (`useGameSession`). */
 export interface EscapeSessionSeam {
-  view: Pick<GameView, 'state' | 'totalQuestions'>;
+  view: Pick<GameView, 'state' | 'totalQuestions' | 'status'>;
   attachSeq: number;
 }
 
@@ -109,10 +109,16 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pin]);
 
+  // A quiz is on in this room: no escape run to follow.
+  const { state: quizState, totalQuestions } = session.view;
+  const quizOn = totalQuestions > 0 || (quizState !== null && !ESCAPE_ROOM_STATES.has(quizState));
+  const quizOnRef = useRef(quizOn);
+  quizOnRef.current = quizOn;
+
   // Sync once the player is in the room: before that the server would take the phone for a screen.
   const { attachSeq } = session;
   useEffect(() => {
-    if (attachSeq === 0) return;
+    if (attachSeq === 0 || quizOnRef.current) return;
     // A join into a new session: the last run's record (and its token) is not this player's.
     const s = loadPlayerSession();
     const record = loadEscapeRecord(pin);
@@ -122,7 +128,8 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
       if (!live) return;
       socketRef.current = sock;
       emitWithAckOrError(sock, 'escape:sync', { pin }).then(
-        () => live && setActive(true),
+        // A quiz shown meanwhile wins: that room is not (or no longer) an escape run.
+        () => live && !quizOnRef.current && setActive(true),
         (e: { code?: string }) => {
           if (live && e.code === 'escape.not_found') setActive(false);
         },
@@ -134,7 +141,6 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
   }, [pin, attachSeq]);
 
   // The room went (back) to a quiz.
-  const { state: quizState, totalQuestions } = session.view;
   useEffect(() => {
     if (totalQuestions > 0 || (quizState !== null && !ESCAPE_ROOM_STATES.has(quizState))) {
       setActive(false);
@@ -223,8 +229,37 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
     return finale;
   };
 
+  // No session here (a reload after the room ended, a refused reconnect): this PIN's
+  // record may still hold results, looked up before the nickname form shows (§1.4).
+  const noSession = session.view.status === 'no-session';
+  const [lookupDone, setLookupDone] = useState(false);
+  useEffect(() => {
+    if (!noSession) {
+      setLookupDone(false);
+      return;
+    }
+    if (!loadEscapeRecord(pin)) {
+      setLookupDone(true);
+      return;
+    }
+    let live = true;
+    void resultsFromRecord().then((finale) => {
+      if (!live) return;
+      // The room is gone: the finale is final.
+      if (finale) dispatch({ type: 'gameEnded' });
+      setLookupDone(true);
+    });
+    return () => {
+      live = false;
+    };
+    // `resultsFromRecord` reads the record each time: no dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noSession, pin]);
+  const checkingRecord = noSession && !lookupDone && loadEscapeRecord(pin) !== null;
+
   return {
     active,
+    checkingRecord,
     ui,
     dispatch: dispatch as (a: EscapeAction) => void,
     submit,
@@ -233,3 +268,5 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
     resultsFromRecord,
   };
 }
+
+export type EscapeSession = ReturnType<typeof useEscapeSession>;

@@ -104,6 +104,26 @@
     "teamTime": "{{name}} 用時 {{time}} 逃脫",
     "waitingOthers": "正在等待其他隊伍",
     "timeUp": "時間到",
-    "stagesCleared": "已通過關卡：{{done}} / {{total}}"
+    "stagesCleared": "已通過關卡：{{done}} / {{total}}",
+    "resultsComing": "結果即將揭曉…",
+    "loading": "正在載入遊戲…",
+    "over": "遊戲已結束"
+  },
+  "hostAway": "主持人暫時離開，遊戲繼續進行。",
+  "finale": {
+    "ranking": "排名",
+    "yourTeam": "你的隊伍",
+    "hints_other": "{{count}} 個提示",
+    "hintsPaid_other": "{{count}} 個提示（{{paid}} 個付費）",
+    "stages": "關卡：{{done}}",
+    "awards": "獎項",
+    "award": {
+      "fastest": "最快",
+      "fewestHints": "提示最少",
+      "teamwork": "最佳團隊合作",
+      "photoFinish": "險勝"
+    },
+    "closed": "房間已關閉",
+    "joinAnother": "加入其他房間"
   }
 }

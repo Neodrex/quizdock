@@ -34,6 +34,14 @@ vi.mock('../game/game-client', () => ({
   saveAvatarSeed: () => undefined,
 }));
 
+// Escape mode stays off: PlayerPage's escape session is not under test here.
+vi.mock('../game/escape/use-escape-session', async () => {
+  const { initialEscapeUi } = await import('../game/escape/escape-reducer');
+  return {
+    useEscapeSession: () => ({ active: false, checkingRecord: false, ui: initialEscapeUi }),
+  };
+});
+
 describe('JoinPage (saisie du PIN)', () => {
   it('names the room at the 6th digit, then goes to /join/$pin', async () => {
     renderApp('/join');

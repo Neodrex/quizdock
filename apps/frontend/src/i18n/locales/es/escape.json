@@ -112,6 +112,30 @@
     "teamTime": "{{name}} escapó en {{time}}",
     "waitingOthers": "Esperando a los otros equipos",
     "timeUp": "Se acabó el tiempo",
-    "stagesCleared": "Etapas superadas: {{done}} de {{total}}"
+    "stagesCleared": "Etapas superadas: {{done}} de {{total}}",
+    "resultsComing": "Los resultados están llegando…",
+    "loading": "Cargando el juego…",
+    "over": "El juego ha terminado"
+  },
+  "hostAway": "El anfitrión se ha ausentado. El juego continúa.",
+  "finale": {
+    "ranking": "Clasificación",
+    "yourTeam": "Tu equipo",
+    "hints_one": "{{count}} pista",
+    "hints_many": "{{count}} pistas",
+    "hints_other": "{{count}} pistas",
+    "hintsPaid_one": "{{count}} pista ({{paid}} de pago)",
+    "hintsPaid_many": "{{count}} pistas ({{paid}} de pago)",
+    "hintsPaid_other": "{{count}} pistas ({{paid}} de pago)",
+    "stages": "Etapas: {{done}}",
+    "awards": "Premios",
+    "award": {
+      "fastest": "El más rápido",
+      "fewestHints": "Menos pistas",
+      "teamwork": "Trabajo en equipo",
+      "photoFinish": "Foto finish"
+    },
+    "closed": "La sala está cerrada",
+    "joinAnother": "Unirse a otra sala"
   }
 }

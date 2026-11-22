@@ -81,6 +81,8 @@ import { useCountdown, useQuestionClock } from '../game/use-countdown';
 import { type GameView, useGameSession } from '../game/use-game-session';
 import { getAuthMode, isAuthenticated, rememberAfterLogin } from '../auth/auth-context';
 import { Spinner } from '@/components/ui/loading';
+import { type EscapeSession, useEscapeSession } from '../game/escape/use-escape-session';
+import { EscapePlayer } from './escape-player-page';
 
 /**
  * The answer page's pinned bars (the clock, the tiles) over a question's background:
@@ -116,6 +118,7 @@ function trackingNotice(
 export function PlayerPage() {
   const { pin } = useParams({ from: '/join/$pin' });
   const session = useGameSession(pin, 'player');
+  const escape = useEscapeSession(pin, session);
   // Once in the game, the interface speaks the audience's language (#209).
   useAudienceLanguage(session.view.language, true);
   // The phone stays on between two questions, from the lobby to the end.
@@ -126,7 +129,7 @@ export function PlayerPage() {
       <PlayerAnnouncer view={session.view} />
       {/* A hook for override.css, with the game's state (no box: the layout is the page's). */}
       <div className="qd-player contents" data-state={session.view.state ?? 'none'}>
-        <PlayerView pin={pin} session={session} />
+        <PlayerView pin={pin} session={session} escape={escape} />
       </div>
     </>
   );
@@ -160,7 +163,15 @@ function PlayerAnnouncer({ view }: { view: ReturnType<typeof useGameSession>['vi
 }
 
 /** The participant's side of the session the page follows, in each state of the game. */
-function PlayerView({ pin, session }: { pin: string; session: ReturnType<typeof useGameSession> }) {
+function PlayerView({
+  pin,
+  session,
+  escape,
+}: {
+  pin: string;
+  session: ReturnType<typeof useGameSession>;
+  escape: EscapeSession;
+}) {
   const { t } = useTranslation('live');
   const { view, socket, markJoined, markReady } = session;
   const [nickname, setNickname] = useState(() => loadPlayerSession()?.nickname ?? loadNickname());
@@ -528,7 +539,11 @@ function PlayerView({ pin, session }: { pin: string; session: ReturnType<typeof 
 
   // The answers or the big screen, next to the logo: a switch, both sides always in sight.
   const screenSwitch =
-    topbarStart && view.status === 'ready' && view.state !== 'ENDED' && !view.kicked
+    topbarStart &&
+    view.status === 'ready' &&
+    view.state !== 'ENDED' &&
+    !view.kicked &&
+    !escape.active
       ? createPortal(
           <div
             role="group"
@@ -642,8 +657,23 @@ function PlayerView({ pin, session }: { pin: string; session: ReturnType<typeof 
     </p>
   ) : null;
 
+  const escapePlayer = () =>
+    surface(
+      <EscapePlayer
+        pin={pin}
+        escape={escape}
+        me={myId ?? null}
+        connectionLost={view.connectionLost}
+        hostAway={view.state === 'HOST_DISCONNECTED'}
+      />,
+    );
+
   // ── Écran « Rejoindre » (pas de session locale valide) ─────────────────────
   if (view.status === 'no-session') {
+    // An escape run's results, kept for this PIN, come before the form (§1.4).
+    if (escape.ui.finale) return escapePlayer();
+    if (escape.checkingRecord)
+      return wrap(<Spinner label={t('player.connectingToSession')} showLabel />);
     return wrap(
       <form
         className="flex w-full flex-1 flex-col gap-4 text-left"
@@ -716,6 +746,8 @@ function PlayerView({ pin, session }: { pin: string; session: ReturnType<typeof 
       </>,
     );
   }
+
+  if (escape.active) return escapePlayer();
 
   // The big screen on this phone (#104): the projection as it is, from this
   // participant's own session — the sound only where it would play here anyway.

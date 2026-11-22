@@ -104,6 +104,26 @@
     "teamTime": "{{name}}は{{time}}で脱出しました",
     "waitingOthers": "ほかのチームを待っています",
     "timeUp": "時間切れ",
-    "stagesCleared": "クリアしたステージ：{{done}} / {{total}}"
+    "stagesCleared": "クリアしたステージ：{{done}} / {{total}}",
+    "resultsComing": "結果を待っています…",
+    "loading": "ゲームを読み込み中…",
+    "over": "ゲームは終了しました"
+  },
+  "hostAway": "ホストが離れました。ゲームは続きます。",
+  "finale": {
+    "ranking": "ランキング",
+    "yourTeam": "あなたのチーム",
+    "hints_other": "ヒント{{count}}件",
+    "hintsPaid_other": "ヒント{{count}}件（有料{{paid}}件）",
+    "stages": "ステージ：{{done}}",
+    "awards": "表彰",
+    "award": {
+      "fastest": "最速",
+      "fewestHints": "ヒント最少",
+      "teamwork": "チームワーク",
+      "photoFinish": "写真判定"
+    },
+    "closed": "ルームは閉じられました",
+    "joinAnother": "別のルームに参加"
   }
 }

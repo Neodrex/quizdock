@@ -112,6 +112,30 @@
     "teamTime": "{{name}} s'est échappée en {{time}}",
     "waitingOthers": "En attente des autres équipes",
     "timeUp": "Temps écoulé",
-    "stagesCleared": "Étapes franchies : {{done}} sur {{total}}"
+    "stagesCleared": "Étapes franchies : {{done}} sur {{total}}",
+    "resultsComing": "Résultats en route…",
+    "loading": "Chargement de la partie…",
+    "over": "La partie est terminée"
+  },
+  "hostAway": "L'animateur s'est absenté. La partie continue.",
+  "finale": {
+    "ranking": "Classement",
+    "yourTeam": "Votre équipe",
+    "hints_one": "{{count}} indice",
+    "hints_many": "{{count}} d'indices",
+    "hints_other": "{{count}} indices",
+    "hintsPaid_one": "{{count}} indice ({{paid}} payant)",
+    "hintsPaid_many": "{{count}} d'indices ({{paid}} payants)",
+    "hintsPaid_other": "{{count}} indices ({{paid}} payants)",
+    "stages": "Étapes : {{done}}",
+    "awards": "Récompenses",
+    "award": {
+      "fastest": "La plus rapide",
+      "fewestHints": "Le moins d'indices",
+      "teamwork": "Esprit d'équipe",
+      "photoFinish": "Photo-finish"
+    },
+    "closed": "La salle est fermée",
+    "joinAnother": "Rejoindre un autre salon"
   }
 }

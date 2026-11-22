@@ -108,6 +108,28 @@
     "teamTime": "{{name}} escaped in {{time}}",
     "waitingOthers": "Waiting for the other teams",
     "timeUp": "Time's up",
-    "stagesCleared": "Stages cleared: {{done}} of {{total}}"
+    "stagesCleared": "Stages cleared: {{done}} of {{total}}",
+    "resultsComing": "Results coming…",
+    "loading": "Loading the game…",
+    "over": "The game is over"
+  },
+  "hostAway": "The host is away. The game goes on.",
+  "finale": {
+    "ranking": "Ranking",
+    "yourTeam": "Your team",
+    "hints_one": "{{count}} hint",
+    "hints_other": "{{count}} hints",
+    "hintsPaid_one": "{{count}} hint ({{paid}} paid)",
+    "hintsPaid_other": "{{count}} hints ({{paid}} paid)",
+    "stages": "Stages: {{done}}",
+    "awards": "Awards",
+    "award": {
+      "fastest": "Fastest",
+      "fewestHints": "Fewest hints",
+      "teamwork": "Teamwork",
+      "photoFinish": "Photo finish"
+    },
+    "closed": "The room is closed",
+    "joinAnother": "Join another room"
   }
 }

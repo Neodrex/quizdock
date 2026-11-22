@@ -108,6 +108,28 @@
     "teamTime": "{{name}} ist in {{time}} entkommen",
     "waitingOthers": "Warten auf die anderen Teams",
     "timeUp": "Die Zeit ist um",
-    "stagesCleared": "Geschaffte Stufen: {{done}} von {{total}}"
+    "stagesCleared": "Geschaffte Stufen: {{done}} von {{total}}",
+    "resultsComing": "Die Ergebnisse kommen…",
+    "loading": "Spiel wird geladen…",
+    "over": "Das Spiel ist vorbei"
+  },
+  "hostAway": "Der Host ist weg. Das Spiel geht weiter.",
+  "finale": {
+    "ranking": "Rangliste",
+    "yourTeam": "Euer Team",
+    "hints_one": "{{count}} Hinweis",
+    "hints_other": "{{count}} Hinweise",
+    "hintsPaid_one": "{{count}} Hinweis ({{paid}} mit Strafzeit)",
+    "hintsPaid_other": "{{count}} Hinweise ({{paid}} mit Strafzeit)",
+    "stages": "Stufen: {{done}}",
+    "awards": "Auszeichnungen",
+    "award": {
+      "fastest": "Am schnellsten",
+      "fewestHints": "Wenigste Hinweise",
+      "teamwork": "Teamwork",
+      "photoFinish": "Fotofinish"
+    },
+    "closed": "Der Raum ist geschlossen",
+    "joinAnother": "Einem anderen Raum beitreten"
   }
 }

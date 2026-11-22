@@ -78,7 +78,7 @@ const finale: EscapeFinale = {
 };
 
 const seam = (over: Partial<EscapeSessionSeam> = {}): EscapeSessionSeam => ({
-  view: { state: GameState.Lobby, totalQuestions: 0 },
+  view: { status: 'ready', state: GameState.Lobby, totalQuestions: 0 },
   attachSeq: 0,
   ...over,
 });
@@ -131,7 +131,9 @@ describe('useEscapeSession', () => {
     rerender(seam({ attachSeq: 2 }));
     await flush();
     expect(result.current.active).toBe(false);
-    rerender(seam({ attachSeq: 2, view: { state: GameState.Lobby, totalQuestions: 0 } }));
+    rerender(
+      seam({ attachSeq: 2, view: { status: 'ready', state: GameState.Lobby, totalQuestions: 0 } }),
+    );
     await flush();
     expect(sent('escape:sync')).toHaveLength(2);
   });
@@ -155,11 +157,11 @@ describe('useEscapeSession', () => {
     const { result, rerender } = mount();
     await flush();
     fire('escape:state', state());
-    rerender(seam({ view: { state: GameState.Lobby, totalQuestions: 5 } }));
+    rerender(seam({ view: { status: 'ready', state: GameState.Lobby, totalQuestions: 5 } }));
     expect(result.current.active).toBe(false);
     fire('escape:state', state());
     expect(result.current.active).toBe(true);
-    rerender(seam({ view: { state: GameState.Answering, totalQuestions: 0 } }));
+    rerender(seam({ view: { status: 'ready', state: GameState.Answering, totalQuestions: 0 } }));
     expect(result.current.active).toBe(false);
   });
 

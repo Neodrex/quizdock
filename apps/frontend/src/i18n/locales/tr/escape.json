@@ -108,6 +108,28 @@
     "teamTime": "{{name}} {{time}} sürede kaçtı",
     "waitingOthers": "Diğer takımlar bekleniyor",
     "timeUp": "Süre doldu",
-    "stagesCleared": "Geçilen aşamalar: {{done}} / {{total}}"
+    "stagesCleared": "Geçilen aşamalar: {{done}} / {{total}}",
+    "resultsComing": "Sonuçlar geliyor…",
+    "loading": "Oyun yükleniyor…",
+    "over": "Oyun bitti"
+  },
+  "hostAway": "Sunucu ayrıldı. Oyun devam ediyor.",
+  "finale": {
+    "ranking": "Sıralama",
+    "yourTeam": "Takımınız",
+    "hints_one": "{{count}} ipucu",
+    "hints_other": "{{count}} ipucu",
+    "hintsPaid_one": "{{count}} ipucu ({{paid}} bedelli)",
+    "hintsPaid_other": "{{count}} ipucu ({{paid}} bedelli)",
+    "stages": "Aşamalar: {{done}}",
+    "awards": "Ödüller",
+    "award": {
+      "fastest": "En hızlı",
+      "fewestHints": "En az ipucu",
+      "teamwork": "Takım çalışması",
+      "photoFinish": "Foto finiş"
+    },
+    "closed": "Oda kapandı",
+    "joinAnother": "Başka bir odaya katıl"
   }
 }
