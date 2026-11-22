@@ -93,5 +93,17 @@
     "confirmCost": "このヒントでチームのタイムに{{seconds}}秒加算されます。",
     "confirmFree": "このヒントは無料です。",
     "confirm": "ヒントをもらう"
+  },
+  "unlock": {
+    "stage": "ステージ{{number}}が解放されました",
+    "escaped": "脱出成功！",
+    "tap": "タップして続ける"
+  },
+  "end": {
+    "escaped": "脱出成功！",
+    "teamTime": "{{name}}は{{time}}で脱出しました",
+    "waitingOthers": "ほかのチームを待っています",
+    "timeUp": "時間切れ",
+    "stagesCleared": "クリアしたステージ：{{done}} / {{total}}"
   }
 }

@@ -97,5 +97,17 @@
     "confirmCost": "Dieser Hinweis fügt der Zeit eures Teams {{seconds}} s hinzu.",
     "confirmFree": "Dieser Hinweis ist gratis.",
     "confirm": "Hinweis holen"
+  },
+  "unlock": {
+    "stage": "Stufe {{number}} freigeschaltet",
+    "escaped": "Ihr seid entkommen!",
+    "tap": "Tippen, um fortzufahren"
+  },
+  "end": {
+    "escaped": "Ihr seid entkommen!",
+    "teamTime": "{{name}} ist in {{time}} entkommen",
+    "waitingOthers": "Warten auf die anderen Teams",
+    "timeUp": "Die Zeit ist um",
+    "stagesCleared": "Geschaffte Stufen: {{done}} von {{total}}"
   }
 }

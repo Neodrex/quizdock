@@ -105,5 +105,17 @@
     "confirmCost": "Ta podpowiedź doda {{seconds}} s do czasu twojej drużyny.",
     "confirmFree": "Ta podpowiedź jest darmowa.",
     "confirm": "Pokaż podpowiedź"
+  },
+  "unlock": {
+    "stage": "Etap {{number}} odblokowany",
+    "escaped": "Udało się uciec!",
+    "tap": "Dotknij, aby kontynuować"
+  },
+  "end": {
+    "escaped": "Udało się uciec!",
+    "teamTime": "{{name}} uciekła w {{time}}",
+    "waitingOthers": "Czekamy na pozostałe drużyny",
+    "timeUp": "Koniec czasu",
+    "stagesCleared": "Ukończone etapy: {{done}} z {{total}}"
   }
 }

@@ -101,5 +101,17 @@
     "confirmCost": "Esta pista añade {{seconds}} s al tiempo de tu equipo.",
     "confirmFree": "Esta pista es gratis.",
     "confirm": "Obtener la pista"
+  },
+  "unlock": {
+    "stage": "Etapa {{number}} desbloqueada",
+    "escaped": "¡Habéis escapado!",
+    "tap": "Toca para continuar"
+  },
+  "end": {
+    "escaped": "¡Habéis escapado!",
+    "teamTime": "{{name}} escapó en {{time}}",
+    "waitingOthers": "Esperando a los otros equipos",
+    "timeUp": "Se acabó el tiempo",
+    "stagesCleared": "Etapas superadas: {{done}} de {{total}}"
   }
 }

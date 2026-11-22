@@ -101,5 +101,17 @@
     "confirmCost": "Questo indizio aggiunge {{seconds}} s al tempo della tua squadra.",
     "confirmFree": "Questo indizio è gratis.",
     "confirm": "Ottieni l'indizio"
+  },
+  "unlock": {
+    "stage": "Fase {{number}} sbloccata",
+    "escaped": "Siete evasi!",
+    "tap": "Tocca per continuare"
+  },
+  "end": {
+    "escaped": "Siete evasi!",
+    "teamTime": "{{name}} è evasa in {{time}}",
+    "waitingOthers": "In attesa delle altre squadre",
+    "timeUp": "Tempo scaduto",
+    "stagesCleared": "Fasi superate: {{done}} su {{total}}"
   }
 }

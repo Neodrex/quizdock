@@ -97,5 +97,17 @@
     "confirmCost": "This hint adds {{seconds}} s to your team's time.",
     "confirmFree": "This hint is free.",
     "confirm": "Get the hint"
+  },
+  "unlock": {
+    "stage": "Stage {{number}} unlocked",
+    "escaped": "You escaped!",
+    "tap": "Tap to continue"
+  },
+  "end": {
+    "escaped": "You escaped!",
+    "teamTime": "{{name}} escaped in {{time}}",
+    "waitingOthers": "Waiting for the other teams",
+    "timeUp": "Time's up",
+    "stagesCleared": "Stages cleared: {{done}} of {{total}}"
   }
 }

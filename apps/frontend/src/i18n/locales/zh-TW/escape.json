@@ -93,5 +93,17 @@
     "confirmCost": "此提示會讓你的隊伍增加 {{seconds}} 秒用時。",
     "confirmFree": "此提示免費。",
     "confirm": "取得提示"
+  },
+  "unlock": {
+    "stage": "第 {{number}} 關已解鎖",
+    "escaped": "你們逃脫了！",
+    "tap": "點按繼續"
+  },
+  "end": {
+    "escaped": "你們逃脫了！",
+    "teamTime": "{{name}} 用時 {{time}} 逃脫",
+    "waitingOthers": "正在等待其他隊伍",
+    "timeUp": "時間到",
+    "stagesCleared": "已通過關卡：{{done}} / {{total}}"
   }
 }

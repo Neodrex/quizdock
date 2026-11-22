@@ -101,5 +101,17 @@
     "confirmCost": "Cet indice ajoute {{seconds}} s au temps de votre équipe.",
     "confirmFree": "Cet indice est gratuit.",
     "confirm": "Obtenir l'indice"
+  },
+  "unlock": {
+    "stage": "Étape {{number}} débloquée",
+    "escaped": "Vous vous êtes échappés !",
+    "tap": "Touchez pour continuer"
+  },
+  "end": {
+    "escaped": "Vous vous êtes échappés !",
+    "teamTime": "{{name}} s'est échappée en {{time}}",
+    "waitingOthers": "En attente des autres équipes",
+    "timeUp": "Temps écoulé",
+    "stagesCleared": "Étapes franchies : {{done}} sur {{total}}"
   }
 }

@@ -97,5 +97,17 @@
     "confirmCost": "यह संकेत आपकी टीम के समय में {{seconds}} से. जोड़ता है।",
     "confirmFree": "यह संकेत मुफ़्त है।",
     "confirm": "संकेत पाएँ"
+  },
+  "unlock": {
+    "stage": "चरण {{number}} खुल गया",
+    "escaped": "आप बच निकले!",
+    "tap": "जारी रखने के लिए टैप करें"
+  },
+  "end": {
+    "escaped": "आप बच निकले!",
+    "teamTime": "{{name}} {{time}} में बच निकली",
+    "waitingOthers": "दूसरी टीमों की प्रतीक्षा",
+    "timeUp": "समय समाप्त",
+    "stagesCleared": "पूरे किए चरण: {{total}} में से {{done}}"
   }
 }

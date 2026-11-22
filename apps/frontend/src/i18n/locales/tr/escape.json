@@ -97,5 +97,17 @@
     "confirmCost": "Bu ipucu takımınızın süresine {{seconds}} sn ekler.",
     "confirmFree": "Bu ipucu ücretsiz.",
     "confirm": "İpucunu al"
+  },
+  "unlock": {
+    "stage": "{{number}}. aşamanın kilidi açıldı",
+    "escaped": "Kaçtınız!",
+    "tap": "Devam etmek için dokunun"
+  },
+  "end": {
+    "escaped": "Kaçtınız!",
+    "teamTime": "{{name}} {{time}} sürede kaçtı",
+    "waitingOthers": "Diğer takımlar bekleniyor",
+    "timeUp": "Süre doldu",
+    "stagesCleared": "Geçilen aşamalar: {{done}} / {{total}}"
   }
 }
