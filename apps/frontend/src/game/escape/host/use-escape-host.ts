@@ -251,7 +251,8 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
   }, [pin, setActive]);
 
   // Back in the finale phase (a reload, a reconnect): escape:finale is not replayed, so
-  // read the results by the room, once per run.
+  // read the results by the room, once per run. A failed read is tried again on the next
+  // attach (the phase and run stay the same in the finale, so they cannot trigger it).
   const phase = ui.board?.phase;
   const gameId = ui.host?.gameId ?? null;
   const haveFinale = !!ui.finale && ui.finale.gameId === gameId;
@@ -268,11 +269,11 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
         finaleRef.current = true;
         dispatch({ type: 'finale', finale: res.finale });
       } catch {
-        // Not marked read: the next change of phase or run tries again.
+        // Not marked read: the next attach (or change of phase or run) tries again.
         readRef.current = null;
       }
     })();
-  }, [phase, gameId, haveFinale, pin]);
+  }, [phase, gameId, haveFinale, pin, session.attachSeq]);
 
   // host:attach refused (the room is gone): a record of this PIN still has the results.
   const refused = session.view.status === 'error';

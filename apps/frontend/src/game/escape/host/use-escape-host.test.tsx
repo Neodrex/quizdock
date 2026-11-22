@@ -454,6 +454,27 @@ describe('useEscapeHost', () => {
     expect(result.current.ui).toMatchObject({ finale, ended: 'none' });
   });
 
+  it('a failed results read in the finale is tried again on the next attach', async () => {
+    let fail = true;
+    acks.set('escape:results', () =>
+      fail ? { ok: false, error: { code: 'escape.not_found' } } : { ok: true, finale },
+    );
+    const { result, rerender } = mount(withState(GameState.Podium));
+    await flush();
+    fire('escape:outline', outlineOf());
+    const ended = hostStateOf({ board: boardOf({ phase: 'finale' }) });
+    fire('escape:host', ended);
+    await flush();
+    expect(sent('escape:results')).toHaveLength(1);
+    expect(result.current.ui.finale).toBeNull();
+    // A reconnect re-attaches: same phase and run, so only the attach can retry the read.
+    fail = false;
+    rerender(withState(GameState.Podium, 2));
+    await flush();
+    expect(sent('escape:results')).toHaveLength(2);
+    expect(result.current.ui.finale).toBe(finale);
+  });
+
   it('a finale that came with the sync is not read again', async () => {
     const { result } = mount(withState(GameState.Podium));
     await flush();
