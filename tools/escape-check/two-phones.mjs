@@ -13,12 +13,13 @@
  * Setup, once:
  *   source live/.envrc.local
  *   cd live/tools/escape-check && pnpm install --ignore-workspace --fetch-timeout=300000 --fetch-retries=6
- * The dev stack: `docker compose up -d postgres redis` in live/, then the backend
- * (`pnpm --filter @quiz-dock/backend start:dev`, DATABASE_URL and REDIS_URL at the
- * compose ports, AUTH_MODE=none) and the frontend (`pnpm --filter @quiz-dock/frontend
- * dev`, VITE_API_URL at the backend).
- * Run:
- *   node live/tools/escape-check/two-phones.mjs
+ * The dev stack: `docker compose up -d postgres redis` in live/. Then, in two shells,
+ * each first `source live/tools/escape-check/devenv.sh` (the toolchain, live/.env, the
+ * compose ports, TMPDIR on the SSD; no secrets):
+ *   pnpm --filter @quiz-dock/backend start:dev     # backend on :3000 (AUTH_MODE=none)
+ *   pnpm --filter @quiz-dock/frontend dev          # Vite on :5173, VITE_API_URL at :3000
+ * Run (a third shell, after `source live/tools/escape-check/devenv.sh`):
+ *   node tools/escape-check/two-phones.mjs
  * Environment: URL (the Vite address, default http://localhost:5173), OUT (screenshots,
  * default <repo>/.tmp/escape-check), HEADED=1 to watch.
  *
@@ -40,8 +41,11 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '../../..');
 const URL = process.env.URL ?? 'http://localhost:5173';
 const OUT = process.env.OUT ?? `${REPO}/.tmp/escape-check`;
-// Chrome's throwaway profiles go under TMPDIR: keep them on the SSD.
-process.env.TMPDIR ??= `${REPO}/.tmp`;
+// Chrome's throwaway profiles go under TMPDIR: keep them on the SSD. macOS always
+// sets TMPDIR (on the internal disk), so it is replaced unless already under REPO.
+if (!resolve(process.env.TMPDIR ?? '/').startsWith(`${REPO}/`)) {
+  process.env.TMPDIR = `${REPO}/.tmp`;
+}
 mkdirSync(OUT, { recursive: true });
 mkdirSync(process.env.TMPDIR, { recursive: true });
 
