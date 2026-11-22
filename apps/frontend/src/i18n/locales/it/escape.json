@@ -140,6 +140,21 @@
   },
   "host": {
     "nav": "Escape room",
-    "console": "Console dell’escape room"
+    "console": "Console dell’escape room",
+    "feed": {
+      "lockSolved": "{{team}}: {{by}} ha aperto {{lock}}",
+      "lockSolvedByHost": "{{team}}: {{lock}} aperto dall’host",
+      "partAccepted": "{{team}}: {{by}} ha inserito la parte {{role}} di {{lock}}",
+      "stageCleared": "{{team}} ha superato {{stage}}",
+      "escaped": "{{team}} è evasa in {{time}}",
+      "hintFree": "{{team}} ha ricevuto un indizio gratuito",
+      "hintAsked": "{{team}} ha chiesto un indizio (+{{seconds}} s)",
+      "hintGiven": "Hai dato un indizio a {{team}} (+{{seconds}} s)",
+      "roles": "{{team}}: ruoli ridistribuiti",
+      "time": "{{team}}: tempo {{delta}}",
+      "timeUp": "{{team}}: tempo scaduto",
+      "stuck": "{{team}} è bloccata su {{stage}} ({{minutes}} min)",
+      "disconnected": "{{name}} si è disconnesso ({{team}})"
+    }
   }
 }

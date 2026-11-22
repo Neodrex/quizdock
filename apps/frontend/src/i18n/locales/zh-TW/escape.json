@@ -128,6 +128,21 @@
   },
   "host": {
     "nav": "密室逃脫",
-    "console": "密室逃脫控制台"
+    "console": "密室逃脫控制台",
+    "feed": {
+      "lockSolved": "{{team}}：{{by}} 打開了 {{lock}}",
+      "lockSolvedByHost": "{{team}}：主持人打開了 {{lock}}",
+      "partAccepted": "{{team}}：{{by}} 輸入了 {{lock}} 的 {{role}} 部分",
+      "stageCleared": "{{team}} 通過了 {{stage}}",
+      "escaped": "{{team}} 以 {{time}} 逃脫",
+      "hintFree": "{{team}} 獲得一則免費提示",
+      "hintAsked": "{{team}} 要求了提示（+{{seconds}} 秒）",
+      "hintGiven": "你給了 {{team}} 一則提示（+{{seconds}} 秒）",
+      "roles": "{{team}}：角色已重新分配",
+      "time": "{{team}}：時間 {{delta}}",
+      "timeUp": "{{team}}：時間到",
+      "stuck": "{{team}} 卡在 {{stage}}（{{minutes}} 分鐘）",
+      "disconnected": "{{name}} 已中斷連線（{{team}}）"
+    }
   }
 }

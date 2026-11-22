@@ -146,6 +146,21 @@
   },
   "host": {
     "nav": "Квесты",
-    "console": "Пульт квеста"
+    "console": "Пульт квеста",
+    "feed": {
+      "lockSolved": "{{team}}: {{by}} открывает {{lock}}",
+      "lockSolvedByHost": "{{team}}: {{lock}} открыт ведущим",
+      "partAccepted": "{{team}}: {{by}} вводит часть «{{role}}» замка {{lock}}",
+      "stageCleared": "{{team}} проходит {{stage}}",
+      "escaped": "{{team}} сбегает за {{time}}",
+      "hintFree": "{{team}} получает бесплатную подсказку",
+      "hintAsked": "{{team}} просит подсказку (+{{seconds}} с)",
+      "hintGiven": "Вы дали подсказку команде {{team}} (+{{seconds}} с)",
+      "roles": "{{team}}: роли розданы заново",
+      "time": "{{team}}: время {{delta}}",
+      "timeUp": "{{team}}: время вышло",
+      "stuck": "{{team}} застряла на этапе {{stage}} ({{minutes}} мин)",
+      "disconnected": "{{name}} отключается ({{team}})"
+    }
   }
 }

@@ -134,6 +134,21 @@
   },
   "host": {
     "nav": "Escape rooms",
-    "console": "Escape console"
+    "console": "Escape console",
+    "feed": {
+      "lockSolved": "{{team}}: {{by}} opened {{lock}}",
+      "lockSolvedByHost": "{{team}}: {{lock}} opened by the host",
+      "partAccepted": "{{team}}: {{by}} entered the {{role}} part of {{lock}}",
+      "stageCleared": "{{team}} cleared {{stage}}",
+      "escaped": "{{team}} escaped in {{time}}",
+      "hintFree": "{{team}} got a free hint",
+      "hintAsked": "{{team}} asked for a hint (+{{seconds}} s)",
+      "hintGiven": "You gave {{team}} a hint (+{{seconds}} s)",
+      "roles": "{{team}}: roles dealt again",
+      "time": "{{team}}: time {{delta}}",
+      "timeUp": "{{team}}: time is up",
+      "stuck": "{{team}} is stuck on {{stage}} ({{minutes}} min)",
+      "disconnected": "{{name}} disconnected ({{team}})"
+    }
   }
 }

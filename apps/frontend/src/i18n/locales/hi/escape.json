@@ -134,6 +134,21 @@
   },
   "host": {
     "nav": "एस्केप रूम",
-    "console": "एस्केप रूम कंसोल"
+    "console": "एस्केप रूम कंसोल",
+    "feed": {
+      "lockSolved": "{{team}}: {{by}} ने {{lock}} खोला",
+      "lockSolvedByHost": "{{team}}: {{lock}} होस्ट ने खोला",
+      "partAccepted": "{{team}}: {{by}} ने {{lock}} का {{role}} हिस्सा डाला",
+      "stageCleared": "{{team}} ने {{stage}} पार किया",
+      "escaped": "{{team}} {{time}} में बच निकली",
+      "hintFree": "{{team}} को एक मुफ़्त संकेत मिला",
+      "hintAsked": "{{team}} ने संकेत माँगा (+{{seconds}} सेकंड)",
+      "hintGiven": "आपने {{team}} को संकेत दिया (+{{seconds}} सेकंड)",
+      "roles": "{{team}}: भूमिकाएँ फिर से बाँटी गईं",
+      "time": "{{team}}: समय {{delta}}",
+      "timeUp": "{{team}}: समय समाप्त",
+      "stuck": "{{team}} {{stage}} पर अटकी है ({{minutes}} मिनट)",
+      "disconnected": "{{name}} का कनेक्शन टूट गया ({{team}})"
+    }
   }
 }

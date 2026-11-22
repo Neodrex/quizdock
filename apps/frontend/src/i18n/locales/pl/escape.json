@@ -146,6 +146,21 @@
   },
   "host": {
     "nav": "Escape roomy",
-    "console": "Konsola escape roomu"
+    "console": "Konsola escape roomu",
+    "feed": {
+      "lockSolved": "{{team}}: {{by}} otwiera {{lock}}",
+      "lockSolvedByHost": "{{team}}: {{lock}} otwarte przez prowadzącego",
+      "partAccepted": "{{team}}: {{by}} wpisuje część {{role}} w {{lock}}",
+      "stageCleared": "{{team}} kończy {{stage}}",
+      "escaped": "{{team}} ucieka w {{time}}",
+      "hintFree": "{{team}} dostaje darmową podpowiedź",
+      "hintAsked": "{{team}} prosi o podpowiedź (+{{seconds}} s)",
+      "hintGiven": "Dajesz podpowiedź drużynie {{team}} (+{{seconds}} s)",
+      "roles": "{{team}}: role rozdane od nowa",
+      "time": "{{team}}: czas {{delta}}",
+      "timeUp": "{{team}}: koniec czasu",
+      "stuck": "{{team}} utknęła na etapie {{stage}} ({{minutes}} min)",
+      "disconnected": "{{name}} traci połączenie ({{team}})"
+    }
   }
 }

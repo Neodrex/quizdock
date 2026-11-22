@@ -134,6 +134,21 @@
   },
   "host": {
     "nav": "Escape Rooms",
-    "console": "Escape-Room-Konsole"
+    "console": "Escape-Room-Konsole",
+    "feed": {
+      "lockSolved": "{{team}}: {{by}} hat {{lock}} geöffnet",
+      "lockSolvedByHost": "{{team}}: {{lock}} vom Host geöffnet",
+      "partAccepted": "{{team}}: {{by}} hat den Teil {{role}} von {{lock}} eingegeben",
+      "stageCleared": "{{team}} hat {{stage}} geschafft",
+      "escaped": "{{team}} ist in {{time}} entkommen",
+      "hintFree": "{{team}} hat einen kostenlosen Tipp bekommen",
+      "hintAsked": "{{team}} hat um einen Tipp gebeten (+{{seconds}} s)",
+      "hintGiven": "Du hast {{team}} einen Tipp gegeben (+{{seconds}} s)",
+      "roles": "{{team}}: Rollen neu verteilt",
+      "time": "{{team}}: Zeit {{delta}}",
+      "timeUp": "{{team}}: Zeit abgelaufen",
+      "stuck": "{{team}} steckt bei {{stage}} fest ({{minutes}} Min.)",
+      "disconnected": "{{name}} hat die Verbindung verloren ({{team}})"
+    }
   }
 }

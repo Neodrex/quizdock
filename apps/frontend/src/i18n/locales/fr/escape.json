@@ -140,6 +140,21 @@
   },
   "host": {
     "nav": "Escape games",
-    "console": "Console de l’escape game"
+    "console": "Console de l’escape game",
+    "feed": {
+      "lockSolved": "{{team}} : {{by}} a ouvert {{lock}}",
+      "lockSolvedByHost": "{{team}} : {{lock}} ouvert par l’animateur",
+      "partAccepted": "{{team}} : {{by}} a saisi la part {{role}} de {{lock}}",
+      "stageCleared": "{{team}} a terminé {{stage}}",
+      "escaped": "{{team}} s’est échappée en {{time}}",
+      "hintFree": "{{team}} a reçu un indice gratuit",
+      "hintAsked": "{{team}} a demandé un indice (+{{seconds}} s)",
+      "hintGiven": "Vous avez donné un indice à {{team}} (+{{seconds}} s)",
+      "roles": "{{team}} : rôles redistribués",
+      "time": "{{team}} : temps {{delta}}",
+      "timeUp": "{{team}} : temps écoulé",
+      "stuck": "{{team}} bloque sur {{stage}} ({{minutes}} min)",
+      "disconnected": "{{name}} s’est déconnecté·e ({{team}})"
+    }
   }
 }

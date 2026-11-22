@@ -134,6 +134,21 @@
   },
   "host": {
     "nav": "Kaçış odaları",
-    "console": "Kaçış odası konsolu"
+    "console": "Kaçış odası konsolu",
+    "feed": {
+      "lockSolved": "{{team}}: {{by}}, {{lock}} kilidini açtı",
+      "lockSolvedByHost": "{{team}}: {{lock}} sunucu tarafından açıldı",
+      "partAccepted": "{{team}}: {{by}}, {{lock}} için {{role}} parçasını girdi",
+      "stageCleared": "{{team}}, {{stage}} aşamasını geçti",
+      "escaped": "{{team}} {{time}} sürede kaçtı",
+      "hintFree": "{{team}} ücretsiz bir ipucu aldı",
+      "hintAsked": "{{team}} ipucu istedi (+{{seconds}} sn)",
+      "hintGiven": "{{team}} takımına ipucu verdiniz (+{{seconds}} sn)",
+      "roles": "{{team}}: roller yeniden dağıtıldı",
+      "time": "{{team}}: süre {{delta}}",
+      "timeUp": "{{team}}: süre doldu",
+      "stuck": "{{team}}, {{stage}} aşamasında takıldı ({{minutes}} dk)",
+      "disconnected": "{{name}} bağlantısı koptu ({{team}})"
+    }
   }
 }

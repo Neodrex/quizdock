@@ -140,6 +140,21 @@
   },
   "host": {
     "nav": "Salas de escape",
-    "console": "Consola del escape room"
+    "console": "Consola del escape room",
+    "feed": {
+      "lockSolved": "{{team}}: {{by}} abrió {{lock}}",
+      "lockSolvedByHost": "{{team}}: el anfitrión abrió {{lock}}",
+      "partAccepted": "{{team}}: {{by}} introdujo la parte de {{role}} de {{lock}}",
+      "stageCleared": "{{team}} superó {{stage}}",
+      "escaped": "{{team}} escapó en {{time}}",
+      "hintFree": "{{team}} recibió una pista gratis",
+      "hintAsked": "{{team}} pidió una pista (+{{seconds}} s)",
+      "hintGiven": "Diste una pista a {{team}} (+{{seconds}} s)",
+      "roles": "{{team}}: roles repartidos de nuevo",
+      "time": "{{team}}: tiempo {{delta}}",
+      "timeUp": "{{team}}: se acabó el tiempo",
+      "stuck": "{{team}} está atascado en {{stage}} ({{minutes}} min)",
+      "disconnected": "{{name}} se desconectó ({{team}})"
+    }
   }
 }
