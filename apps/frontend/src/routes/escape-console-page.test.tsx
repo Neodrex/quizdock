@@ -1,5 +1,5 @@
 import { GameState } from '@quiz-dock/contracts';
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   boardOf,
@@ -184,6 +184,42 @@ describe('EscapeConsole', () => {
       'href',
       '/escape',
     );
+  });
+
+  it('a11y, each phase: every control and region is named; the laptop grid has a caption', async () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query.includes('1024px'),
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList,
+    );
+    const named = () => {
+      const page = document.querySelector<HTMLElement>('[data-escape-phase]')!;
+      for (const role of ['button', 'textbox', 'spinbutton', 'combobox', 'link', 'region'] as const)
+        for (const el of within(page).queryAllByRole(role))
+          expect(el, el.outerHTML.slice(0, 80)).toHaveAccessibleName();
+    };
+    const lobby = draw(forming(), { state: GameState.Lobby });
+    await screen.findByRole('heading', { name: 'Équipes de la salle' });
+    named();
+    lobby.unmount();
+    const run = draw(running(), {}, '?team=t1');
+    const table = await screen.findByRole('table', { name: 'Équipes en direct' });
+    expect(within(table).getAllByRole('columnheader').length).toBeGreaterThan(2);
+    expect(screen.getByRole('complementary', { name: 'Team Red' })).toBeInTheDocument();
+    named();
+    // A confirm is a labelled dialog.
+    fireEvent.click(screen.getByRole('button', { name: 'Terminer la partie' }));
+    expect(screen.getByRole('dialog')).toHaveAccessibleName();
+    run.unmount();
+    const ended = hostStateOf({ board: boardOf({ phase: 'finale' }) });
+    draw({ outline: outlineOf(), host: ended, board: ended.board, finale: finaleOf() });
+    await screen.findByRole('button', { name: 'Télécharger le CSV' });
+    named();
+    vi.restoreAllMocks();
   });
 
   it('shows no answer of the template in any phase', async () => {

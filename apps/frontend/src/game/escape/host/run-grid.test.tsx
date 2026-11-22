@@ -143,6 +143,13 @@ describe('RunGrid', () => {
   });
 
   describe('a row per team on a laptop', () => {
+    it('the table has a caption and header cells', () => {
+      draw();
+      const table = screen.getByRole('table', { name: 'Live teams' });
+      expect(within(table).getAllByRole('columnheader').length).toBeGreaterThan(2);
+      expect(within(table).getAllByRole('rowheader').length).toBeGreaterThan(0);
+    });
+
     it('name and connected count, with an offline mark', () => {
       draw();
       const r = within(row('Team Red'));

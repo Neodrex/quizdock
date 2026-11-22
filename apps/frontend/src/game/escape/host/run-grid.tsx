@@ -267,6 +267,7 @@ export function RunGrid({
         // A wide grid scrolls in its own box, never the page.
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
+            <caption className="sr-only">{t('host.grid.title')}</caption>
             <thead className="bg-muted/50 text-left">
               <tr>
                 <th scope="col" className="px-3 py-2">

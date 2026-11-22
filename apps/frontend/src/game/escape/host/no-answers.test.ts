@@ -238,6 +238,25 @@ describe('the host console never reads an answer', () => {
     expect(names).toContain('game/launch-access-dialog.tsx'); // outside host/
   });
 
+  it('the final console page reaches every part it composes, and the shared views', () => {
+    const fromConsole = graph([resolve(src, 'routes/escape-console-page.tsx')]).map(rel);
+    for (const part of [
+      'invite-panel.tsx',
+      'formation-panel.tsx',
+      'team-board.tsx',
+      'run-grid.tsx',
+      'team-detail.tsx',
+      'host-actions.tsx',
+      'activity-feed.tsx',
+      'host-results.tsx',
+      'results-csv.ts',
+    ]) {
+      expect(fromConsole).toContain(`game/escape/host/${part}`);
+    }
+    expect(fromConsole).toContain('game/escape/escape-finale.tsx'); // outside host/
+    expect(fromConsole).toContain('game/escape/team-timer.tsx');
+  });
+
   it('strips comments only', () => {
     expect(code('a // the answer\nb /* answers */ c').trim()).toBe('a \nb  c');
     // `//` and `/*` inside strings, templates and regexes are code.
