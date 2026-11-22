@@ -62,6 +62,41 @@ describe('replay timeline', () => {
     expect(frameAt(late, 2_500_000).teams[0].finished).toBe(true);
   });
 
+  describe("ends at the run's real end when the finale carries it", () => {
+    const red = finale.ranking[0];
+    const blue = finale.ranking[1];
+    it('every team escaped: at the last escape', () => {
+      const all = screenFinaleOf({
+        endedMs: 1_872_100,
+        ranking: [
+          red,
+          { ...blue, escaped: true, timedOut: false, stageClearedAt: [300_000, 600_000, 900_000] },
+        ],
+      });
+      expect(maxTOf(all)).toBe(1_872_000);
+    });
+
+    it('a team timed out after the host took time: at the deadline it hit, not the limit', () => {
+      const cut = screenFinaleOf({
+        endedMs: 600_000,
+        ranking: [{ ...red, stageClearedAt: [100_000, 200_000, 400_000] }, blue],
+      });
+      expect(maxTOf(cut)).toBe(600_000);
+      expect(replayMsOf(cut)).toBe(REPLAY_MS);
+      expect(frameAt(cut, 590_000).teams[1].timeUp).toBe(false);
+      expect(frameAt(cut, 600_000).teams[1]).toMatchObject({ position: 1, timeUp: true });
+    });
+
+    it('extra time: later than the limit still fits', () => {
+      const late = screenFinaleOf({
+        endedMs: 2_700_000,
+        ranking: [{ ...red, stageClearedAt: [252_000, 900_000, 2_650_000] }, blue],
+      });
+      expect(maxTOf(late)).toBe(2_700_000);
+      expect(frameAt(late, 2_650_000).teams[0].finished).toBe(true);
+    });
+  });
+
   it('an escaped team finishes at its escape time, then shows its score with the penalty', () => {
     expect(red(1_871_000)).toMatchObject({ finished: false, timeMs: 1_871_000 });
     expect(red(1_872_000)).toMatchObject({ finished: true, position: 3, timeMs: 1_932_000 });

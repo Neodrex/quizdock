@@ -55,6 +55,8 @@ export const screenFinaleOf = (over: Partial<EscapeScreenFinale> = {}): EscapeSc
   title: 'Vault Heist',
   finale: 'The vault is open.',
   limitMs: 2_400_000,
+  // Unknown (an older record): the replay falls back on the limit.
+  endedMs: null,
   stages: [{ title: 'The Lobby' }, { title: 'The Office' }, { title: 'The Vault' }],
   ranking: [
     ranked(),

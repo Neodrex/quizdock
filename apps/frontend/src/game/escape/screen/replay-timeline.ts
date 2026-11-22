@@ -42,15 +42,30 @@ export interface Frame {
 }
 
 /**
- * The run time the replay ends at: the last clear of any team, or the limit when a team
- * timed out. The host may have given extra time, so a clear can come after `limitMs`:
- * the later of both. Nobody cleared anything: 0 (a still frame).
+ * The run time the replay ends at: where the run really ended (`endedMs`).
+ * - Every team escaped: the last escape.
+ * - Otherwise the run's end (the latest deadline a team hit, or the host's end), never
+ *   before the last clear: extra time can put clears past `limitMs`.
+ * - `endedMs` unknown (an older record): the last clear, or the limit when a team timed
+ *   out. That over-runs when the host took time away: the finale has no deadlines.
+ * Nobody cleared anything: 0 (a still frame).
  */
 export function maxTOf(finale: EscapeScreenFinale): number {
   const clears = finale.ranking.flatMap((r) => r.stageClearedAt);
   if (!clears.length) return 0;
   const last = Math.max(...clears);
+  if (finale.ranking.every((r) => r.escaped)) return last;
+  if (finale.endedMs != null) return Math.max(last, finale.endedMs);
   return finale.ranking.some((r) => r.timedOut) ? Math.max(last, finale.limitMs) : last;
+}
+
+/**
+ * When a timed-out team's time ran out: its deadline is not in the finale, so the limit,
+ * or the run's end when that came sooner (the host took time); never before its last clear.
+ */
+function timeUpAt(finale: EscapeScreenFinale, r: Ranked): number {
+  const end = finale.endedMs != null ? Math.min(finale.limitMs, finale.endedMs) : finale.limitMs;
+  return Math.max(end, ...r.stageClearedAt);
 }
 
 /** How long the replay plays (ms of the screen's time): 0 for a still frame. */
@@ -124,7 +139,7 @@ export function frameAt(finale: EscapeScreenFinale, t: number): Frame {
   const teams = teamOrderOf(finale).map((r) => {
     const finishAt = finishOf(r);
     const finished = finishAt !== null && t >= finishAt;
-    const lastMoment = Math.max(finale.limitMs, ...r.stageClearedAt);
+    const lastMoment = timeUpAt(finale, r);
     return {
       r,
       frame: {

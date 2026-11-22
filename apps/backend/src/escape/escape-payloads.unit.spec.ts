@@ -611,6 +611,14 @@ describe('screenFinaleOf (M6 §1.4: no host columns on a screen)', () => {
     expect(leaksIn(screen, tpl)).toEqual([]);
   });
 
+  it("carries the run's real end, so the replay stops where the run did", () => {
+    const v = finaleView();
+    const finale = finaleOf(v, 'g1');
+    const ended = { ...v, run: { ...v.run, clock: { ...v.run.clock, endedElapsedMs: 1_234_000 } } };
+    expect(screenFinaleOf(finale, ended).endedMs).toBe(1_234_000);
+    expect(screenFinaleOf(finale, v).endedMs).toBeNull();
+  });
+
   it('has no host column and no player id, at any depth', () => {
     const v = finaleView();
     const finale = finaleOf(v, 'g1');
@@ -641,6 +649,7 @@ describe('screenFinaleOf (M6 §1.4: no host columns on a screen)', () => {
       title: string;
       finale: string;
       limitMs: number;
+      endedMs: number | null;
       stages: { title: string }[];
       ranking: {
         teamId: string;

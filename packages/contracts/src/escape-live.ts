@@ -370,6 +370,11 @@ export interface EscapeScreenFinale {
   /** The template's closing text. */
   finale: string;
   limitMs: number;
+  /**
+   * Run time (ms, pauses excluded) at which the run ended: the last escape, the latest
+   * deadline a team hit, or the host's end. Null when not known (an older record).
+   */
+  endedMs: number | null;
   /** Every stage title: the run is over. */
   stages: { title: string }[];
   ranking: {

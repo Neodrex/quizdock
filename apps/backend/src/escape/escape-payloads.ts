@@ -392,6 +392,7 @@ export function screenFinaleOf(finale: EscapeFinale, v: RunView): EscapeScreenFi
     title: finale.title,
     finale: finale.finale,
     limitMs: v.run.clock.limitMs,
+    endedMs: v.run.clock.endedElapsedMs,
     stages: v.snap.template.stages.map((s) => ({ title: s.title })),
     ranking: finale.ranking.map((r) => ({
       teamId: r.teamId,
