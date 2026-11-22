@@ -9,7 +9,9 @@ import { EscapeTimings } from './escape-timings';
 describe('EscapeAttempts (Redis)', () => {
   let redis: RedisService;
   const gameId = `attempts-test-${Date.now()}` as GameId;
-  const timings = Object.assign(new EscapeTimings(), { wrongMax: 3, wrongWindowS: 1 });
+  // A window wide enough that a loaded machine never sees it close between two
+  // calls of one test (a 1 s window did, now and then); test 1 ends it on purpose.
+  const timings = Object.assign(new EscapeTimings(), { wrongMax: 3, wrongWindowS: 10 });
 
   beforeAll(() => {
     if (!onTestRedis()) {
@@ -30,9 +32,11 @@ describe('EscapeAttempts (Redis)', () => {
     await limiter.count(gameId, 'a');
     const wait = await limiter.blocked(gameId, 'a');
     expect(wait).toBeGreaterThan(0);
-    expect(wait).toBeLessThanOrEqual(1000);
+    expect(wait).toBeLessThanOrEqual(10_000);
     await expect(limiter.blocked(gameId, 'b')).resolves.toBe(0);
-    await new Promise((r) => setTimeout(r, wait + 50));
+    // The window runs out: shortened here rather than waited for.
+    await redis.pexpire(escapeKeys.wrong(gameId, 'a'), 50);
+    await new Promise((r) => setTimeout(r, 150));
     await expect(limiter.blocked(gameId, 'a')).resolves.toBe(0);
     expect(await redis.exists(escapeKeys.wrong(gameId, 'a'))).toBe(0);
   });
