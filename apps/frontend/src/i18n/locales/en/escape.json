@@ -51,5 +51,29 @@
     "everyone": "Everyone",
     "imageAlt": "{{stage}}, clue {{index}}",
     "openDocument": "Open the document"
+  },
+  "lock": {
+    "kind": {
+      "code": "Code",
+      "phrase": "Phrase",
+      "choice": "Choice",
+      "sequence": "Sequence",
+      "combined": "Team lock"
+    },
+    "opened": "Opened",
+    "submit": "Open",
+    "answerFor": "Answer for {{lock}}",
+    "wrong": "Not quite",
+    "retryIn": "Try again in {{seconds}} s",
+    "paused": "The game is paused",
+    "timeUp": "Time's up",
+    "notRunning": "The game is not running",
+    "notYourPart": "This part is not yours to enter",
+    "alreadySolved": "Already opened",
+    "refused": "That did not go through. Try again.",
+    "sendFailed": "Could not send. Check your connection.",
+    "dragItem": "Drag {{item}}",
+    "moveUp": "Move {{item}} up",
+    "moveDown": "Move {{item}} down"
   }
 }

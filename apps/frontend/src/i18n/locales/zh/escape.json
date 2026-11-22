@@ -48,5 +48,29 @@
     "everyone": "所有人",
     "imageAlt": "{{stage}}，线索 {{index}}",
     "openDocument": "打开文档"
+  },
+  "lock": {
+    "kind": {
+      "code": "密码",
+      "phrase": "口令",
+      "choice": "选择",
+      "sequence": "排序",
+      "combined": "团队锁"
+    },
+    "opened": "已打开",
+    "submit": "打开",
+    "answerFor": "{{lock}}的答案",
+    "wrong": "不太对",
+    "retryIn": "{{seconds}} 秒后再试",
+    "paused": "游戏已暂停",
+    "timeUp": "时间到",
+    "notRunning": "游戏未在进行",
+    "notYourPart": "这部分不归你填写",
+    "alreadySolved": "已经打开",
+    "refused": "未能成功，请重试。",
+    "sendFailed": "发送失败，请检查网络连接。",
+    "dragItem": "拖动{{item}}",
+    "moveUp": "上移{{item}}",
+    "moveDown": "下移{{item}}"
   }
 }

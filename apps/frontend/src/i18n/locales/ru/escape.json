@@ -57,5 +57,29 @@
     "everyone": "Для всех",
     "imageAlt": "{{stage}}, улика {{index}}",
     "openDocument": "Открыть документ"
+  },
+  "lock": {
+    "kind": {
+      "code": "Код",
+      "phrase": "Фраза",
+      "choice": "Выбор",
+      "sequence": "Порядок",
+      "combined": "Командный замок"
+    },
+    "opened": "Открыто",
+    "submit": "Открыть",
+    "answerFor": "Ответ для «{{lock}}»",
+    "wrong": "Не совсем",
+    "retryIn": "Повторите через {{seconds}} с",
+    "paused": "Игра на паузе",
+    "timeUp": "Время вышло",
+    "notRunning": "Игра не идёт",
+    "notYourPart": "Эта часть не ваша",
+    "alreadySolved": "Уже открыто",
+    "refused": "Не получилось. Попробуйте ещё раз.",
+    "sendFailed": "Не удалось отправить. Проверьте подключение.",
+    "dragItem": "Перетащить «{{item}}»",
+    "moveUp": "Переместить «{{item}}» вверх",
+    "moveDown": "Переместить «{{item}}» вниз"
   }
 }

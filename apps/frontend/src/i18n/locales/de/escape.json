@@ -51,5 +51,29 @@
     "everyone": "Alle",
     "imageAlt": "{{stage}}, Hinweis {{index}}",
     "openDocument": "Dokument öffnen"
+  },
+  "lock": {
+    "kind": {
+      "code": "Zahlencode",
+      "phrase": "Lösungswort",
+      "choice": "Auswahl",
+      "sequence": "Reihenfolge",
+      "combined": "Teamschloss"
+    },
+    "opened": "Geöffnet",
+    "submit": "Öffnen",
+    "answerFor": "Antwort für {{lock}}",
+    "wrong": "Nicht ganz",
+    "retryIn": "Erneut versuchen in {{seconds}} s",
+    "paused": "Das Spiel ist pausiert",
+    "timeUp": "Die Zeit ist um",
+    "notRunning": "Das Spiel läuft nicht",
+    "notYourPart": "Dieser Teil ist nicht deiner",
+    "alreadySolved": "Bereits geöffnet",
+    "refused": "Das hat nicht geklappt. Versuche es erneut.",
+    "sendFailed": "Senden fehlgeschlagen. Prüfe deine Verbindung.",
+    "dragItem": "{{item}} ziehen",
+    "moveUp": "{{item}} nach oben",
+    "moveDown": "{{item}} nach unten"
   }
 }

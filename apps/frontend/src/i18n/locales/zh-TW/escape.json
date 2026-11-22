@@ -48,5 +48,29 @@
     "everyone": "所有人",
     "imageAlt": "{{stage}}，線索 {{index}}",
     "openDocument": "開啟文件"
+  },
+  "lock": {
+    "kind": {
+      "code": "密碼",
+      "phrase": "口令",
+      "choice": "選擇",
+      "sequence": "排序",
+      "combined": "團隊鎖"
+    },
+    "opened": "已開啟",
+    "submit": "開啟",
+    "answerFor": "{{lock}}的答案",
+    "wrong": "不太對",
+    "retryIn": "{{seconds}} 秒後再試",
+    "paused": "遊戲已暫停",
+    "timeUp": "時間到",
+    "notRunning": "遊戲未在進行",
+    "notYourPart": "這部分不歸你填寫",
+    "alreadySolved": "已經開啟",
+    "refused": "未能成功，請再試一次。",
+    "sendFailed": "傳送失敗，請檢查網路連線。",
+    "dragItem": "拖曳{{item}}",
+    "moveUp": "上移{{item}}",
+    "moveDown": "下移{{item}}"
   }
 }

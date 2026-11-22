@@ -54,5 +54,29 @@
     "everyone": "Tutti",
     "imageAlt": "{{stage}}, indizio {{index}}",
     "openDocument": "Apri il documento"
+  },
+  "lock": {
+    "kind": {
+      "code": "Codice",
+      "phrase": "Frase",
+      "choice": "Scelta",
+      "sequence": "Sequenza",
+      "combined": "Lucchetto di squadra"
+    },
+    "opened": "Aperto",
+    "submit": "Apri",
+    "answerFor": "Risposta per {{lock}}",
+    "wrong": "Non proprio",
+    "retryIn": "Riprova tra {{seconds}} s",
+    "paused": "Il gioco è in pausa",
+    "timeUp": "Tempo scaduto",
+    "notRunning": "Il gioco non è in corso",
+    "notYourPart": "Questa parte non spetta a te",
+    "alreadySolved": "Già aperto",
+    "refused": "Non è andato a buon fine. Riprova.",
+    "sendFailed": "Invio non riuscito. Controlla la connessione.",
+    "dragItem": "Trascina {{item}}",
+    "moveUp": "Sposta su {{item}}",
+    "moveDown": "Sposta giù {{item}}"
   }
 }

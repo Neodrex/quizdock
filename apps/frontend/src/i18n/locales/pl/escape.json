@@ -57,5 +57,29 @@
     "everyone": "Wszyscy",
     "imageAlt": "{{stage}}, wskazówka {{index}}",
     "openDocument": "Otwórz dokument"
+  },
+  "lock": {
+    "kind": {
+      "code": "Kod",
+      "phrase": "Hasło",
+      "choice": "Wybór",
+      "sequence": "Kolejność",
+      "combined": "Zamek drużynowy"
+    },
+    "opened": "Otwarte",
+    "submit": "Otwórz",
+    "answerFor": "Odpowiedź dla: {{lock}}",
+    "wrong": "Nie do końca",
+    "retryIn": "Spróbuj ponownie za {{seconds}} s",
+    "paused": "Gra jest wstrzymana",
+    "timeUp": "Koniec czasu",
+    "notRunning": "Gra nie trwa",
+    "notYourPart": "Ta część nie należy do ciebie",
+    "alreadySolved": "Już otwarte",
+    "refused": "Nie udało się. Spróbuj ponownie.",
+    "sendFailed": "Nie udało się wysłać. Sprawdź połączenie.",
+    "dragItem": "Przeciągnij: {{item}}",
+    "moveUp": "Przesuń w górę: {{item}}",
+    "moveDown": "Przesuń w dół: {{item}}"
   }
 }

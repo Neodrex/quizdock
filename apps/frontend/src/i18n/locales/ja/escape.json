@@ -48,5 +48,29 @@
     "everyone": "全員",
     "imageAlt": "{{stage}}、手がかり {{index}}",
     "openDocument": "資料を開く"
+  },
+  "lock": {
+    "kind": {
+      "code": "コード",
+      "phrase": "合言葉",
+      "choice": "選択",
+      "sequence": "並べ替え",
+      "combined": "チーム錠"
+    },
+    "opened": "解錠済み",
+    "submit": "開ける",
+    "answerFor": "{{lock}}の答え",
+    "wrong": "惜しい",
+    "retryIn": "{{seconds}}秒後にもう一度",
+    "paused": "ゲームは一時停止中です",
+    "timeUp": "時間切れ",
+    "notRunning": "ゲームは進行していません",
+    "notYourPart": "このパートはあなたの担当ではありません",
+    "alreadySolved": "すでに開いています",
+    "refused": "うまくいきませんでした。もう一度お試しください。",
+    "sendFailed": "送信できませんでした。接続を確認してください。",
+    "dragItem": "{{item}}をドラッグ",
+    "moveUp": "{{item}}を上へ",
+    "moveDown": "{{item}}を下へ"
   }
 }

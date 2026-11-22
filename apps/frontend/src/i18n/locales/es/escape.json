@@ -54,5 +54,29 @@
     "everyone": "Todos",
     "imageAlt": "{{stage}}, pista {{index}}",
     "openDocument": "Abrir el documento"
+  },
+  "lock": {
+    "kind": {
+      "code": "Código",
+      "phrase": "Frase",
+      "choice": "Elección",
+      "sequence": "Secuencia",
+      "combined": "Cerradura de equipo"
+    },
+    "opened": "Abierto",
+    "submit": "Abrir",
+    "answerFor": "Respuesta para {{lock}}",
+    "wrong": "No del todo",
+    "retryIn": "Vuelve a intentarlo en {{seconds}} s",
+    "paused": "El juego está en pausa",
+    "timeUp": "Se acabó el tiempo",
+    "notRunning": "El juego no está en marcha",
+    "notYourPart": "Esta parte no te corresponde",
+    "alreadySolved": "Ya está abierto",
+    "refused": "No se ha podido. Inténtalo de nuevo.",
+    "sendFailed": "No se pudo enviar. Revisa tu conexión.",
+    "dragItem": "Arrastrar {{item}}",
+    "moveUp": "Subir {{item}}",
+    "moveDown": "Bajar {{item}}"
   }
 }

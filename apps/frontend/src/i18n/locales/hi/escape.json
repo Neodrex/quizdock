@@ -51,5 +51,29 @@
     "everyone": "सभी",
     "imageAlt": "{{stage}}, सुराग {{index}}",
     "openDocument": "दस्तावेज़ खोलें"
+  },
+  "lock": {
+    "kind": {
+      "code": "कोड",
+      "phrase": "वाक्यांश",
+      "choice": "विकल्प",
+      "sequence": "क्रम",
+      "combined": "टीम ताला"
+    },
+    "opened": "खुल गया",
+    "submit": "खोलें",
+    "answerFor": "{{lock}} का उत्तर",
+    "wrong": "पूरी तरह सही नहीं",
+    "retryIn": "{{seconds}} से. में फिर कोशिश करें",
+    "paused": "खेल रुका हुआ है",
+    "timeUp": "समय समाप्त",
+    "notRunning": "खेल चल नहीं रहा",
+    "notYourPart": "यह हिस्सा आपका नहीं है",
+    "alreadySolved": "पहले से खुला है",
+    "refused": "यह नहीं हो सका। फिर से कोशिश करें।",
+    "sendFailed": "भेजा नहीं जा सका। अपना कनेक्शन जाँचें।",
+    "dragItem": "{{item}} खींचें",
+    "moveUp": "{{item}} ऊपर ले जाएँ",
+    "moveDown": "{{item}} नीचे ले जाएँ"
   }
 }

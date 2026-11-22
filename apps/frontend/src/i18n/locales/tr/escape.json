@@ -51,5 +51,29 @@
     "everyone": "Herkes",
     "imageAlt": "{{stage}}, ipucu {{index}}",
     "openDocument": "Belgeyi aç"
+  },
+  "lock": {
+    "kind": {
+      "code": "Kod",
+      "phrase": "Söz",
+      "choice": "Seçim",
+      "sequence": "Sıralama",
+      "combined": "Takım kilidi"
+    },
+    "opened": "Açıldı",
+    "submit": "Aç",
+    "answerFor": "{{lock}} için cevap",
+    "wrong": "Tam değil",
+    "retryIn": "{{seconds}} sn sonra tekrar dene",
+    "paused": "Oyun duraklatıldı",
+    "timeUp": "Süre doldu",
+    "notRunning": "Oyun devam etmiyor",
+    "notYourPart": "Bu kısım sana ait değil",
+    "alreadySolved": "Zaten açık",
+    "refused": "Olmadı. Tekrar dene.",
+    "sendFailed": "Gönderilemedi. Bağlantını kontrol et.",
+    "dragItem": "{{item}} öğesini sürükle",
+    "moveUp": "{{item}} yukarı taşı",
+    "moveDown": "{{item}} aşağı taşı"
   }
 }
