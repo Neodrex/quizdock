@@ -154,6 +154,8 @@ export interface EscapeFormation {
 
 /** To one phone. */
 export interface EscapePlayerState {
+  /** The run's id: the key for escape:results, and how a phone sees a new game in its room. */
+  gameId: string;
   phase: EscapePhase;
   clock: EscapeClock;
   title: string;

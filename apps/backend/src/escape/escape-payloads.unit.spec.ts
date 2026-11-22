@@ -57,6 +57,7 @@ const teamA = newTeam(tpl, 'a', 'Crew A', ['p1', 'p2', 'p3']);
 const teamB = newTeam(tpl, 'b', 'Crew B', ['q1']);
 
 const view = (a: TeamState = teamA, run: EscapeRun = running): RunView => ({
+  id: 'g1',
   snap,
   run,
   teams: [rec(a), rec(teamB)],
@@ -149,6 +150,7 @@ describe('playerStateOf', () => {
 
   it('describes the team, its members and its clock', () => {
     const state = playerStateOf(view(), 'p2');
+    expect(state.gameId).toBe('g1');
     expect(state.phase).toBe('running');
     expect(state.clock).toEqual({
       serverNow: NOW,

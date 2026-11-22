@@ -7,6 +7,7 @@ import {
 } from '@quiz-dock/contracts';
 import type { Socket } from 'socket.io-client';
 import { vaultHeist } from '../../src/escape/samples';
+import { GameService } from '../../src/game/game.service';
 import { nextEvent } from '../game-harness';
 import {
   type EscapeContext,
@@ -117,10 +118,13 @@ export function lobbyTests(ctx: EscapeContext): void {
   });
 
   it('six players join and sync: each gets its state, with no team', async () => {
-    const { players, lastHost } = await room(6);
+    const { pin, players, lastHost } = await room(6);
+    const meta = await ctx.h.app.get(GameService).getMeta(pin);
     for (const p of players) {
       expect(p.last()).toMatchObject({ phase: 'forming', team: null, view: null, nextHint: null });
       expect(p.last().title).toBe('Vault Heist');
+      // The run's id: the key for escape:results, and how a phone sees a new game.
+      expect(p.last().gameId).toBe(meta!.id);
     }
     // The host's view follows the arrivals (its sync came first).
     await eventually(async () => expect(lastHost().unassigned).toHaveLength(6));

@@ -35,6 +35,8 @@ export interface RoomPlayer {
 
 /** Everything a payload is built from, read once per change. */
 export interface RunView {
+  /** The run's game id (meta.id). */
+  id: string;
   snap: EscapeSnapshot;
   run: EscapeRun;
   /** Team records in display order (run.teamIds). */
@@ -106,6 +108,7 @@ export function playerStateOf(v: RunView, playerId: string): EscapePlayerState {
     v.run.phase === 'running' && rec !== null && rec.team.escapedAt === null && !rec.timedOut;
   const hint = playing ? nextHint(tpl, rec.team) : null;
   return {
+    gameId: v.id,
     phase: v.run.phase,
     clock: clockOf(v),
     title: tpl.title,

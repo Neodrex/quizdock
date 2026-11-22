@@ -904,6 +904,7 @@ export class EscapeEngine implements OnModuleDestroy {
       sockets.filter((s) => s.data.pin === ref.pin && s.data.playerId).map((s) => s.data.playerId),
     );
     return {
+      id: ref.id,
       snap: ref.snap,
       run: ref.run,
       teams: ref.run.teamIds.flatMap((t) => recs.get(t) ?? []),
