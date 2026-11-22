@@ -313,6 +313,51 @@ export function lobbyTests(ctx: EscapeContext): void {
     expect(new Set(got.map((s) => s.view!.roles[0])).size).toBe(3);
   });
 
+  /** The roles on `p`'s own lobby card, once its team has `size` members. */
+  async function lobbyCard(p: SyncedPlayer, size: number): Promise<string[]> {
+    return eventually(async () => {
+      const s = p.last();
+      expect(s.phase).toBe('forming');
+      expect(s.team?.members).toHaveLength(size);
+      return s.team!.members.find((m) => m.playerId === p.playerId)!.roles;
+    });
+  }
+
+  /** Starts the run and checks every phone's lobby card against its dealt roles. */
+  async function expectCardsDealt(host: Socket, pin: string, cards: [SyncedPlayer, string[]][]) {
+    const running = cards.map(([p]) => stateWhere(p.socket, (s) => s.phase === 'running'));
+    await hostAfter(host, 'escape:start', { pin });
+    const got = await Promise.all(running);
+    got.forEach((s, i) => expect(s.view?.roles).toEqual(cards[i][1]));
+  }
+
+  it('the lobby role card of a self-picked team is the role dealt at start', async () => {
+    const { host, pin, players } = await room(3);
+    await hostAfter(host, 'escape:teams', { pin, mode: 'self', count: 1 });
+    for (const p of players) {
+      expect(await p.socket.emitWithAck('escape:choose-team', { pin, teamId: 't1' })).toEqual({
+        ok: true,
+      });
+    }
+    const cards: [SyncedPlayer, string[]][] = [];
+    for (const p of players) cards.push([p, await lobbyCard(p, 3)]);
+    for (const [, roles] of cards) expect(roles).toHaveLength(1);
+    await expectCardsDealt(host, pin, cards);
+  });
+
+  it('the lobby role card after a host move is the role dealt at start', async () => {
+    const { host, pin, players } = await room(4);
+    await hostAfter(host, 'escape:teams', { pin, mode: 'auto', count: 2 });
+    await hostAfter(host, 'escape:move', { pin, playerId: players[0].playerId, teamId: 't2' });
+    // t1 = [P2], t2 = [P1, P3, P0].
+    const sizes = [3, 3, 1, 3];
+    const cards: [SyncedPlayer, string[]][] = [];
+    for (const [i, p] of players.entries()) cards.push([p, await lobbyCard(p, sizes[i])]);
+    expect(cards[2][1]).toHaveLength(3);
+    for (const i of [0, 1, 3]) expect(cards[i][1]).toHaveLength(1);
+    await expectCardsDealt(host, pin, cards);
+  });
+
   it('a late joiner in auto formation lands in the smallest team at its first sync', async () => {
     const { host, pin } = await room(3);
     await hostAfter(host, 'escape:teams', { pin, mode: 'auto', count: 2 });

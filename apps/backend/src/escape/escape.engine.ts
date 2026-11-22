@@ -106,6 +106,19 @@ function sameRoles(a: Record<string, string[]>, b: Record<string, string[]>): bo
   return flat(a) === flat(b);
 }
 
+/**
+ * F4: the team's roles in `phase`. In the lobby they are dealt afresh (round
+ * robin), so a phone's role card is a live preview of what escape:start deals;
+ * once running they are sticky, so a reconnect or move keeps the others' roles.
+ */
+const dealRoles = (
+  tpl: EscapeSnapshot['template'],
+  team: TeamState,
+  live: ReadonlySet<string>,
+  phase: EscapeRun['phase'],
+): Record<string, string[]> =>
+  rolesFor(tpl, phase === 'forming' ? { ...team, roles: {} } : team, live);
+
 const membersIndex = (teams: TeamState[]): Record<string, string> =>
   Object.fromEntries(teams.flatMap((t) => t.members.map((m) => [m, t.id])));
 
@@ -310,7 +323,7 @@ export class EscapeEngine implements OnModuleDestroy {
         );
       }
       const live = this.pruneAndGetHolders(ref.id, v);
-      const recs = teams.map((t) => fresh({ ...t, roles: rolesFor(tpl, t, live) }));
+      const recs = teams.map((t) => fresh({ ...t, roles: dealRoles(tpl, t, live, 'forming') }));
       const run: EscapeRun = {
         ...ref.run,
         formation: dto.mode,
@@ -388,11 +401,8 @@ export class EscapeEngine implements OnModuleDestroy {
       }
       if (!teams.length) throw new BadRequestException('escape.no_players');
       const live = this.pruneAndGetHolders(ref.id, v);
-      // Roles are dealt afresh (round robin): lobby moves and picks one by one would
-      // otherwise leave the first member with every role and the others sharing one.
-      const recs = teams.map((t) =>
-        fresh({ ...t, roles: rolesFor(tpl, { ...t, roles: {} }, live) }),
-      );
+      // The same deal as the lobby preview, so every phone keeps its lobby role card.
+      const recs = teams.map((t) => fresh({ ...t, roles: dealRoles(tpl, t, live, 'forming') }));
       const now = Date.now();
       const run: EscapeRun = {
         ...ref.run,
@@ -980,7 +990,7 @@ export class EscapeEngine implements OnModuleDestroy {
     const changed: TeamRecord[] = [];
     const recs = v.teams.map((rec) => {
       if (teamIds && !teamIds.includes(rec.team.id)) return rec;
-      const roles = rolesFor(tpl, rec.team, live);
+      const roles = dealRoles(tpl, rec.team, live, ref.run.phase);
       if (sameRoles(roles, rec.team.roles)) return rec;
       const next = { ...rec, team: { ...rec.team, roles } };
       changed.push(next);
@@ -1010,7 +1020,8 @@ export class EscapeEngine implements OnModuleDestroy {
     const changed: TeamRecord[] = [];
     const recs = v.teams.map((rec, i) => {
       if (after[i] === before[i]) return rec;
-      const next = { ...rec, team: { ...after[i], roles: rolesFor(tpl, after[i], live) } };
+      const roles = dealRoles(tpl, after[i], live, ref.run.phase);
+      const next = { ...rec, team: { ...after[i], roles } };
       changed.push(next);
       return next;
     });
