@@ -14,6 +14,7 @@ import { runMsAt } from '../game/escape/host/host-reducer';
 import { HostResults, type ResultsCommands } from '../game/escape/host/host-results';
 import { InvitePanel } from '../game/escape/host/invite-panel';
 import { RunGrid, useTeamSelection } from '../game/escape/host/run-grid';
+import { ScreenPanel } from '../game/escape/host/screen-panel';
 import { TeamBoard } from '../game/escape/host/team-board';
 import { TeamDetailPanel } from '../game/escape/host/team-detail';
 import type { EscapeHost } from '../game/escape/host/use-escape-host';
@@ -55,11 +56,13 @@ function Header({
   outline,
   board,
   phase,
+  session,
 }: {
   pin: string;
   outline: EscapeHostOutline | null;
   board: EscapeBoard | null;
   phase: EscapePhase | null;
+  session: ReturnType<typeof useGameSession>;
 }) {
   const { t } = useTranslation('escape');
   const title = outline?.title ?? board?.title ?? t('host.console');
@@ -77,6 +80,14 @@ function Header({
       </div>
       <div className="flex flex-wrap items-center gap-3">
         {board && phase !== 'forming' ? <RunClock board={board} /> : null}
+        {/* The big screen, in every phase: opened, paired and heard from here (M6). */}
+        <ScreenPanel
+          pin={pin}
+          socket={session.socket}
+          sounds={session.view.sounds}
+          theme={session.view.theme}
+          disabled={session.view.connectionLost}
+        />
         <Link to="/escape" className={cn(buttonVariants({ variant: 'ghost' }), 'min-h-11')}>
           <DoorOpen className="size-4" aria-hidden />
           {t('host.nav')}
@@ -212,7 +223,7 @@ export function EscapeConsole({
 
   return (
     <section className={SECTION} data-escape-phase={phase ?? 'none'}>
-      <Header pin={pin} outline={outline} board={board} phase={phase} />
+      <Header pin={pin} outline={outline} board={board} phase={phase} session={session} />
       {/* Down, every action would be refused: all are off, and the view stays. The
           results disable their own commands, so the CSV (made locally) still downloads. */}
       <fieldset disabled={lost && !showResults} className="contents">

@@ -187,15 +187,38 @@ describe('EscapeConsole', () => {
     expect(await screen.findByRole('button', { name: /Lancer la partie/ })).toBeDisabled();
   });
 
-  it('no big-screen link (M6), and a way back to the escape rooms', async () => {
-    draw(running());
-    await screen.findByRole('heading', { name: 'Équipes en direct' });
-    expect(document.querySelector('a[href*="projection"]')).toBeNull();
+  it('the big screen panel in every phase, and a way back to the escape rooms', async () => {
+    const SOUNDS = { muted: false, musicMuted: false, sfxMuted: false, musicLevel: 1, sfxLevel: 1 };
+    const big = () => screen.findByRole('button', { name: /Fenêtre de projection/ });
+    const lobby = draw(forming(), { state: GameState.Lobby, sounds: SOUNDS });
+    expect(await big()).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: 'Projeter depuis un autre ordinateur' }),
+    ).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Audio du salon' })).toBeEnabled();
+    lobby.unmount();
+
+    const run = draw(running(), { sounds: SOUNDS });
+    expect(await big()).toBeEnabled();
     const page = document.querySelector<HTMLElement>('[data-escape-phase]')!;
     expect(within(page).getByRole('link', { name: 'Escape games' })).toHaveAttribute(
       'href',
       '/escape',
     );
+    run.unmount();
+
+    const ended = hostStateOf({ board: boardOf({ phase: 'finale' }) });
+    draw({ outline: outlineOf(), host: ended, board: ended.board, finale: finaleOf() });
+    expect(await big()).toBeEnabled();
+  });
+
+  it('the big screen panel is off while the connection is down', async () => {
+    draw(running(), { connectionLost: true, sounds: { muted: false } });
+    expect(await screen.findByRole('button', { name: /Fenêtre de projection/ })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Projeter depuis un autre ordinateur' }),
+    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Audio du salon' })).toBeDisabled();
   });
 
   it('a11y, each phase: every control and region is named; the laptop grid has a caption', async () => {
