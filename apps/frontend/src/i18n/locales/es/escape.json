@@ -31,5 +31,21 @@
     "paused": "La partida está en pausa",
     "resumed": "La partida continúa",
     "rolesChanged": "Tu rol ha cambiado: {{roles}}"
+  },
+  "progress": {
+    "label": "Etapa {{current}} de {{total}}"
+  },
+  "role": {
+    "title": "Tu rol",
+    "later": "Tu rol se asigna al empezar"
+  },
+  "lobby": {
+    "waitingTeams": "Esperando a que el anfitrión forme los equipos",
+    "pickTeam": "Elige tu equipo",
+    "chooseFailed": "No se pudo unir a este equipo. Inténtalo de nuevo.",
+    "full": "Completo",
+    "yourTeam": "Tu equipo",
+    "you": "(tú)",
+    "offline": "Sin conexión"
   }
 }

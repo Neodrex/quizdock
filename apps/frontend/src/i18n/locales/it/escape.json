@@ -31,5 +31,21 @@
     "paused": "La partita è in pausa",
     "resumed": "La partita riprende",
     "rolesChanged": "Il tuo ruolo è cambiato: {{roles}}"
+  },
+  "progress": {
+    "label": "Fase {{current}} di {{total}}"
+  },
+  "role": {
+    "title": "Il tuo ruolo",
+    "later": "Il tuo ruolo ti verrà assegnato all'inizio"
+  },
+  "lobby": {
+    "waitingTeams": "In attesa che l'host formi le squadre",
+    "pickTeam": "Scegli la tua squadra",
+    "chooseFailed": "Impossibile unirsi a questa squadra. Riprova.",
+    "full": "Piena",
+    "yourTeam": "La tua squadra",
+    "you": "(tu)",
+    "offline": "Non in linea"
   }
 }

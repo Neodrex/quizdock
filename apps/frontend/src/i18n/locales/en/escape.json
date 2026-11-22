@@ -28,5 +28,21 @@
     "paused": "The game is paused",
     "resumed": "The game is back on",
     "rolesChanged": "Your role changed: {{roles}}"
+  },
+  "progress": {
+    "label": "Stage {{current}} of {{total}}"
+  },
+  "role": {
+    "title": "Your role",
+    "later": "Your role is given at the start"
+  },
+  "lobby": {
+    "waitingTeams": "Waiting for the host to form teams",
+    "pickTeam": "Pick your team",
+    "chooseFailed": "Could not join this team. Try again.",
+    "full": "Full",
+    "yourTeam": "Your team",
+    "you": "(you)",
+    "offline": "Offline"
   }
 }

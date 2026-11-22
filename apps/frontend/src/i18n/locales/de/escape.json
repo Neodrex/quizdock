@@ -28,5 +28,21 @@
     "paused": "Das Spiel ist pausiert",
     "resumed": "Das Spiel geht weiter",
     "rolesChanged": "Deine Rolle hat sich geändert: {{roles}}"
+  },
+  "progress": {
+    "label": "Etappe {{current}} von {{total}}"
+  },
+  "role": {
+    "title": "Deine Rolle",
+    "later": "Deine Rolle erhältst du beim Start"
+  },
+  "lobby": {
+    "waitingTeams": "Warten, bis der Host die Teams bildet",
+    "pickTeam": "Wähle dein Team",
+    "chooseFailed": "Beitritt zu diesem Team fehlgeschlagen. Versuche es erneut.",
+    "full": "Voll",
+    "yourTeam": "Dein Team",
+    "you": "(du)",
+    "offline": "Offline"
   }
 }

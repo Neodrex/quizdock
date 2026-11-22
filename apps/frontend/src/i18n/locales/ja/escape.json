@@ -25,5 +25,21 @@
     "paused": "ゲームは一時停止中です",
     "resumed": "ゲーム再開",
     "rolesChanged": "役割が変わりました：{{roles}}"
+  },
+  "progress": {
+    "label": "ステージ {{current}} / {{total}}"
+  },
+  "role": {
+    "title": "あなたの役割",
+    "later": "役割はスタート時に配られます"
+  },
+  "lobby": {
+    "waitingTeams": "ホストがチームを作るのを待っています",
+    "pickTeam": "チームを選んでください",
+    "chooseFailed": "このチームに参加できませんでした。もう一度お試しください。",
+    "full": "満員",
+    "yourTeam": "あなたのチーム",
+    "you": "（あなた）",
+    "offline": "オフライン"
   }
 }

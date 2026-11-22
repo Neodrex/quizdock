@@ -34,5 +34,21 @@
     "paused": "Gra jest wstrzymana",
     "resumed": "Gra toczy się dalej",
     "rolesChanged": "Twoja rola się zmieniła: {{roles}}"
+  },
+  "progress": {
+    "label": "Etap {{current}} z {{total}}"
+  },
+  "role": {
+    "title": "Twoja rola",
+    "later": "Rolę otrzymasz na starcie"
+  },
+  "lobby": {
+    "waitingTeams": "Czekamy, aż prowadzący utworzy drużyny",
+    "pickTeam": "Wybierz drużynę",
+    "chooseFailed": "Nie udało się dołączyć do drużyny. Spróbuj ponownie.",
+    "full": "Pełna",
+    "yourTeam": "Twoja drużyna",
+    "you": "(ty)",
+    "offline": "Rozłączony"
   }
 }

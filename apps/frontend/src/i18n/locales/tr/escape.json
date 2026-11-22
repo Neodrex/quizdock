@@ -28,5 +28,21 @@
     "paused": "Oyun duraklatıldı",
     "resumed": "Oyun devam ediyor",
     "rolesChanged": "Rolün değişti: {{roles}}"
+  },
+  "progress": {
+    "label": "Aşama {{current}}/{{total}}"
+  },
+  "role": {
+    "title": "Rolün",
+    "later": "Rolün başlangıçta verilecek"
+  },
+  "lobby": {
+    "waitingTeams": "Sunucunun takımları kurması bekleniyor",
+    "pickTeam": "Takımını seç",
+    "chooseFailed": "Bu takıma katılınamadı. Tekrar dene.",
+    "full": "Dolu",
+    "yourTeam": "Takımın",
+    "you": "(sen)",
+    "offline": "Çevrimdışı"
   }
 }

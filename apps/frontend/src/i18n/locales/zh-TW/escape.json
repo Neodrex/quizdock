@@ -25,5 +25,21 @@
     "paused": "遊戲已暫停",
     "resumed": "遊戲繼續",
     "rolesChanged": "你的角色變了：{{roles}}"
+  },
+  "progress": {
+    "label": "第 {{current}} 關，共 {{total}} 關"
+  },
+  "role": {
+    "title": "你的角色",
+    "later": "角色將在開始時分配"
+  },
+  "lobby": {
+    "waitingTeams": "等待主持人分組",
+    "pickTeam": "選擇你的隊伍",
+    "chooseFailed": "無法加入此隊伍，請再試一次。",
+    "full": "已滿",
+    "yourTeam": "你的隊伍",
+    "you": "（你）",
+    "offline": "離線"
   }
 }
