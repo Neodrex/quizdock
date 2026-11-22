@@ -233,7 +233,6 @@ function RoomCard({
   return (
     <article
       aria-labelledby={titleId}
-      aria-disabled={launchable ? undefined : true}
       className="bg-card flex w-full flex-col gap-3 rounded-lg border p-4"
     >
       <div className={cn('flex flex-col gap-2', !launchable && 'opacity-60')}>

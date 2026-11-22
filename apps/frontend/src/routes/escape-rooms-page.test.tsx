@@ -145,10 +145,13 @@ describe('/escape', () => {
     renderApp('/escape');
     await screen.findByRole('article', { name: 'Lost Library' });
     const library = within(card('Lost Library'));
-    expect(card('Lost Library')).toHaveAttribute('aria-disabled', 'true');
     expect(library.getByText('Publiez-le d’abord')).toBeInTheDocument();
     expect(library.getByRole('button', { name: 'Créer la salle' })).toBeDisabled();
-    fireEvent.click(library.getByRole('button', { name: 'Publier' }));
+    // aria-disabled is inherited: on the card it would announce Publish as disabled too.
+    const publish = library.getByRole('button', { name: 'Publier' });
+    expect(publish).toBeEnabled();
+    expect(publish.closest('[aria-disabled="true"]')).toBeNull();
+    fireEvent.click(publish);
     await waitFor(() =>
       expect(
         within(card('Lost Library')).getByRole('button', { name: 'Créer la salle' }),
@@ -182,7 +185,7 @@ describe('/escape', () => {
     renderApp('/escape');
     await screen.findByRole('article', { name: 'Broken' });
     const row = within(card('Broken'));
-    expect(card('Broken')).toHaveAttribute('aria-disabled', 'true');
+    expect(card('Broken')).not.toHaveAttribute('aria-disabled');
     expect(
       row.getByText('Cette salle est illisible : impossible de l’ouvrir.'),
     ).toBeInTheDocument();
