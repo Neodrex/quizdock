@@ -170,6 +170,26 @@
       "create": "建立房間",
       "creating": "正在開啟…",
       "length": "時長 {{minutes}} 分鐘。遊戲中可以加時。"
+    },
+    "invite": {
+      "title": "邀請玩家",
+      "goTo": "在手機上開啟",
+      "pinLabel": "PIN {{digits}}"
+    },
+    "formation": {
+      "title": "隊伍",
+      "players": "房間內玩家：{{players}}",
+      "mode": "組隊方式",
+      "auto": "由我分隊",
+      "self": "玩家自選",
+      "count": "隊伍數量",
+      "maxSize": "每隊最多人數（選填）",
+      "names": "隊伍名稱（選填，每行一個）",
+      "rolesHint": "此房間有 {{roles}} 個角色：每隊至少安排 {{roles}} 名玩家。",
+      "sharedRoles": "每隊少於 {{roles}} 人時，部分玩家會擔任多個角色。",
+      "make": "分隊",
+      "open": "開放選隊",
+      "selfOpen": "玩家在手機上選擇自己的隊伍。"
     }
   }
 }

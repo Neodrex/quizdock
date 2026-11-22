@@ -170,6 +170,26 @@
       "create": "创建房间",
       "creating": "正在打开…",
       "length": "时长 {{minutes}} 分钟。游戏中可以加时。"
+    },
+    "invite": {
+      "title": "邀请玩家",
+      "goTo": "在手机上打开",
+      "pinLabel": "PIN {{digits}}"
+    },
+    "formation": {
+      "title": "队伍",
+      "players": "房间内玩家：{{players}}",
+      "mode": "组队方式",
+      "auto": "由我分队",
+      "self": "玩家自选",
+      "count": "队伍数量",
+      "maxSize": "每队最多人数（可选）",
+      "names": "队伍名称（可选，每行一个）",
+      "rolesHint": "此房间有 {{roles}} 个角色：每队至少安排 {{roles}} 名玩家。",
+      "sharedRoles": "每队少于 {{roles}} 人时，部分玩家会担任多个角色。",
+      "make": "分队",
+      "open": "开放选队",
+      "selfOpen": "玩家在手机上选择自己的队伍。"
     }
   }
 }

@@ -182,6 +182,26 @@
       "create": "Crear sala",
       "creating": "Abriendo…",
       "length": "Dura {{minutes}} min. Puedes añadir tiempo durante la partida."
+    },
+    "invite": {
+      "title": "Invitar a los jugadores",
+      "goTo": "En un móvil, ve a",
+      "pinLabel": "PIN {{digits}}"
+    },
+    "formation": {
+      "title": "Equipos",
+      "players": "Jugadores en la sala: {{players}}",
+      "mode": "Cómo se forman los equipos",
+      "auto": "Yo hago los equipos",
+      "self": "Eligen los jugadores",
+      "count": "Número de equipos",
+      "maxSize": "Máximo de jugadores por equipo (opcional)",
+      "names": "Nombres de los equipos (opcional, uno por línea)",
+      "rolesHint": "Esta sala tiene {{roles}} roles: procura que cada equipo tenga al menos {{roles}} jugadores.",
+      "sharedRoles": "Con menos de {{roles}} jugadores por equipo, algunos tendrán más de un rol.",
+      "make": "Formar equipos",
+      "open": "Abrir la elección de equipo",
+      "selfOpen": "Los jugadores eligen su equipo en el móvil."
     }
   }
 }

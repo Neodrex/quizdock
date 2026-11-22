@@ -182,6 +182,26 @@
       "create": "Créer la salle",
       "creating": "Ouverture…",
       "length": "Dure {{minutes}} min. Vous pourrez ajouter du temps pendant la partie."
+    },
+    "invite": {
+      "title": "Inviter les joueurs",
+      "goTo": "Sur un téléphone, allez sur",
+      "pinLabel": "PIN {{digits}}"
+    },
+    "formation": {
+      "title": "Équipes",
+      "players": "Joueurs dans la salle : {{players}}",
+      "mode": "Formation des équipes",
+      "auto": "Je fais les équipes",
+      "self": "Les joueurs choisissent",
+      "count": "Nombre d’équipes",
+      "maxSize": "Joueurs maximum par équipe (facultatif)",
+      "names": "Noms des équipes (facultatif, un par ligne)",
+      "rolesHint": "Cette salle a {{roles}} rôles : visez au moins {{roles}} joueurs par équipe.",
+      "sharedRoles": "Sous {{roles}} joueurs par équipe, certains joueurs tiennent plusieurs rôles.",
+      "make": "Former les équipes",
+      "open": "Ouvrir le choix des équipes",
+      "selfOpen": "Les joueurs choisissent leur équipe sur leur téléphone."
     }
   }
 }

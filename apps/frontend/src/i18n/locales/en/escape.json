@@ -176,6 +176,26 @@
       "create": "Create room",
       "creating": "Opening…",
       "length": "Lasts {{minutes}} min. You can add time during the game."
+    },
+    "invite": {
+      "title": "Invite the players",
+      "goTo": "On a phone, go to",
+      "pinLabel": "PIN {{digits}}"
+    },
+    "formation": {
+      "title": "Teams",
+      "players": "Players in the room: {{players}}",
+      "mode": "How teams form",
+      "auto": "I make the teams",
+      "self": "Players pick",
+      "count": "Number of teams",
+      "maxSize": "Max players per team (optional)",
+      "names": "Team names (optional, one per line)",
+      "rolesHint": "This room has {{roles}} roles: aim for at least {{roles}} players per team.",
+      "sharedRoles": "With fewer than {{roles}} players per team, some players hold more than one role.",
+      "make": "Make teams",
+      "open": "Open team choice",
+      "selfOpen": "Players pick their team on their phone."
     }
   }
 }

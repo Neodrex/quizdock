@@ -13,7 +13,7 @@ import i18n from '../../i18n';
 export const GAME = '0123456789abcdef0123456789abcdef';
 export const ME = 'p-me';
 
-const en = i18n.cloneInstance({ lng: 'en' });
+export const en = i18n.cloneInstance({ lng: 'en' });
 
 export const drawEn = (ui: ReactNode) => render(<I18nextProvider i18n={en}>{ui}</I18nextProvider>);
 

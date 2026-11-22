@@ -188,6 +188,26 @@
       "create": "Utwórz pokój",
       "creating": "Otwieranie…",
       "length": "Trwa {{minutes}} min. W trakcie gry możesz dodać czas."
+    },
+    "invite": {
+      "title": "Zaproś graczy",
+      "goTo": "Na telefonie wejdź na",
+      "pinLabel": "PIN {{digits}}"
+    },
+    "formation": {
+      "title": "Drużyny",
+      "players": "Gracze w pokoju: {{players}}",
+      "mode": "Jak powstają drużyny",
+      "auto": "Sam tworzę drużyny",
+      "self": "Gracze wybierają",
+      "count": "Liczba drużyn",
+      "maxSize": "Maks. graczy w drużynie (opcjonalnie)",
+      "names": "Nazwy drużyn (opcjonalnie, jedna na wiersz)",
+      "rolesHint": "Ten pokój ma {{roles}} ról: celuj w co najmniej {{roles}} graczy na drużynę.",
+      "sharedRoles": "Przy mniej niż {{roles}} graczach w drużynie niektórzy mają więcej niż jedną rolę.",
+      "make": "Utwórz drużyny",
+      "open": "Otwórz wybór drużyn",
+      "selfOpen": "Gracze wybierają drużynę na telefonie."
     }
   }
 }

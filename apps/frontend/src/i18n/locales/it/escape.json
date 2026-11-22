@@ -182,6 +182,26 @@
       "create": "Crea stanza",
       "creating": "Apertura…",
       "length": "Dura {{minutes}} min. Puoi aggiungere tempo durante la partita."
+    },
+    "invite": {
+      "title": "Invita i giocatori",
+      "goTo": "Da un telefono, vai su",
+      "pinLabel": "PIN {{digits}}"
+    },
+    "formation": {
+      "title": "Squadre",
+      "players": "Giocatori nella stanza: {{players}}",
+      "mode": "Come si formano le squadre",
+      "auto": "Faccio io le squadre",
+      "self": "Scelgono i giocatori",
+      "count": "Numero di squadre",
+      "maxSize": "Massimo di giocatori per squadra (facoltativo)",
+      "names": "Nomi delle squadre (facoltativo, uno per riga)",
+      "rolesHint": "Questa stanza ha {{roles}} ruoli: punta ad almeno {{roles}} giocatori per squadra.",
+      "sharedRoles": "Con meno di {{roles}} giocatori per squadra, alcuni avranno più di un ruolo.",
+      "make": "Forma le squadre",
+      "open": "Apri la scelta della squadra",
+      "selfOpen": "I giocatori scelgono la squadra sul telefono."
     }
   }
 }

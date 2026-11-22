@@ -176,6 +176,26 @@
       "create": "Raum erstellen",
       "creating": "Wird geöffnet…",
       "length": "Dauert {{minutes}} Min. Während des Spiels kannst du Zeit hinzufügen."
+    },
+    "invite": {
+      "title": "Spieler einladen",
+      "goTo": "Auf dem Handy öffnen",
+      "pinLabel": "PIN {{digits}}"
+    },
+    "formation": {
+      "title": "Teams",
+      "players": "Spieler im Raum: {{players}}",
+      "mode": "Wie Teams entstehen",
+      "auto": "Ich bilde die Teams",
+      "self": "Spieler wählen selbst",
+      "count": "Anzahl der Teams",
+      "maxSize": "Max. Spieler pro Team (optional)",
+      "names": "Teamnamen (optional, einer pro Zeile)",
+      "rolesHint": "Dieser Raum hat {{roles}} Rollen: plane mindestens {{roles}} Spieler pro Team ein.",
+      "sharedRoles": "Bei weniger als {{roles}} Spielern pro Team haben manche Spieler mehrere Rollen.",
+      "make": "Teams bilden",
+      "open": "Teamwahl öffnen",
+      "selfOpen": "Die Spieler wählen ihr Team auf dem Handy."
     }
   }
 }

@@ -176,6 +176,26 @@
       "create": "Oda oluştur",
       "creating": "Açılıyor…",
       "length": "{{minutes}} dk sürer. Oyun sırasında süre ekleyebilirsiniz."
+    },
+    "invite": {
+      "title": "Oyuncuları davet et",
+      "goTo": "Telefonda şu adrese gidin",
+      "pinLabel": "PIN {{digits}}"
+    },
+    "formation": {
+      "title": "Takımlar",
+      "players": "Odadaki oyuncular: {{players}}",
+      "mode": "Takımlar nasıl kurulur",
+      "auto": "Takımları ben kurarım",
+      "self": "Oyuncular seçer",
+      "count": "Takım sayısı",
+      "maxSize": "Takım başına en fazla oyuncu (isteğe bağlı)",
+      "names": "Takım adları (isteğe bağlı, her satıra bir tane)",
+      "rolesHint": "Bu odada {{roles}} rol var: her takımda en az {{roles}} oyuncu olmasına çalışın.",
+      "sharedRoles": "Takımda {{roles}} oyuncudan az olursa bazı oyuncular birden fazla rol üstlenir.",
+      "make": "Takımları kur",
+      "open": "Takım seçimini aç",
+      "selfOpen": "Oyuncular takımlarını telefonlarından seçer."
     }
   }
 }
