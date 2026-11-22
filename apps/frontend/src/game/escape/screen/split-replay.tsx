@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useMotionLevel } from '../../motion/level';
 import { formatClock } from '../team-timer';
-import { COLUMN_CLASS } from './screen-layout';
+import { COLUMN_CLASS, laneScaleOf, TALL_LANES_MAX } from './screen-layout';
 import {
   frameAt,
   replayMsOf,
@@ -25,6 +25,12 @@ type Ranked = EscapeScreenFinale['ranking'][number];
  * keep the team order; never a scroll (§1.8): two compact columns for 13–30 teams,
  * above that the top 12 and how many more. A new finale (pushed again) replays.
  */
+/**
+ * The widest em a replay lane fits at: 1em on a 4:3 screen, where the screen's base
+ * (2.6vmin) is 2.6vh, that is 1.95vw.
+ */
+const REPLAY_FIT_VW = 1.95;
+
 export function SplitReplay({
   finale,
   onDone,
@@ -133,7 +139,11 @@ function Race({ finale, t }: { finale: EscapeScreenFinale; t: number }) {
             ? {
                 gridTemplateRows: `repeat(${Math.ceil(lanes.length / columns)}, minmax(0, 1fr))`,
               }
-            : undefined
+            : lanes.length <= TALL_LANES_MAX
+              ? // A small race replays bigger, as the race track scales it, but its lanes
+                // have fixed columns: never wider than what fits a 4:3 projector at 1em.
+                { fontSize: `min(${laneScaleOf(lanes.length)}em, ${REPLAY_FIT_VW}vw)` }
+              : undefined
         }
       >
         {lanes.map((team) => (

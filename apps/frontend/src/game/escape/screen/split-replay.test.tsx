@@ -4,6 +4,7 @@ import type { MotionLevel } from '../../motion/level';
 import { drawEn } from '../test-fixtures';
 import { REPLAY_MS } from './replay-timeline';
 import { screenFinaleOf } from './screen-fixtures';
+import { laneScaleOf } from './screen-layout';
 import { SplitReplay } from './split-replay';
 
 const motion = vi.hoisted(() => ({ level: 'full' as MotionLevel }));
@@ -112,6 +113,17 @@ describe('SplitReplay', () => {
       't3',
       't4',
     ]);
+  });
+
+  it('a small race replays bigger, as the race track', () => {
+    const { unmount } = drawEn(<SplitReplay finale={many(2)} onDone={() => undefined} />);
+    // Scaled, but capped by the width: the lanes' columns are fixed.
+    expect(screen.getByTestId('replay-lanes').style.fontSize).toBe(
+      `min(${laneScaleOf(2)}em, 1.95vw)`,
+    );
+    unmount();
+    drawEn(<SplitReplay finale={many(4)} onDone={() => undefined} />);
+    expect(screen.getByTestId('replay-lanes').style.fontSize).toBe('');
   });
 
   it('6 to 30 teams: up to 4 compact columns of 8 rows, every team shown', () => {
