@@ -13,6 +13,7 @@ import {
   awards,
   checkAnswer,
   deadlineMs,
+  hashOrder,
   hostUnlock,
   newTeam,
   nextHint,
@@ -336,7 +337,7 @@ describe('hints', () => {
   it('a free (timed) hint costs nothing but still shows', () => {
     const t = useHint(withHints, team(), 'h1', { free: true });
     expect(t).toMatchObject({ hintsUsed: ['h1'], paidHints: [], hintPenaltyS: 0 });
-    expect(playerView(withHints, t, 'p1').hints).toEqual([{ id: 'h1', text: 'Look up' }]);
+    expect(playerView(withHints, t, 'p1', 'g1').hints).toEqual([{ id: 'h1', text: 'Look up' }]);
     expect(nextHint(withHints, t)?.id).toBe('h2');
   });
   it('a paid hint costs its penalty and is tracked as paid', () => {
@@ -450,12 +451,12 @@ describe('playerView', () => {
   };
 
   it('shows shared clues and the player role clues only', () => {
-    const v = playerView(tplClues, team(), 'p1');
+    const v = playerView(tplClues, team(), 'p1', 'g1');
     expect(v.clues.map((c) => c.id)).toEqual(['c1', 'c2']);
     expect(v.roles).toEqual(['nav']);
   });
   it('never contains an answer', () => {
-    const json = JSON.stringify(playerView(tplClues, team(), 'p1'));
+    const json = JSON.stringify(playerView(tplClues, team(), 'p1', 'g1'));
     for (const secret of ['1234', 'north', '"42"', '"answer"', '"correct"', '"order"']) {
       expect(json).not.toContain(secret);
     }
@@ -463,7 +464,7 @@ describe('playerView', () => {
   it('never contains an answer, other roles clues or unused hints, for any lock kind', () => {
     const t = useHint(tplAll, team(), 'h1');
     for (const p of ['p1', 'p2']) {
-      const json = JSON.stringify(playerView(tplAll, t, p));
+      const json = JSON.stringify(playerView(tplAll, t, p, 'g1'));
       for (const secret of [
         '1234',
         'north',
@@ -483,7 +484,7 @@ describe('playerView', () => {
     }
   });
   it('choice options in authored order', () => {
-    const v = playerView(tplAll, team(), 'p1');
+    const v = playerView(tplAll, team(), 'p1', 'g1');
     expect(v.locks.find((l) => l.id === 'pick')?.options?.map((o) => o.id)).toEqual(['o1', 'o2']);
   });
   describe('digits', () => {
@@ -497,7 +498,7 @@ describe('playerView', () => {
       ],
     });
     const lockOf = (t: EscapeTemplate, id: string) =>
-      playerView(t, newTeam(t, 'a', 'A', ['p1', 'p2']), 'p1').locks.find((l) => l.id === id)!;
+      playerView(t, newTeam(t, 'a', 'A', ['p1', 'p2']), 'p1', 'g1').locks.find((l) => l.id === id)!;
 
     it('marks a code lock whose answer is all digits', () => {
       expect(lockOf(withCode('0417'), 'pad').digits).toBe(true);
@@ -534,8 +535,10 @@ describe('playerView', () => {
         },
       ],
     });
-    const shown = (t: EscapeTemplate, teamId: string) =>
-      playerView(t, newTeam(t, teamId, teamId, ['p1']), 'p1').locks[0].items?.map((i) => i.id);
+    const shown = (t: EscapeTemplate, teamId: string, runId = 'g1') =>
+      playerView(t, newTeam(t, teamId, teamId, ['p1']), 'p1', runId).locks[0].items?.map(
+        (i) => i.id,
+      );
     const ids = ['a', 'b', 'c', 'd'];
     const teamIds = Array.from({ length: 20 }, (_, i) => `team-${i}`);
 
@@ -545,6 +548,20 @@ describe('playerView', () => {
     it('differs between teams', () => {
       const orders = new Set(teamIds.map((id) => JSON.stringify(shown(withSeq(ids), id))));
       expect(orders.size).toBeGreaterThan(1);
+    });
+    it('differs between runs for the same team slot (team ids repeat as t1..tN)', () => {
+      const runs = Array.from({ length: 20 }, (_, i) => `game-${i}`);
+      const orders = new Set(runs.map((g) => JSON.stringify(shown(withSeq(ids), 't1', g))));
+      expect(orders.size).toBeGreaterThan(1);
+    });
+    it('is deterministic within a run', () => {
+      expect(shown(withSeq(ids), 't1', 'game-7')).toEqual(shown(withSeq(ids), 't1', 'game-7'));
+    });
+    it('is seeded by run, team and lock', () => {
+      const lock = withSeq(ids).stages[0].locks[0] as SequenceLock;
+      expect(shown(withSeq(ids), 't2', 'game-3')).toEqual(
+        hashOrder(lock.items, 'game-3:t2:seq').map((i) => i.id),
+      );
     });
     it('does not depend on the authored order', () => {
       for (const id of teamIds) {
@@ -563,15 +580,15 @@ describe('playerView', () => {
     const pick = leaky.stages[0].locks[2] as ChoiceLock;
     Object.assign(pick.options[0], { isCorrect: true });
     Object.assign(leaky.stages[0].clues[0], { note: 'secret' });
-    const json = JSON.stringify(playerView(leaky, team(), 'p1'));
+    const json = JSON.stringify(playerView(leaky, team(), 'p1', 'g1'));
     expect(json).not.toContain('isCorrect');
     expect(json).not.toContain('secret');
   });
   it('a player id naming an Object.prototype member sees no roles', () => {
-    expect(playerView(tplClues, team(), 'constructor')).toMatchObject({ roles: [] });
+    expect(playerView(tplClues, team(), 'constructor', 'g1')).toMatchObject({ roles: [] });
   });
   it('combined locks show only the parts the player can enter', () => {
-    const v = playerView(tplClues, team(), 'p2');
+    const v = playerView(tplClues, team(), 'p2', 'g1');
     expect(v.locks.find((l) => l.id === 'duo')).toMatchObject({
       kind: 'combined',
       myParts: ['dec'],
@@ -579,7 +596,7 @@ describe('playerView', () => {
   });
   it('combined locks name every role with a part, never its answer', () => {
     const duo = tplClues.stages[0].locks.find((l) => l.id === 'duo') as CombinedLock;
-    const v = playerView(tplClues, team(), 'p2').locks.find((l) => l.id === 'duo');
+    const v = playerView(tplClues, team(), 'p2', 'g1').locks.find((l) => l.id === 'duo');
     expect(v?.partRoles).toEqual(duo.parts.map((p) => p.roleId));
     const json = JSON.stringify(v);
     for (const p of duo.parts) expect(json).not.toContain(`"${p.answer}"`);

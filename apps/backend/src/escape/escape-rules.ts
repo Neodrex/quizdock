@@ -315,9 +315,16 @@ export function hashOrder(
     .map(({ id, label }) => ({ id, label }));
 }
 
-/** Per-team hash order of a sequence lock's items (see hashOrder). */
-function shuffledItems(lock: SequenceLock, teamId: string): { id: string; label: string }[] {
-  return hashOrder(lock.items, teamId);
+/**
+ * Per-run, per-team hash order of a sequence lock's items (see hashOrder).
+ * Team ids repeat in every run (t1..tN), so the run id is part of the seed.
+ */
+function shuffledItems(
+  lock: SequenceLock,
+  runId: string,
+  teamId: string,
+): { id: string; label: string }[] {
+  return hashOrder(lock.items, `${runId}:${teamId}:${lock.id}`);
 }
 
 export interface PlayerLockView {
@@ -326,7 +333,7 @@ export interface PlayerLockView {
   kind: Lock['kind'];
   solved: boolean;
   options?: { id: string; label: string; image: string | null }[];
-  /** Sequence items in a stable per-team hash order (see shuffledItems). */
+  /** Sequence items in a stable per-run, per-team hash order (see shuffledItems). */
   items?: { id: string; label: string }[];
   /** Combined: every role with a part (role names are public), the ones this player may enter, and which are in. */
   partRoles?: string[];
@@ -355,9 +362,15 @@ export const playerViewMatchesContract: Same<PlayerView, EscapePlayerView> = tru
  * Everything one phone may know. This is the security boundary: no answers
  * (answer, answers, correct, order, combined part answers), no clues of roles
  * the player does not hold, no unused hints. Fields are copied one by one so
- * nothing extra in authored data can leak.
+ * nothing extra in authored data can leak. `runId`: the run's game id (seeds
+ * the sequence order).
  */
-export function playerView(tpl: EscapeTemplate, team: TeamState, playerId: string): PlayerView {
+export function playerView(
+  tpl: EscapeTemplate,
+  team: TeamState,
+  playerId: string,
+  runId: string,
+): PlayerView {
   const stage = tpl.stages[Math.min(team.stageIndex, tpl.stages.length - 1)];
   const roles = [...(own(team.roles, playerId) ?? [])];
   return {
@@ -378,7 +391,7 @@ export function playerView(tpl: EscapeTemplate, team: TeamState, playerId: strin
             options: l.options.map(({ id, label, image }) => ({ id, label, image })),
           };
         case 'sequence':
-          return { ...base, items: shuffledItems(l, team.id) };
+          return { ...base, items: shuffledItems(l, runId, team.id) };
         case 'code':
           // Says only "digits", as a real padlock does; separators are dropped when checking.
           return /^\d+$/.test(normalizeCode(l.answer)) ? { ...base, digits: true } : base;
