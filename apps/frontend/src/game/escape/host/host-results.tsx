@@ -108,10 +108,13 @@ export function HostResults({
   socket,
   stageCount,
   commands,
+  lost = false,
 }: {
   finale: EscapeFinale;
   /** The room has closed (`ended: 'final'`): read-only. */
   closed: boolean;
+  /** The connection is down: the room commands are off, the CSV (local) stays on. */
+  lost?: boolean;
   pin: string;
   socket: GameSocket | null;
   /** The template's stage count: a column per stage in the CSV. */
@@ -149,7 +152,7 @@ export function HostResults({
           {t('host.results.download')}
         </Button>
         {closed ? null : (
-          <>
+          <fieldset disabled={lost} className="contents">
             <Button
               type="button"
               variant="outline"
@@ -173,7 +176,7 @@ export function HostResults({
               <RotateCcw className="size-4" aria-hidden />
               {t('host.results.runAgain')}
             </Button>
-          </>
+          </fieldset>
         )}
       </div>
       {error ? (

@@ -170,6 +170,17 @@ describe('EscapeConsole', () => {
     expect(screen.getByRole('button', { name: 'Pause' })).toBeDisabled();
   });
 
+  it('a lost connection in the finale keeps "Download CSV" usable, the rest off', async () => {
+    const host = hostStateOf({ board: boardOf({ phase: 'finale' }) });
+    draw(
+      { outline: outlineOf(), host, board: host.board, finale: finaleOf() },
+      { connectionLost: true },
+    );
+    expect(await screen.findByRole('button', { name: 'Télécharger le CSV' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Remontrer le final' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Rejouer|Relancer/ })).toBeDisabled();
+  });
+
   it('a lost connection in the lobby disables Start and the moves', async () => {
     draw(forming(), { state: GameState.Lobby, connectionLost: true });
     expect(await screen.findByRole('button', { name: /Lancer la partie/ })).toBeDisabled();

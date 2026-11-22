@@ -120,7 +120,8 @@ export function EscapeConsole({
   const team = host?.teams.find((x) => x.id === selected) ?? null;
 
   let body: ReactNode;
-  if (phase === 'finale' && finale) {
+  const showResults = phase === 'finale' && !!finale;
+  if (showResults) {
     const stageCount =
       outline?.stages.length ?? Math.max(0, ...finale.ranking.map((r) => r.stageClearedAt.length));
     body = (
@@ -131,6 +132,7 @@ export function EscapeConsole({
         socket={socket}
         stageCount={stageCount}
         commands={results}
+        lost={lost}
       />
     );
   } else if (!outline || !host || !phase || phase === 'finale') {
@@ -211,8 +213,9 @@ export function EscapeConsole({
   return (
     <section className={SECTION} data-escape-phase={phase ?? 'none'}>
       <Header pin={pin} outline={outline} board={board} phase={phase} />
-      {/* Down, every action would be refused: all are off, and the view stays. */}
-      <fieldset disabled={lost} className="contents">
+      {/* Down, every action would be refused: all are off, and the view stays. The
+          results disable their own commands, so the CSV (made locally) still downloads. */}
+      <fieldset disabled={lost && !showResults} className="contents">
         {body}
       </fieldset>
       <ConsoleAnnouncer polite={ui.polite} />
