@@ -413,6 +413,13 @@
     "clock": {
       "finalMinutes": "Final minutes",
       "allOut": "Every team is out"
+    },
+    "replay": {
+      "title": "The race again",
+      "penalty": "Hint penalty: {{time}}",
+      "tableCaption": "Split times by stage",
+      "stage": "Stage",
+      "notCleared": "Not cleared"
     }
   }
 }

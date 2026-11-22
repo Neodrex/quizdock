@@ -425,6 +425,13 @@
     "clock": {
       "finalMinutes": "Últimos minutos",
       "allOut": "Todos los equipos han terminado"
+    },
+    "replay": {
+      "title": "La carrera, otra vez",
+      "penalty": "Penalización por pistas: {{time}}",
+      "tableCaption": "Tiempos parciales por etapa",
+      "stage": "Etapa",
+      "notCleared": "No superada"
     }
   }
 }

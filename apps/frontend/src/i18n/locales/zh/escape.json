@@ -401,6 +401,13 @@
     "clock": {
       "finalMinutes": "最后几分钟",
       "allOut": "所有队伍都已结束"
+    },
+    "replay": {
+      "title": "比赛回放",
+      "penalty": "提示罚时：{{time}}",
+      "tableCaption": "各关分段用时",
+      "stage": "关卡",
+      "notCleared": "未通关"
     }
   }
 }

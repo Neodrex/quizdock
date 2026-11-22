@@ -401,6 +401,13 @@
     "clock": {
       "finalMinutes": "残りわずか",
       "allOut": "全チームが終了しました"
+    },
+    "replay": {
+      "title": "レースのリプレイ",
+      "penalty": "ヒントのペナルティ：{{time}}",
+      "tableCaption": "ステージごとのスプリットタイム",
+      "stage": "ステージ",
+      "notCleared": "未クリア"
     }
   }
 }

@@ -425,6 +425,13 @@
     "clock": {
       "finalMinutes": "Ultimi minuti",
       "allOut": "Tutte le squadre sono uscite"
+    },
+    "replay": {
+      "title": "La gara di nuovo",
+      "penalty": "Penalità per indizi: {{time}}",
+      "tableCaption": "Tempi intermedi per fase",
+      "stage": "Fase",
+      "notCleared": "Non superata"
     }
   }
 }

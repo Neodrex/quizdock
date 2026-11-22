@@ -413,6 +413,13 @@
     "clock": {
       "finalMinutes": "आख़िरी मिनट",
       "allOut": "सभी टीमें बाहर हैं"
+    },
+    "replay": {
+      "title": "दौड़ का रीप्ले",
+      "penalty": "संकेत दंड: {{time}}",
+      "tableCaption": "चरण के अनुसार बीच के समय",
+      "stage": "चरण",
+      "notCleared": "पूरा नहीं हुआ"
     }
   }
 }

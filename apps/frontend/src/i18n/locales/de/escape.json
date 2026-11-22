@@ -413,6 +413,13 @@
     "clock": {
       "finalMinutes": "Letzte Minuten",
       "allOut": "Alle Teams sind fertig"
+    },
+    "replay": {
+      "title": "Das Rennen noch einmal",
+      "penalty": "Hinweis-Strafzeit: {{time}}",
+      "tableCaption": "Zwischenzeiten pro Etappe",
+      "stage": "Etappe",
+      "notCleared": "Nicht geschafft"
     }
   }
 }

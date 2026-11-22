@@ -437,6 +437,13 @@
     "clock": {
       "finalMinutes": "Ostatnie minuty",
       "allOut": "Wszystkie drużyny skończyły"
+    },
+    "replay": {
+      "title": "Powtórka wyścigu",
+      "penalty": "Kara za podpowiedzi: {{time}}",
+      "tableCaption": "Międzyczasy na etapach",
+      "stage": "Etap",
+      "notCleared": "Nieukończony"
     }
   }
 }

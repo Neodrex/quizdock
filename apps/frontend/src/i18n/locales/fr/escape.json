@@ -425,6 +425,13 @@
     "clock": {
       "finalMinutes": "Dernières minutes",
       "allOut": "Toutes les équipes sont sorties"
+    },
+    "replay": {
+      "title": "La course en replay",
+      "penalty": "Pénalité d’indices : {{time}}",
+      "tableCaption": "Temps intermédiaires par étape",
+      "stage": "Étape",
+      "notCleared": "Non franchie"
     }
   }
 }

@@ -413,6 +413,13 @@
     "clock": {
       "finalMinutes": "Son dakikalar",
       "allOut": "Tüm takımlar bitirdi"
+    },
+    "replay": {
+      "title": "Yarışın tekrarı",
+      "penalty": "İpucu cezası: {{time}}",
+      "tableCaption": "Aşamalara göre ara süreler",
+      "stage": "Aşama",
+      "notCleared": "Geçilmedi"
     }
   }
 }
