@@ -96,6 +96,20 @@ describe('ScreenPanel', () => {
     expect(codeField()).toHaveValue('');
   });
 
+  it('keeps the popover open on its result: the focus goes to the emptied code field', () => {
+    // In a browser, the focused submit button turns disabled with the code emptied and
+    // drops the focus: the popover closes on that focus loss, and "Paired" is never seen.
+    draw();
+    openPairing();
+    fireEvent.change(codeField(), { target: { value: '1234' } });
+    pairButton().focus();
+    fireEvent.click(pairButton());
+    expect(codeField()).toHaveFocus();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      "That screen is now the lobby's projection.",
+    );
+  });
+
   it('says when no screen shows the code', () => {
     draw({ socket: socketOf(false) as never });
     openPairing();

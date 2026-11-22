@@ -1,6 +1,6 @@
 import type { RoomSoundsPayload, ThemeValues } from '@quiz-dock/contracts';
 import { EllipsisVertical, ExternalLink, Eye, Share2 } from 'lucide-react';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ export function ScreenPanel({
   const [pairCode, setPairCode] = useState('');
   const [pairResult, setPairResult] = useState<'paired' | 'failed' | null>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);
+  const codeField = useRef<HTMLInputElement>(null);
   const screenUrl = `${window.location.origin}/session/${pin}/projection`;
 
   const openScreen = () => window.open(screenUrl, '_blank', 'noopener,noreferrer');
@@ -42,7 +43,12 @@ export function ScreenPanel({
     if (disabled || !/^\d{4}$/.test(pairCode)) return;
     socket?.emit('host:pair-screen', { pin, code: pairCode }, (res: { ok: boolean }) => {
       setPairResult(res.ok ? 'paired' : 'failed');
-      if (res.ok) setPairCode('');
+      if (res.ok) {
+        // The emptied code disables the focused submit button, and a browser then drops
+        // the focus, which closes the popover before its result is read: keep it inside.
+        codeField.current?.focus();
+        setPairCode('');
+      }
     });
   };
   // The link alone, as the quiz console sends it: it opens in one tap wherever it lands.
@@ -124,6 +130,7 @@ export function ScreenPanel({
             <div className="flex gap-2">
               <Input
                 id="escape-pair-code"
+                ref={codeField}
                 value={pairCode}
                 onChange={(e) => {
                   setPairCode(e.target.value.replace(/\D/g, '').slice(0, 4));
