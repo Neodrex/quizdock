@@ -410,8 +410,10 @@
       "more_one": "et {{count}} autre équipe",
       "more_many": "et {{count}} autres équipes",
       "more_other": "et {{count}} autres équipes",
-      "atStage": "Étape {{stage}} : {{teams}}",
-      "escapedCount": "Évadées : {{count}}"
+      "escapedCount": "Évadées : {{count}}",
+      "atStage_one": "Étape {{stage}} : {{count}} équipe",
+      "atStage_many": "Étape {{stage}} : {{count}} équipes",
+      "atStage_other": "Étape {{stage}} : {{count}} équipes"
     },
     "banner": {
       "stageCleared": "{{team}} a terminé l'étape {{stage}}",

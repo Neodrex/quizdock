@@ -206,7 +206,7 @@ function Rest({ rest }: { rest: Lane[] }) {
         .sort(([a], [b]) => b - a)
         .map(([stage, count]) => (
           <span key={stage} className="tabular-nums">
-            {t('screen.track.atStage', { stage: stage + 1, teams: count })}
+            {t('screen.track.atStage', { stage: stage + 1, count })}
           </span>
         ))}
       {escaped > 0 && (

@@ -399,8 +399,9 @@
       "timeUp": "Zeit abgelaufen",
       "more_one": "und {{count}} weiteres Team",
       "more_other": "und {{count}} weitere Teams",
-      "atStage": "Etappe {{stage}}: {{teams}}",
-      "escapedCount": "Entkommen: {{count}}"
+      "escapedCount": "Entkommen: {{count}}",
+      "atStage_one": "Etappe {{stage}}: {{count}} Team",
+      "atStage_other": "Etappe {{stage}}: {{count}} Teams"
     },
     "banner": {
       "stageCleared": "{{team}} hat Etappe {{stage}} geschafft",

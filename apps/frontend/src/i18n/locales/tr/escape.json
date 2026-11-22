@@ -399,8 +399,9 @@
       "timeUp": "Süre doldu",
       "more_one": "ve {{count}} takım daha",
       "more_other": "ve {{count}} takım daha",
-      "atStage": "Aşama {{stage}}: {{teams}}",
-      "escapedCount": "Kaçan: {{count}}"
+      "escapedCount": "Kaçan: {{count}}",
+      "atStage_one": "Aşama {{stage}}: {{count}} takım",
+      "atStage_other": "Aşama {{stage}}: {{count}} takım"
     },
     "banner": {
       "stageCleared": "{{team}} {{stage}}. aşamayı geçti",

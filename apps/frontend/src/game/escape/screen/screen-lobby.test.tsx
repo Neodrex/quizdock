@@ -110,12 +110,24 @@ describe('ScreenLobby', () => {
     expect(screen.getByText('2 players in the room')).toBeInTheDocument();
   });
 
+  it('from 13 teams, a card shows 3 names and counts the rest', () => {
+    const teams = Array.from({ length: 13 }, (_, i) =>
+      summaryOf({ id: `t${i}`, name: `Team ${i}` }),
+    );
+    draw(forming({ teams, roster: ['Ana', 'Ben', 'Cy', 'Dee'].map((n) => entry(n, 't0')) }));
+    const c = card('Team 0');
+    expect(within(c).getByText('Cy')).toBeInTheDocument();
+    expect(within(c).queryByText('Dee')).toBeNull();
+    expect(within(c).getByText('+1')).toBeInTheDocument();
+  });
+
   it.each([
     [2, 'grid-cols-2'],
     [6, 'grid-cols-3'],
     [12, 'grid-cols-4'],
     [20, 'grid-cols-5'],
     [30, 'grid-cols-6'],
+    [31, 'grid-cols-8'],
   ])('lays %i teams out without scrolling (%s)', (count, cols) => {
     const teams = Array.from({ length: count }, (_, i) =>
       summaryOf({ id: `t${i}`, name: `Team ${i}` }),

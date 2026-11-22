@@ -116,7 +116,7 @@ describe('RaceTrack', () => {
     expect(shown).toHaveLength(12);
     expect(shown.map(nameOf)).toEqual(Array.from({ length: 12 }, (_, i) => `Team ${i}`));
     expect(screen.getByText('and 30 more teams')).toBeInTheDocument();
-    expect(screen.getByText('Stage 1: 30')).toBeInTheDocument();
+    expect(screen.getByText('Stage 1: 30 teams')).toBeInTheDocument();
   });
 
   it.each([

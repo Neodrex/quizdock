@@ -388,8 +388,8 @@
       "escaped": "{{time}} で脱出",
       "timeUp": "時間切れ",
       "more_other": "ほか {{count}} チーム",
-      "atStage": "ステージ {{stage}}：{{teams}}",
-      "escapedCount": "脱出：{{count}}"
+      "escapedCount": "脱出：{{count}}",
+      "atStage_other": "ステージ {{stage}}：{{count}} チーム"
     },
     "banner": {
       "stageCleared": "{{team}} がステージ {{stage}} をクリア",

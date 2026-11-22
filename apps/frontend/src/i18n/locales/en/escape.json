@@ -399,8 +399,9 @@
       "timeUp": "Time up",
       "more_one": "and {{count}} more team",
       "more_other": "and {{count}} more teams",
-      "atStage": "Stage {{stage}}: {{teams}}",
-      "escapedCount": "Escaped: {{count}}"
+      "escapedCount": "Escaped: {{count}}",
+      "atStage_one": "Stage {{stage}}: {{count}} team",
+      "atStage_other": "Stage {{stage}}: {{count}} teams"
     },
     "banner": {
       "stageCleared": "{{team}} cleared stage {{stage}}",

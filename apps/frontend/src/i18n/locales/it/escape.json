@@ -410,8 +410,10 @@
       "more_one": "e {{count}} altra squadra",
       "more_many": "e altre {{count}} squadre",
       "more_other": "e altre {{count}} squadre",
-      "atStage": "Fase {{stage}}: {{teams}}",
-      "escapedCount": "Evase: {{count}}"
+      "escapedCount": "Evase: {{count}}",
+      "atStage_one": "Fase {{stage}}: {{count}} squadra",
+      "atStage_many": "Fase {{stage}}: {{count}} squadre",
+      "atStage_other": "Fase {{stage}}: {{count}} squadre"
     },
     "banner": {
       "stageCleared": "{{team}} ha superato la fase {{stage}}",

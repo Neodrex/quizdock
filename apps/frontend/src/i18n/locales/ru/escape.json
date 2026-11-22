@@ -421,8 +421,11 @@
       "more_few": "и ещё {{count}} команды",
       "more_many": "и ещё {{count}} команд",
       "more_other": "и ещё {{count}} команды",
-      "atStage": "Этап {{stage}}: {{teams}}",
-      "escapedCount": "Выбрались: {{count}}"
+      "escapedCount": "Выбрались: {{count}}",
+      "atStage_one": "Этап {{stage}}: {{count}} команда",
+      "atStage_few": "Этап {{stage}}: {{count}} команды",
+      "atStage_many": "Этап {{stage}}: {{count}} команд",
+      "atStage_other": "Этап {{stage}}: {{count}} команды"
     },
     "banner": {
       "stageCleared": "{{team}}: этап {{stage}} пройден",

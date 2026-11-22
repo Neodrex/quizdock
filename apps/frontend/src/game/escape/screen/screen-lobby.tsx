@@ -9,9 +9,14 @@ import { type LobbyTeam, lobbyOf } from './screen-reducer';
 
 /** Names shown per team card; the rest are counted ("+3"). */
 const NAMES_SHOWN = 8;
-/** In a crowded room the cards are small: fewer names each. */
+/**
+ * In a crowded room the cards are small: fewer names each. From 13 teams the grid has
+ * 5 to 8 columns and 3 to 6 rows, so a card is about a sixth of the screen's height:
+ * the team line, its count and 3 one-line names fit at the screen's type base without
+ * a scroll; 8 names would overflow.
+ */
 const NAMES_SHOWN_COMPACT = 3;
-/** Above this many teams the cards go compact. */
+/** From this many teams the cards go compact. */
 const COMPACT_FROM = 13;
 /** Nicknames of the players with no team, shown before counting the rest. */
 const WAITING_SHOWN = 24;

@@ -421,8 +421,11 @@
       "more_few": "i jeszcze {{count}} drużyny",
       "more_many": "i jeszcze {{count}} drużyn",
       "more_other": "i jeszcze {{count}} drużyny",
-      "atStage": "Etap {{stage}}: {{teams}}",
-      "escapedCount": "Uciekły: {{count}}"
+      "escapedCount": "Uciekły: {{count}}",
+      "atStage_one": "Etap {{stage}}: {{count}} drużyna",
+      "atStage_few": "Etap {{stage}}: {{count}} drużyny",
+      "atStage_many": "Etap {{stage}}: {{count}} drużyn",
+      "atStage_other": "Etap {{stage}}: {{count}} drużyny"
     },
     "banner": {
       "stageCleared": "{{team}} ukończyła etap {{stage}}",

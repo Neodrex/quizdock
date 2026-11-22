@@ -399,8 +399,9 @@
       "timeUp": "समय समाप्त",
       "more_one": "और {{count}} टीम",
       "more_other": "और {{count}} टीमें",
-      "atStage": "चरण {{stage}}: {{teams}}",
-      "escapedCount": "बच निकलीं: {{count}}"
+      "escapedCount": "बच निकलीं: {{count}}",
+      "atStage_one": "चरण {{stage}}: {{count}} टीम",
+      "atStage_other": "चरण {{stage}}: {{count}} टीमें"
     },
     "banner": {
       "stageCleared": "{{team}} ने चरण {{stage}} पूरा किया",

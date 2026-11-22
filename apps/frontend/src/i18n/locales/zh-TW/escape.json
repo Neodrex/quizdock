@@ -388,8 +388,8 @@
       "escaped": "用時 {{time}} 逃脫",
       "timeUp": "時間到",
       "more_other": "另有 {{count}} 支隊伍",
-      "atStage": "第 {{stage}} 關：{{teams}}",
-      "escapedCount": "已逃脫：{{count}}"
+      "escapedCount": "已逃脫：{{count}}",
+      "atStage_other": "第 {{stage}} 關：{{count}} 支隊伍"
     },
     "banner": {
       "stageCleared": "{{team}} 通過了第 {{stage}} 關",
