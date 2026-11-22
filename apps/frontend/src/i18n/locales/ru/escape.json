@@ -1,0 +1,38 @@
+{
+  "timer": {
+    "label": "Осталось времени: {{minutes}} {{seconds}}",
+    "minutes_one": "{{count}} минута",
+    "minutes_few": "{{count}} минуты",
+    "minutes_many": "{{count}} минут",
+    "minutes_other": "{{count}} минуты",
+    "seconds_one": "{{count}} секунда",
+    "seconds_few": "{{count}} секунды",
+    "seconds_many": "{{count}} секунд",
+    "seconds_other": "{{count}} секунды",
+    "paused": "Пауза"
+  },
+  "announce": {
+    "started": "Игра началась. Удачи!",
+    "lockSolved": "{{by}} открывает: {{lock}}",
+    "lockSolvedByHost": "Ведущий открыл: {{lock}}",
+    "partAccepted": "{{by}} вводит часть «{{role}}» замка {{lock}}",
+    "stageCleared": "Этап пройден! {{text}}",
+    "escaped": "Вы выбрались! {{text}}",
+    "hintFree": "Пришла бесплатная подсказка",
+    "hintPaid": "Пришла подсказка (+{{seconds}} с)",
+    "hint": "Пришла подсказка",
+    "timeChanged": "Время изменено: {{delta}}",
+    "timeUp": "Время вышло!",
+    "minutesLeft_one": "Осталась {{count}} минута",
+    "minutesLeft_few": "Осталось {{count}} минуты",
+    "minutesLeft_many": "Осталось {{count}} минут",
+    "minutesLeft_other": "Осталось {{count}} минуты",
+    "teammateWrong": "{{by}} пробует неверный ответ",
+    "wrong": "Не совсем. Попробуйте ещё раз.",
+    "rateLimited": "Слишком много попыток. Повторите через {{seconds}} с",
+    "hintTaken": "Кто-то из команды уже запросил эту подсказку",
+    "paused": "Игра на паузе",
+    "resumed": "Игра продолжается",
+    "rolesChanged": "Ваша роль изменилась: {{roles}}"
+  }
+}

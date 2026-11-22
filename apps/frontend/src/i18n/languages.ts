@@ -18,6 +18,7 @@ export const namespaces = [
   'errors',
   'validation',
   'admin',
+  'escape',
 ] as const;
 
 export const supportedLngs = [

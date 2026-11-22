@@ -1,0 +1,38 @@
+{
+  "timer": {
+    "label": "Pozostały czas: {{minutes}} {{seconds}}",
+    "minutes_one": "{{count}} minuta",
+    "minutes_few": "{{count}} minuty",
+    "minutes_many": "{{count}} minut",
+    "minutes_other": "{{count}} minuty",
+    "seconds_one": "{{count}} sekunda",
+    "seconds_few": "{{count}} sekundy",
+    "seconds_many": "{{count}} sekund",
+    "seconds_other": "{{count}} sekundy",
+    "paused": "Wstrzymano"
+  },
+  "announce": {
+    "started": "Gra się zaczęła. Powodzenia!",
+    "lockSolved": "{{by}} otwiera: {{lock}}",
+    "lockSolvedByHost": "Prowadzący otworzył: {{lock}}",
+    "partAccepted": "{{by}} wpisuje część {{role}} zamka {{lock}}",
+    "stageCleared": "Etap ukończony! {{text}}",
+    "escaped": "Uciekliście! {{text}}",
+    "hintFree": "Przyszła darmowa podpowiedź",
+    "hintPaid": "Przyszła podpowiedź (+{{seconds}} s)",
+    "hint": "Przyszła podpowiedź",
+    "timeChanged": "Zmiana czasu: {{delta}}",
+    "timeUp": "Czas minął!",
+    "minutesLeft_one": "Została {{count}} minuta",
+    "minutesLeft_few": "Zostały {{count}} minuty",
+    "minutesLeft_many": "Zostało {{count}} minut",
+    "minutesLeft_other": "Zostało {{count}} minuty",
+    "teammateWrong": "{{by}} próbuje złej odpowiedzi",
+    "wrong": "Nie do końca. Spróbuj jeszcze raz.",
+    "rateLimited": "Za dużo prób. Spróbuj za {{seconds}} s",
+    "hintTaken": "Ktoś z drużyny już poprosił o tę podpowiedź",
+    "paused": "Gra jest wstrzymana",
+    "resumed": "Gra toczy się dalej",
+    "rolesChanged": "Twoja rola się zmieniła: {{roles}}"
+  }
+}

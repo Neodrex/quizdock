@@ -1,0 +1,32 @@
+{
+  "timer": {
+    "label": "बचा समय: {{minutes}} {{seconds}}",
+    "minutes_one": "{{count}} मिनट",
+    "minutes_other": "{{count}} मिनट",
+    "seconds_one": "{{count}} सेकंड",
+    "seconds_other": "{{count}} सेकंड",
+    "paused": "रुका हुआ"
+  },
+  "announce": {
+    "started": "खेल शुरू हो गया। शुभकामनाएँ!",
+    "lockSolved": "{{by}} ने {{lock}} खोला",
+    "lockSolvedByHost": "होस्ट ने {{lock}} खोला",
+    "partAccepted": "{{by}} ने {{lock}} का {{role}} भाग डाला",
+    "stageCleared": "चरण पूरा! {{text}}",
+    "escaped": "आप बच निकले! {{text}}",
+    "hintFree": "एक मुफ़्त संकेत आया",
+    "hintPaid": "एक संकेत आया (+{{seconds}} से.)",
+    "hint": "एक संकेत आया",
+    "timeChanged": "समय बदला: {{delta}}",
+    "timeUp": "समय समाप्त!",
+    "minutesLeft_one": "{{count}} मिनट बचा है",
+    "minutesLeft_other": "{{count}} मिनट बचे हैं",
+    "teammateWrong": "{{by}} ने एक गलत उत्तर आज़माया",
+    "wrong": "बिल्कुल नहीं। फिर से कोशिश करें।",
+    "rateLimited": "बहुत ज़्यादा कोशिशें। {{seconds}} से. बाद फिर कोशिश करें",
+    "hintTaken": "किसी साथी ने यह संकेत पहले ही माँग लिया है",
+    "paused": "खेल रुका हुआ है",
+    "resumed": "खेल फिर शुरू",
+    "rolesChanged": "आपकी भूमिका बदल गई: {{roles}}"
+  }
+}

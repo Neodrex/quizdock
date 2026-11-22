@@ -1,0 +1,32 @@
+{
+  "timer": {
+    "label": "Time left: {{minutes}} {{seconds}}",
+    "minutes_one": "{{count}} minute",
+    "minutes_other": "{{count}} minutes",
+    "seconds_one": "{{count}} second",
+    "seconds_other": "{{count}} seconds",
+    "paused": "Paused"
+  },
+  "announce": {
+    "started": "The run has started. Good luck!",
+    "lockSolved": "{{by}} opened {{lock}}",
+    "lockSolvedByHost": "The host opened {{lock}}",
+    "partAccepted": "{{by}} entered the {{role}} part of {{lock}}",
+    "stageCleared": "Stage cleared! {{text}}",
+    "escaped": "You escaped! {{text}}",
+    "hintFree": "A free hint arrived",
+    "hintPaid": "A hint arrived (+{{seconds}} s)",
+    "hint": "A hint arrived",
+    "timeChanged": "Time changed: {{delta}}",
+    "timeUp": "Time's up!",
+    "minutesLeft_one": "{{count}} minute left",
+    "minutesLeft_other": "{{count}} minutes left",
+    "teammateWrong": "{{by}} tried a wrong answer",
+    "wrong": "Not quite. Try again.",
+    "rateLimited": "Too many tries. Try again in {{seconds}} s",
+    "hintTaken": "A teammate already asked for this hint",
+    "paused": "The game is paused",
+    "resumed": "The game is back on",
+    "rolesChanged": "Your role changed: {{roles}}"
+  }
+}

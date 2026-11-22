@@ -1,0 +1,29 @@
+{
+  "timer": {
+    "label": "剩余时间：{{minutes}}{{seconds}}",
+    "minutes_other": "{{count}} 分钟",
+    "seconds_other": "{{count}} 秒",
+    "paused": "已暂停"
+  },
+  "announce": {
+    "started": "游戏开始了，祝你好运！",
+    "lockSolved": "{{by}} 打开了 {{lock}}",
+    "lockSolvedByHost": "主持人打开了 {{lock}}",
+    "partAccepted": "{{by}} 输入了 {{lock}} 的 {{role}} 部分",
+    "stageCleared": "关卡通过！{{text}}",
+    "escaped": "你们逃出来了！{{text}}",
+    "hintFree": "收到一条免费提示",
+    "hintPaid": "收到一条提示（+{{seconds}} 秒）",
+    "hint": "收到一条提示",
+    "timeChanged": "时间已调整：{{delta}}",
+    "timeUp": "时间到！",
+    "minutesLeft_other": "还剩 {{count}} 分钟",
+    "teammateWrong": "{{by}} 尝试了一个错误答案",
+    "wrong": "差一点，再试一次。",
+    "rateLimited": "尝试次数过多，请 {{seconds}} 秒后再试",
+    "hintTaken": "队友已经要过这条提示了",
+    "paused": "游戏已暂停",
+    "resumed": "游戏继续",
+    "rolesChanged": "你的角色变了：{{roles}}"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "timer": {
+    "label": "Tiempo restante: {{minutes}} {{seconds}}",
+    "minutes_one": "{{count}} minuto",
+    "minutes_many": "{{count}} minutos",
+    "minutes_other": "{{count}} minutos",
+    "seconds_one": "{{count}} segundo",
+    "seconds_many": "{{count}} segundos",
+    "seconds_other": "{{count}} segundos",
+    "paused": "En pausa"
+  },
+  "announce": {
+    "started": "¡Empieza la partida! Mucha suerte.",
+    "lockSolved": "{{by}} abrió {{lock}}",
+    "lockSolvedByHost": "El anfitrión abrió {{lock}}",
+    "partAccepted": "{{by}} introdujo la parte de {{role}} de {{lock}}",
+    "stageCleared": "¡Etapa superada! {{text}}",
+    "escaped": "¡Habéis escapado! {{text}}",
+    "hintFree": "Ha llegado una pista gratis",
+    "hintPaid": "Ha llegado una pista (+{{seconds}} s)",
+    "hint": "Ha llegado una pista",
+    "timeChanged": "Tiempo cambiado: {{delta}}",
+    "timeUp": "¡Se acabó el tiempo!",
+    "minutesLeft_one": "Queda {{count}} minuto",
+    "minutesLeft_many": "Quedan {{count}} minutos",
+    "minutesLeft_other": "Quedan {{count}} minutos",
+    "teammateWrong": "{{by}} probó una respuesta incorrecta",
+    "wrong": "No exactamente. Inténtalo de nuevo.",
+    "rateLimited": "Demasiados intentos. Vuelve a intentarlo en {{seconds}} s",
+    "hintTaken": "Un compañero ya pidió esta pista",
+    "paused": "La partida está en pausa",
+    "resumed": "La partida continúa",
+    "rolesChanged": "Tu rol ha cambiado: {{roles}}"
+  }
+}

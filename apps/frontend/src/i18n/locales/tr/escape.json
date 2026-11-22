@@ -1,0 +1,32 @@
+{
+  "timer": {
+    "label": "Kalan süre: {{minutes}} {{seconds}}",
+    "minutes_one": "{{count}} dakika",
+    "minutes_other": "{{count}} dakika",
+    "seconds_one": "{{count}} saniye",
+    "seconds_other": "{{count}} saniye",
+    "paused": "Duraklatıldı"
+  },
+  "announce": {
+    "started": "Oyun başladı. Bol şans!",
+    "lockSolved": "{{by}}, {{lock}} kilidini açtı",
+    "lockSolvedByHost": "Sunucu {{lock}} kilidini açtı",
+    "partAccepted": "{{by}}, {{lock}} kilidinin {{role}} parçasını girdi",
+    "stageCleared": "Aşama geçildi! {{text}}",
+    "escaped": "Kaçtınız! {{text}}",
+    "hintFree": "Ücretsiz bir ipucu geldi",
+    "hintPaid": "Bir ipucu geldi (+{{seconds}} sn)",
+    "hint": "Bir ipucu geldi",
+    "timeChanged": "Süre değişti: {{delta}}",
+    "timeUp": "Süre doldu!",
+    "minutesLeft_one": "{{count}} dakika kaldı",
+    "minutesLeft_other": "{{count}} dakika kaldı",
+    "teammateWrong": "{{by}} yanlış bir cevap denedi",
+    "wrong": "Tam değil. Tekrar deneyin.",
+    "rateLimited": "Çok fazla deneme. {{seconds}} sn sonra tekrar deneyin",
+    "hintTaken": "Bir takım arkadaşı bu ipucunu zaten istedi",
+    "paused": "Oyun duraklatıldı",
+    "resumed": "Oyun devam ediyor",
+    "rolesChanged": "Rolün değişti: {{roles}}"
+  }
+}

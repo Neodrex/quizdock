@@ -1,0 +1,35 @@
+{
+  "timer": {
+    "label": "Tempo rimasto: {{minutes}} {{seconds}}",
+    "minutes_one": "{{count}} minuto",
+    "minutes_many": "{{count}} minuti",
+    "minutes_other": "{{count}} minuti",
+    "seconds_one": "{{count}} secondo",
+    "seconds_many": "{{count}} secondi",
+    "seconds_other": "{{count}} secondi",
+    "paused": "In pausa"
+  },
+  "announce": {
+    "started": "La partita è iniziata. Buona fortuna!",
+    "lockSolved": "{{by}} ha aperto {{lock}}",
+    "lockSolvedByHost": "L’organizzatore ha aperto {{lock}}",
+    "partAccepted": "{{by}} ha inserito la parte {{role}} di {{lock}}",
+    "stageCleared": "Fase superata! {{text}}",
+    "escaped": "Siete fuggiti! {{text}}",
+    "hintFree": "È arrivato un indizio gratuito",
+    "hintPaid": "È arrivato un indizio (+{{seconds}} s)",
+    "hint": "È arrivato un indizio",
+    "timeChanged": "Tempo modificato: {{delta}}",
+    "timeUp": "Tempo scaduto!",
+    "minutesLeft_one": "Manca {{count}} minuto",
+    "minutesLeft_many": "Mancano {{count}} minuti",
+    "minutesLeft_other": "Mancano {{count}} minuti",
+    "teammateWrong": "{{by}} ha provato una risposta sbagliata",
+    "wrong": "Non proprio. Riprova.",
+    "rateLimited": "Troppi tentativi. Riprova tra {{seconds}} s",
+    "hintTaken": "Un compagno ha già chiesto questo indizio",
+    "paused": "La partita è in pausa",
+    "resumed": "La partita riprende",
+    "rolesChanged": "Il tuo ruolo è cambiato: {{roles}}"
+  }
+}

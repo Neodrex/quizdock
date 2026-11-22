@@ -1,0 +1,35 @@
+{
+  "timer": {
+    "label": "Temps restant : {{minutes}} {{seconds}}",
+    "minutes_one": "{{count}} minute",
+    "minutes_many": "{{count}} minutes",
+    "minutes_other": "{{count}} minutes",
+    "seconds_one": "{{count}} seconde",
+    "seconds_many": "{{count}} secondes",
+    "seconds_other": "{{count}} secondes",
+    "paused": "En pause"
+  },
+  "announce": {
+    "started": "La partie commence. Bonne chance !",
+    "lockSolved": "{{by}} a ouvert {{lock}}",
+    "lockSolvedByHost": "L’animateur a ouvert {{lock}}",
+    "partAccepted": "{{by}} a saisi la part {{role}} de {{lock}}",
+    "stageCleared": "Étape réussie ! {{text}}",
+    "escaped": "Vous êtes sortis ! {{text}}",
+    "hintFree": "Un indice gratuit est arrivé",
+    "hintPaid": "Un indice est arrivé (+{{seconds}} s)",
+    "hint": "Un indice est arrivé",
+    "timeChanged": "Temps modifié : {{delta}}",
+    "timeUp": "Temps écoulé !",
+    "minutesLeft_one": "Plus que {{count}} minute",
+    "minutesLeft_many": "Plus que {{count}} minutes",
+    "minutesLeft_other": "Plus que {{count}} minutes",
+    "teammateWrong": "{{by}} a tenté une mauvaise réponse",
+    "wrong": "Pas tout à fait. Réessayez.",
+    "rateLimited": "Trop d’essais. Réessayez dans {{seconds}} s",
+    "hintTaken": "Un coéquipier a déjà demandé cet indice",
+    "paused": "La partie est en pause",
+    "resumed": "La partie reprend",
+    "rolesChanged": "Votre rôle a changé : {{roles}}"
+  }
+}

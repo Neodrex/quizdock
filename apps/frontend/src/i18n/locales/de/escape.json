@@ -1,0 +1,32 @@
+{
+  "timer": {
+    "label": "Verbleibende Zeit: {{minutes}} {{seconds}}",
+    "minutes_one": "{{count}} Minute",
+    "minutes_other": "{{count}} Minuten",
+    "seconds_one": "{{count}} Sekunde",
+    "seconds_other": "{{count}} Sekunden",
+    "paused": "Pausiert"
+  },
+  "announce": {
+    "started": "Das Spiel beginnt. Viel Glück!",
+    "lockSolved": "{{by}} hat {{lock}} geöffnet",
+    "lockSolvedByHost": "Die Spielleitung hat {{lock}} geöffnet",
+    "partAccepted": "{{by}} hat den Teil {{role}} von {{lock}} eingegeben",
+    "stageCleared": "Etappe geschafft! {{text}}",
+    "escaped": "Ihr seid entkommen! {{text}}",
+    "hintFree": "Ein kostenloser Hinweis ist da",
+    "hintPaid": "Ein Hinweis ist da (+{{seconds}} s)",
+    "hint": "Ein Hinweis ist da",
+    "timeChanged": "Zeit geändert: {{delta}}",
+    "timeUp": "Die Zeit ist um!",
+    "minutesLeft_one": "Noch {{count}} Minute",
+    "minutesLeft_other": "Noch {{count}} Minuten",
+    "teammateWrong": "{{by}} hat eine falsche Antwort versucht",
+    "wrong": "Nicht ganz. Versucht es noch einmal.",
+    "rateLimited": "Zu viele Versuche. Erneut in {{seconds}} s",
+    "hintTaken": "Ein Teammitglied hat diesen Hinweis schon angefordert",
+    "paused": "Das Spiel ist pausiert",
+    "resumed": "Das Spiel geht weiter",
+    "rolesChanged": "Deine Rolle hat sich geändert: {{roles}}"
+  }
+}

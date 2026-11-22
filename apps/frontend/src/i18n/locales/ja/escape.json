@@ -1,0 +1,29 @@
+{
+  "timer": {
+    "label": "残り時間：{{minutes}}{{seconds}}",
+    "minutes_other": "{{count}}分",
+    "seconds_other": "{{count}}秒",
+    "paused": "一時停止中"
+  },
+  "announce": {
+    "started": "ゲーム開始！幸運を祈ります。",
+    "lockSolved": "{{by}}さんが{{lock}}を開けました",
+    "lockSolvedByHost": "ホストが{{lock}}を開けました",
+    "partAccepted": "{{by}}さんが{{lock}}の{{role}}のパートを入力しました",
+    "stageCleared": "ステージクリア！{{text}}",
+    "escaped": "脱出成功！{{text}}",
+    "hintFree": "無料のヒントが届きました",
+    "hintPaid": "ヒントが届きました（+{{seconds}}秒）",
+    "hint": "ヒントが届きました",
+    "timeChanged": "時間が変更されました：{{delta}}",
+    "timeUp": "時間切れ！",
+    "minutesLeft_other": "残り{{count}}分",
+    "teammateWrong": "{{by}}さんが間違った答えを試しました",
+    "wrong": "惜しい！もう一度どうぞ。",
+    "rateLimited": "試行回数が多すぎます。{{seconds}}秒後にもう一度どうぞ",
+    "hintTaken": "チームメイトがすでにこのヒントを求めました",
+    "paused": "ゲームは一時停止中です",
+    "resumed": "ゲーム再開",
+    "rolesChanged": "役割が変わりました：{{roles}}"
+  }
+}
