@@ -426,6 +426,7 @@
       "escapedIn": "{{time}} में बाहर निकले",
       "penalty": "+{{time}} दंड",
       "thanks": "खेलने के लिए धन्यवाद",
+      "timeUp": "समय समाप्त",
       "award": {
         "fastest": "सबसे तेज़: {{team}}",
         "fewestHints": "सबसे कम संकेत: {{team}}",

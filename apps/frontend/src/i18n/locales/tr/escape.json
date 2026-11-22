@@ -426,6 +426,7 @@
       "escapedIn": "{{time}} sürede kaçtı",
       "penalty": "+{{time}} ceza",
       "thanks": "Oynadığınız için teşekkürler",
+      "timeUp": "Süre doldu",
       "award": {
         "fastest": "En hızlı: {{team}}",
         "fewestHints": "En az ipucu: {{team}}",

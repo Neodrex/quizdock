@@ -414,6 +414,7 @@
       "escapedIn": "{{time}}で脱出",
       "penalty": "ペナルティ +{{time}}",
       "thanks": "ご参加ありがとうございました",
+      "timeUp": "時間切れ",
       "award": {
         "fastest": "最速：{{team}}",
         "fewestHints": "ヒント最少：{{team}}",

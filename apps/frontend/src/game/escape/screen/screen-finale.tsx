@@ -62,6 +62,8 @@ export function ScreenFinale({
 }) {
   const { t } = useTranslation('escape');
   const replaying = replay !== 'done';
+  // The template's closing text tells of an escape: when nobody escaped, a neutral line.
+  const outro = finale.ranking.some((r) => r.escaped) ? finale.finale : t('screen.finale.timeUp');
   return (
     <section
       data-testid="screen-finale"
@@ -75,14 +77,14 @@ export function ScreenFinale({
         {/* Closed: the thanks take the closing text's line, so the results still fit. */}
         {closed && !replaying ? (
           <p className="text-[1.4em] font-bold">{t('screen.finale.thanks')}</p>
-        ) : finale.finale ? (
+        ) : outro ? (
           <p
             className={cn(
               'max-w-[40em] font-medium whitespace-pre-line',
               replaying ? 'line-clamp-3 text-[1.4em]' : 'line-clamp-1 text-[1.1em]',
             )}
           >
-            {finale.finale}
+            {outro}
           </p>
         ) : null}
       </header>

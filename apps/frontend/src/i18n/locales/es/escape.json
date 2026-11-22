@@ -438,6 +438,7 @@
       "escapedIn": "Escaparon en {{time}}",
       "penalty": "+{{time}} de penalización",
       "thanks": "Gracias por jugar",
+      "timeUp": "Se acabó el tiempo",
       "award": {
         "fastest": "Los más rápidos: {{team}}",
         "fewestHints": "Menos pistas: {{team}}",

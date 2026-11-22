@@ -450,6 +450,7 @@
       "escapedIn": "Выбрались за {{time}}",
       "penalty": "+{{time}} штрафа",
       "thanks": "Спасибо за игру",
+      "timeUp": "Время вышло",
       "award": {
         "fastest": "Самые быстрые: {{team}}",
         "fewestHints": "Меньше всего подсказок: {{team}}",

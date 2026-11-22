@@ -414,6 +414,7 @@
       "escapedIn": "用時 {{time}} 逃脫",
       "penalty": "罰時 +{{time}}",
       "thanks": "感謝參與",
+      "timeUp": "時間到",
       "award": {
         "fastest": "最快：{{team}}",
         "fewestHints": "提示最少：{{team}}",

@@ -72,6 +72,19 @@ describe('ScreenFinale', () => {
     expect(steps.map((s) => s.dataset.place)).toEqual(['1', '2', '3']);
   });
 
+  it("nobody escaped: a neutral time's-up line, not the template's escape text", () => {
+    const none = screenFinaleOf({
+      ranking: base.ranking.map((r) => ({ ...r, escaped: false, timedOut: true, scoreMs: null })),
+    });
+    const { unmount } = draw(none, 'pending');
+    expect(screen.queryByText('The vault is open.')).toBeNull();
+    expect(screen.getByText("Time's up")).toBeInTheDocument();
+    unmount();
+    draw(none);
+    expect(screen.queryByText('The vault is open.')).toBeNull();
+    expect(screen.getByText("Time's up")).toBeInTheDocument();
+  });
+
   it('two teams: #1 comes first in the page (read first), drawn on the right', () => {
     draw(screenFinaleOf());
     const steps = within(screen.getByTestId('podium')).getAllByTestId('podium-step');

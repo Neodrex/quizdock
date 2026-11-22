@@ -426,6 +426,7 @@
       "escapedIn": "Escaped in {{time}}",
       "penalty": "+{{time}} penalty",
       "thanks": "Thanks for playing",
+      "timeUp": "Time's up",
       "award": {
         "fastest": "Fastest: {{team}}",
         "fewestHints": "Fewest hints: {{team}}",

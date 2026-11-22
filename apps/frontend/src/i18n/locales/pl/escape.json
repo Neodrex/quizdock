@@ -450,6 +450,7 @@
       "escapedIn": "Ucieczka w {{time}}",
       "penalty": "+{{time}} kary",
       "thanks": "Dziękujemy za grę",
+      "timeUp": "Koniec czasu",
       "award": {
         "fastest": "Najszybsi: {{team}}",
         "fewestHints": "Najmniej podpowiedzi: {{team}}",
