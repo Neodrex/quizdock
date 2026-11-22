@@ -97,7 +97,7 @@ describe('ShowClock', () => {
   ] as const)('motion %s pulses once a second in the final minutes: %s', (level, pulse) => {
     motion.level = level;
     drawEn(<ShowClock board={running(4 * MIN)} now={NOW} />);
-    expect(digits().className.includes('animate-[pulse_1s')).toBe(pulse);
+    expect(digits().dataset.pulse === 'scale').toBe(pulse);
   });
 
   it('shows whole seconds only over the last 10 s', () => {

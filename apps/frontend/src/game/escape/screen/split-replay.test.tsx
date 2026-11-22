@@ -155,4 +155,13 @@ describe('SplitReplay', () => {
     expect(penalty.className).not.toContain('text-destructive');
     expect(penalty.querySelector('svg')?.getAttribute('class')).toContain('text-destructive');
   });
+
+  it('dense lanes (3–4 columns) keep the penalty in sight', () => {
+    drawEn(<SplitReplay finale={many(30)} onDone={() => undefined} />);
+    act(() => void vi.advanceTimersByTime(REPLAY_MS + 100));
+    expect(screen.getByTestId('replay-lanes')).toHaveAttribute('data-columns', '4');
+    const penalty = screen.getAllByTestId('replay-penalty')[0];
+    const seen = within(penalty).getByText('+1:00');
+    expect(seen.closest('.sr-only')).toBeNull();
+  });
 });

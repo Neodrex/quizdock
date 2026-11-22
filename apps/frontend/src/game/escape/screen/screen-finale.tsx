@@ -1,6 +1,7 @@
 import type { EscapeScreenFinale } from '@quiz-dock/contracts';
 import { AlarmClockPlus, Award, CircleCheck, Hourglass, Lightbulb, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from '@/lib/use-media-query';
 import { cn } from '@/lib/utils';
 import { formatClock } from '../team-timer';
 import type { EscapeScreenUi } from './screen-reducer';
@@ -10,12 +11,33 @@ type Ranked = EscapeScreenFinale['ranking'][number];
 type Awards = EscapeScreenFinale['awards'];
 const AWARDS: (keyof Awards)[] = ['fastest', 'fewestHints', 'teamwork', 'photoFinish'];
 /**
- * Teams listed under the podium, in two columns of two rows; past that, a count. The
- * results hold about 32 em of height (screen-layout.ts): the title and one line under
- * it (5.4 em), the podium (13.8 em), the awards on up to two rows (4.4 em) and the
- * gaps leave room for two rows of 2.6 em. Nothing scrolls on a TV.
+ * The results hold about 32.5 em of height (screen-layout.ts), 26.25 em under the
+ * title and its one line. With up to 4 other teams: the podium in a row (13.8 em),
+ * those teams under it in two columns, the awards at the bottom. With more: a compact
+ * podium and the awards in a column on the left (25.75 em), and the others on the
+ * right in columns of FINALE_ROWS one-line rows (1.84 em each). Two columns fit 16:9
+ * and 16:10; under 3:2 one does. Only past that, a count: nothing scrolls on a TV.
  */
-const LISTED = 4;
+export const UNDER_PODIUM_MAX = 4;
+export const FINALE_ROWS = 14;
+const NARROW = '(max-aspect-ratio: 3/2)';
+
+export interface FinaleList {
+  /** The podium and the awards beside the list, not above and under it. */
+  side: boolean;
+  columns: 1 | 2;
+  /** Teams after the podium shown in the list; `more` are counted. */
+  listed: number;
+  more: number;
+}
+
+export function finaleListOf(teams: number, narrow: boolean): FinaleList {
+  const others = Math.max(0, teams - 3);
+  if (others <= UNDER_PODIUM_MAX) return { side: false, columns: 2, listed: others, more: 0 };
+  const columns = narrow ? 1 : 2;
+  const listed = Math.min(others, FINALE_ROWS * columns);
+  return { side: true, columns, listed, more: others - listed };
+}
 
 /**
  * The big screen's finale (M6 Task 6.13), in order: the template's closing text, the
@@ -75,33 +97,70 @@ export function ScreenFinale({
 
 function Results({ finale }: { finale: EscapeScreenFinale }) {
   const { t } = useTranslation('escape');
+  const narrow = useMediaQuery(NARROW);
+  const layout = finaleListOf(finale.ranking.length, narrow);
   const podium = finale.ranking.slice(0, 3);
-  const listed = finale.ranking.slice(3, 3 + LISTED);
-  const more = finale.ranking.length - 3 - listed.length;
-  return (
-    <div className="flex min-h-0 w-full flex-1 flex-col gap-[0.8em]">
+  const listed = finale.ranking.slice(3, 3 + layout.listed);
+  const rows = Math.max(1, Math.ceil(listed.length / layout.columns));
+  const podiumList = (
+    <>
       <h2 className="sr-only">{t('screen.finale.podium')}</h2>
-      <ol data-testid="podium" className="flex shrink-0 items-end justify-center gap-[1em]">
+      <ol
+        data-testid="podium"
+        data-layout={layout.side ? 'column' : 'row'}
+        className={cn(
+          'flex shrink-0 gap-[1em]',
+          layout.side ? 'flex-col gap-[0.3em]' : 'items-end justify-center',
+        )}
+      >
         {podium.map((r, i) => (
-          <PodiumStep key={r.teamId} team={r} index={i} />
+          <PodiumStep key={r.teamId} team={r} index={i} compact={layout.side} />
         ))}
       </ol>
-      {listed.length > 0 && (
-        <>
-          <h2 className="sr-only">{t('finale.ranking')}</h2>
-          <ol
-            data-testid="ranked-list"
-            className="grid min-h-0 grid-cols-2 gap-x-[1em] gap-y-[0.3em]"
-          >
-            {listed.map((r) => (
-              <RankedRow key={r.teamId} team={r} />
-            ))}
-          </ol>
-        </>
-      )}
-      {more > 0 && (
-        <p className="text-[1.1em] font-semibold">{t('screen.track.more', { count: more })}</p>
-      )}
+    </>
+  );
+  const ranked = listed.length > 0 && (
+    <>
+      <h2 className="sr-only">{t('finale.ranking')}</h2>
+      {/* Down each column, then across: as the race and the replay. */}
+      <ol
+        data-testid="ranked-list"
+        data-columns={layout.columns}
+        className={cn(
+          'grid min-h-0 grid-flow-col content-start gap-x-[1em] gap-y-[0.1em]',
+          layout.columns === 2 ? 'grid-cols-2' : 'grid-cols-1',
+        )}
+        style={{ gridTemplateRows: `repeat(${rows}, auto)` }}
+      >
+        {listed.map((r) => (
+          <RankedRow key={r.teamId} team={r} />
+        ))}
+      </ol>
+    </>
+  );
+  const more = layout.more > 0 && (
+    <p className="shrink-0 text-[1.1em] font-semibold">
+      {t('screen.track.more', { count: layout.more })}
+    </p>
+  );
+  if (layout.side)
+    return (
+      <div className="flex min-h-0 w-full flex-1 gap-[1em]">
+        <div className="flex w-[14em] shrink-0 flex-col gap-[0.6em]">
+          {podiumList}
+          <AwardsList finale={finale} column />
+        </div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-[0.3em]">
+          {ranked}
+          {more}
+        </div>
+      </div>
+    );
+  return (
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-[0.8em]">
+      {podiumList}
+      {ranked}
+      {more}
       <AwardsList finale={finale} />
     </div>
   );
@@ -129,14 +188,19 @@ function Outcome({ team, short = false }: { team: Ranked; short?: boolean }) {
   return (
     <span
       className={cn(
-        'flex items-center gap-x-[0.8em] gap-y-[0.1em] font-semibold tabular-nums',
+        'flex items-center gap-x-[0.5em] gap-y-[0.1em] font-semibold tabular-nums',
         short ? 'shrink-0 flex-nowrap' : 'flex-wrap justify-center',
       )}
     >
       {team.escaped ? (
         <span className="flex items-center gap-[0.2em]">
           <CircleCheck aria-hidden className="size-[1em]" />
-          {said(t('screen.finale.escapedIn', { time: escapedTime }), escapedTime)}
+          {short ? (
+            // The score beside it is the time: the words for screen readers.
+            <span className="sr-only">{t('screen.finale.escapedIn', { time: escapedTime })}</span>
+          ) : (
+            t('screen.finale.escapedIn', { time: escapedTime })
+          )}
         </span>
       ) : (
         <span className="flex items-center gap-[0.2em]">
@@ -159,20 +223,63 @@ function Outcome({ team, short = false }: { team: Ranked; short?: boolean }) {
   );
 }
 
-function Place({ place }: { place: number }) {
+function Place({ place, small = false }: { place: number; small?: boolean }) {
   const { t } = useTranslation('escape');
   return (
-    <span className="bg-primary text-primary-foreground flex min-w-[2.4em] shrink-0 justify-center rounded-full px-[0.3em] text-[1.2em] font-bold tabular-nums">
+    <span
+      className={cn(
+        'bg-primary text-primary-foreground flex min-w-[2.4em] shrink-0 justify-center rounded-full px-[0.3em] font-bold tabular-nums',
+        small ? 'text-[1em] leading-[1.4]' : 'text-[1.2em]',
+      )}
+    >
       <span className="sr-only">{t('screen.track.placeLabel', { place })}</span>
       <span aria-hidden="true">{t('screen.track.place', { place })}</span>
     </span>
   );
 }
 
-function PodiumStep({ team, index }: { team: Ranked; index: number }) {
+function PodiumStep({
+  team,
+  index,
+  compact,
+}: {
+  team: Ranked;
+  index: number;
+  /** Beside a long list: one card per line, place, name and score on the first. */
+  compact: boolean;
+}) {
   // Visually 2 · 1 · 3, with the winner raised; read in place order.
   // By position on the podium, not by place: tied places (1, 1, 3) keep a spot each.
   const order = ['order-2', 'order-1', 'order-3'][index] ?? 'order-3';
+  if (compact)
+    return (
+      <li
+        data-testid="podium-step"
+        data-place={team.place}
+        className={cn(
+          'bg-card text-card-foreground flex min-w-0 flex-col gap-[0.15em] rounded-[0.6em] border-[0.1em] p-[0.3em]',
+          team.place === 1 && 'border-primary',
+        )}
+      >
+        <span className="flex min-w-0 items-center gap-[0.4em]">
+          <Place place={team.place} small />
+          <span className="min-w-0 flex-1 truncate text-[1.4em] leading-tight font-bold">
+            {team.name}
+          </span>
+          {team.scoreMs !== null && (
+            <span className="shrink-0 font-mono text-[1.4em] leading-tight font-bold tabular-nums">
+              {formatClock(team.scoreMs)}
+            </span>
+          )}
+        </span>
+        <Outcome team={team} short />
+        {team.members.length > 0 && (
+          <span data-testid="members" className="truncate text-[1em] font-medium">
+            {team.members.join(', ')}
+          </span>
+        )}
+      </li>
+    );
   return (
     <li
       data-testid="podium-step"
@@ -205,12 +312,15 @@ function RankedRow({ team }: { team: Ranked }) {
   return (
     <li
       data-testid="ranked-row"
-      className="bg-card text-card-foreground flex min-w-0 items-center gap-[0.8em] rounded-[0.5em] border-[0.1em] px-[0.6em] py-[0.2em]"
+      // One line of 1.84 em with its gap (FINALE_ROWS): no padding, tight leading.
+      className="bg-card text-card-foreground flex min-w-0 items-center gap-[0.5em] rounded-[0.5em] border-[0.1em] px-[0.4em]"
     >
-      <Place place={team.place} />
-      <span className="w-[7em] min-w-0 shrink truncate text-[1.2em] font-bold">{team.name}</span>
+      <Place place={team.place} small />
+      <span className="w-[4.5em] min-w-0 shrink truncate text-[1.4em] leading-[1.1] font-bold">
+        {team.name}
+      </span>
       {team.scoreMs !== null && (
-        <span className="shrink-0 font-mono text-[1.1em] font-bold tabular-nums">
+        <span className="shrink-0 font-mono text-[1.1em] leading-tight font-bold tabular-nums">
           {formatClock(team.scoreMs)}
         </span>
       )}
@@ -229,7 +339,7 @@ function gapSeconds(gapMs: number, lng: string): string {
   return new Intl.NumberFormat(lng, { maximumFractionDigits: tenths ? 1 : 0 }).format(value);
 }
 
-function AwardsList({ finale }: { finale: EscapeScreenFinale }) {
+function AwardsList({ finale, column = false }: { finale: EscapeScreenFinale; column?: boolean }) {
   const { t, i18n } = useTranslation('escape');
   const byId = new Map(finale.ranking.map((r) => [r.teamId, r]));
   const name = (id: string) => byId.get(id)?.name ?? '';
@@ -258,17 +368,24 @@ function AwardsList({ finale }: { finale: EscapeScreenFinale }) {
   });
   if (!items.length) return null;
   return (
-    <div className="flex shrink-0 flex-col items-center gap-[0.3em]">
+    <div className={cn('flex shrink-0 flex-col gap-[0.3em]', !column && 'items-center')}>
       <h2 className="sr-only">{t('finale.awards')}</h2>
-      <ul className="flex flex-wrap justify-center gap-[0.6em]">
+      {/* In the left column: one line each, cut with an ellipsis (the full text is read). */}
+      <ul
+        className={cn(
+          'flex gap-[0.3em]',
+          column ? 'flex-col' : 'flex-wrap justify-center gap-[0.6em]',
+        )}
+      >
         {items.map(({ key, text }) => (
           <li
             key={key}
             data-award={key}
-            className="bg-card text-card-foreground flex items-center gap-[0.3em] rounded-full border-[0.1em] px-[0.8em] py-[0.2em] text-[1em] font-semibold"
+            title={column ? text : undefined}
+            className="bg-card text-card-foreground flex min-w-0 items-center gap-[0.3em] rounded-full border-[0.1em] px-[0.8em] py-[0.2em] text-[1em] font-semibold"
           >
-            <Award aria-hidden className="text-primary size-[1em]" />
-            {text}
+            <Award aria-hidden className="text-primary size-[1em] shrink-0" />
+            <span className={cn(column && 'truncate')}>{text}</span>
           </li>
         ))}
       </ul>

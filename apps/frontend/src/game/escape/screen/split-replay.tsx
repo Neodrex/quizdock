@@ -121,6 +121,7 @@ function Race({ finale, t }: { finale: EscapeScreenFinale; t: number }) {
       <ol
         data-testid="replay-lanes"
         data-columns={columns}
+        data-flow={compact ? 'column' : undefined}
         className={cn(
           'min-h-0 flex-1 gap-[0.4em]',
           compact
@@ -229,7 +230,10 @@ function ReplayLane({
           </span>
         ) : (
           <>
-            {team.finished && <CircleCheck aria-hidden className="size-[1.1em] shrink-0" />}
+            {/* Dense: the check goes, the penalty stays in sight (the time says finished). */}
+            {team.finished && !dense && (
+              <CircleCheck aria-hidden className="size-[1.1em] shrink-0" />
+            )}
             {team.finished && team.penaltyS > 0 && (
               // The words in the card's own colour (contrast); the red is the icon's.
               <span
@@ -240,7 +244,7 @@ function ReplayLane({
                 <span className="sr-only">
                   {t('screen.replay.penalty', { time: formatClock(team.penaltyS * 1000) })}
                 </span>
-                {!dense && <span aria-hidden="true">+{formatClock(team.penaltyS * 1000)}</span>}
+                <span aria-hidden="true">+{formatClock(team.penaltyS * 1000)}</span>
               </span>
             )}
             <span className="font-mono">{formatClock(team.timeMs)}</span>
@@ -288,22 +292,20 @@ function SplitTable({
 }) {
   const { t } = useTranslation('escape');
   const rows = splitTableOf(finale, teams);
+  const cell = compact ? 'text-[0.9em]' : 'text-[1.1em]';
   return (
     <table
       data-testid="split-table"
       aria-labelledby="split-table-title"
-      className={cn(
-        'min-w-0 flex-1 table-fixed tabular-nums',
-        compact ? 'text-[0.9em]' : 'text-[1.1em]',
-      )}
+      className="min-w-0 flex-1 table-fixed tabular-nums"
     >
       <thead>
         <tr>
-          <th scope="col" className="w-[30%] truncate text-left font-semibold">
+          <th scope="col" className={cn('w-[30%] truncate text-left font-semibold', cell)}>
             {t('screen.replay.team')}
           </th>
           {finale.stages.map((stage, i) => (
-            <th key={i} scope="col" className="truncate text-left font-semibold">
+            <th key={i} scope="col" className={cn('truncate text-left font-semibold', cell)}>
               {stage.title}
             </th>
           ))}
@@ -312,17 +314,18 @@ function SplitTable({
       <tbody>
         {rows.map((cells, i) => (
           <tr key={teams[i].teamId} className="border-t-[0.06em]">
-            <th scope="row" className="truncate py-[0.2em] text-left text-[1.2em] font-bold">
+            {/* Team names at 1.4em, as everywhere on the screen; the times smaller. */}
+            <th scope="row" className="truncate py-[0.1em] text-left text-[1.4em] font-bold">
               {teams[i].name}
             </th>
             {cells.map((ms, j) =>
               ms === null ? (
-                <td key={j}>
+                <td key={j} className={cell}>
                   <span aria-hidden="true">—</span>
                   <span className="sr-only">{t('screen.replay.notCleared')}</span>
                 </td>
               ) : (
-                <td key={j} className="font-mono">
+                <td key={j} className={cn('font-mono', cell)}>
                   {formatClock(ms)}
                 </td>
               ),

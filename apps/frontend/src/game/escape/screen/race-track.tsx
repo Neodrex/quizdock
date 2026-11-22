@@ -40,8 +40,13 @@ export function RaceTrack({ board, now }: { board: EscapeBoard; now: number }) {
         aria-label={t('screen.track.label')}
         data-compact={compact || undefined}
         data-columns={layout.columns}
+        // Down each column, then across, as the replay: a team keeps its cell.
+        data-flow="column"
+        style={{
+          gridTemplateRows: `repeat(${Math.max(1, Math.ceil(lanes.length / layout.columns))}, minmax(0, 1fr))`,
+        }}
         className={cn(
-          'grid min-h-0 flex-1 auto-rows-fr',
+          'grid min-h-0 flex-1 grid-flow-col',
           COLUMN_CLASS[layout.columns],
           compact ? 'gap-x-[0.8em] gap-y-[0.3em]' : 'gap-y-[0.5em]',
         )}

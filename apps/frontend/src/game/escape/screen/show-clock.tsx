@@ -1,5 +1,6 @@
 import type { EscapeBoard } from '@quiz-dock/contracts';
 import { DoorOpen, Pause } from 'lucide-react';
+import { motion as m } from 'motion/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,15 @@ export function ShowClock({ board, now }: { board: EscapeBoard; now: number }) {
     minutes: t('timer.minutes', { count: Math.floor(labelAt / 60) }),
     seconds: t('timer.seconds', { count: labelAt % 60 }),
   });
+  const digits = {
+    'aria-hidden': true,
+    'data-testid': 'show-clock-digits',
+    className: cn(
+      'font-mono leading-none font-bold tabular-nums',
+      final ? 'text-destructive text-[8em]' : 'text-[4em]',
+    ),
+    children: last ? String(total) : formatClock(remainingMs),
+  };
   return (
     <div
       role="timer"
@@ -49,17 +59,18 @@ export function ShowClock({ board, now }: { board: EscapeBoard; now: number }) {
       data-final={final}
       className="flex shrink-0 flex-col items-center gap-[0.2em]"
     >
-      <span
-        aria-hidden
-        data-testid="show-clock-digits"
-        className={cn(
-          'font-mono leading-none font-bold tabular-nums',
-          final ? 'text-destructive text-[8em]' : 'text-[4em]',
-          pulse && 'animate-[pulse_1s_ease-in-out_infinite]',
-        )}
-      >
-        {last ? String(total) : formatClock(remainingMs)}
-      </span>
+      {/* The pulse grows the digits by 4% once a second; it never fades them (7:1).
+          Without it, a plain span: no transform at all. */}
+      {pulse ? (
+        <m.span
+          {...digits}
+          data-pulse="scale"
+          animate={{ scale: [1, 1.04, 1] }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      ) : (
+        <span {...digits} />
+      )}
       {paused ? (
         <span className="flex items-center gap-[0.3em] text-[1.4em] font-bold">
           <Pause aria-hidden className="size-[1em]" />

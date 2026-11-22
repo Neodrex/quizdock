@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MotionLevel } from '../../motion/level';
@@ -8,7 +8,7 @@ import { ScreenBanners } from './banners';
 import { RaceTrack } from './race-track';
 import { REPLAY_MS } from './replay-timeline';
 import { announceOf, boardOf, screenFinaleOf, summaryOf } from './screen-fixtures';
-import { ScreenFinale } from './screen-finale';
+import { FINALE_ROWS, finaleListOf, ScreenFinale } from './screen-finale';
 import {
   ALL_LANES_MAX,
   LANE_ROWS,
@@ -31,6 +31,9 @@ vi.mock('../../motion/level', () => ({ useMotionLevel: () => motion.level }));
 vi.mock('qrcode.react', () => ({
   QRCodeSVG: (p: { className?: string }) => <svg role="img" className={p.className} />,
 }));
+
+const narrow = vi.hoisted(() => ({ on: false }));
+vi.mock('@/lib/use-media-query', () => ({ useMediaQuery: () => narrow.on }));
 
 const NOW = 1_000_000_000;
 const MIN = 60_000;
@@ -56,7 +59,39 @@ const hasIcon = (el: Element) => el.querySelector('svg') !== null;
 
 beforeEach(() => {
   motion.level = 'full';
+  narrow.on = false;
 });
+
+const src = resolve(process.cwd(), 'src');
+/** Every shipped screen file, subfolders included, and the screen page. */
+const screenFiles = () => [
+  ...readdirSync(resolve(src, 'game/escape/screen'), { recursive: true, encoding: 'utf8' })
+    .filter((n) => /\.tsx?$/.test(n) && !/\.test\.tsx?$|-fixtures\.tsx?$/.test(n))
+    .map((n) => resolve(src, 'game/escape/screen', n)),
+  resolve(src, 'routes/escape-screen-page.tsx'),
+];
+
+/** An element's font size in the screen's em: the product of the `text-[Nem]` above it. */
+const emOf = (el: Element | null): number => {
+  let size = 1;
+  for (let e = el; e; e = e.parentElement) {
+    const m = /(?:^|\s)text-\[([\d.]+)em\]/.exec(e.getAttribute('class') ?? '');
+    if (m) size *= Number(m[1]);
+  }
+  return size;
+};
+const rankingOf = (n: number) => {
+  const r = screenFinaleOf().ranking[0];
+  return screenFinaleOf({
+    ranking: Array.from({ length: n }, (_, i) => ({
+      ...r,
+      teamId: `t${i + 1}`,
+      name: `Team ${i + 1}`,
+      place: i + 1,
+      hintPenaltyS: 60,
+    })),
+  });
+};
 
 describe('colour is never the only signal', () => {
   it('race lanes: escaped, time up, offline and hints each carry an icon and words', () => {
@@ -120,21 +155,16 @@ describe('colour is never the only signal', () => {
 });
 
 describe('no faded text: opacity would take it under 7:1', () => {
-  const src = resolve(process.cwd(), 'src');
-  const dir = resolve(src, 'game/escape/screen');
-  const files = [
-    ...readdirSync(dir)
-      .filter((n) => /\.tsx?$/.test(n) && !/\.test\.tsx?$|-fixtures\.tsx?$/.test(n))
-      .map((n) => join(dir, n)),
-    resolve(src, 'routes/escape-screen-page.tsx'),
-  ];
+  const files = screenFiles();
   // Tailwind's opacity steps and colour alphas (`text-foreground/60`); 0 and 100 are
-  // not a fade. Motion's fade-ins are transitions, not a resting state.
-  const FADED = /\bopacity-(?!0\b|100\b)\d+|\b(text|bg)-[a-z-]+\/\d+/;
+  // not a fade. Tailwind's `pulse` dims to 0.5: a resting-state fade once a second.
+  // Motion's fade-ins are transitions, not a resting state.
+  const FADED = /\bopacity-(?!0\b|100\b)\d+|\b(text|bg)-[a-z-]+\/\d+|animate-(pulse|\[pulse)/;
 
   it('catches a faded class', () => {
     expect(FADED.test("'opacity-60 grayscale'")).toBe(true);
     expect(FADED.test('text-foreground/70')).toBe(true);
+    expect(FADED.test("'animate-[pulse_1s_ease-in-out_infinite]'")).toBe(true);
     expect(FADED.test("'grayscale border-dashed'")).toBe(false);
   });
 
@@ -193,7 +223,10 @@ describe('reduced motion: nothing moves, nothing transforms', () => {
       </>,
     );
     expect(document.querySelector('[data-testid="stage-fill"]')?.className).toContain('transition');
-    expect(screen.getByTestId('show-clock-digits').className).toContain('animate-');
+    // The pulse grows the digits a little; it never fades them.
+    const digits = screen.getByTestId('show-clock-digits');
+    expect(digits).toHaveAttribute('data-pulse', 'scale');
+    expect(digits.className).not.toMatch(/animate-|opacity/);
   });
 });
 
@@ -243,26 +276,111 @@ describe('the layout fits 16:9, 16:10 and 4:3 without a scroll', () => {
     );
   });
 
-  it('the finale: podium steps share the width (4:3), four more listed, the rest counted', () => {
-    const r = screenFinaleOf().ranking[0];
-    const finale = screenFinaleOf({
-      ranking: Array.from({ length: 12 }, (_, i) => ({
-        ...r,
-        teamId: `t${i + 1}`,
-        name: `Team ${i + 1}`,
-        place: i + 1,
-      })),
-    });
-    drawEn(<ScreenFinale finale={finale} replay="done" closed onReplayDone={() => undefined} />);
-    for (const step of screen.getAllByTestId('podium-step')) {
-      expect(step).toHaveClass('flex-1', 'max-w-[18em]');
-      expect(step.className).not.toMatch(/(^|\s)w-\[/);
-    }
-    expect(screen.getAllByTestId('ranked-row')).toHaveLength(4);
-    expect(screen.getByTestId('ranked-list')).toHaveClass('grid-cols-2');
-    expect(screen.getByText('and 5 more teams')).toBeInTheDocument();
+  it('the finale lists every team up to about 30, beside a compact podium', () => {
+    expect(finaleListOf(5, false)).toMatchObject({ side: false, listed: 2, more: 0 });
+    expect(finaleListOf(7, false)).toMatchObject({ side: false, listed: 4, more: 0 });
+    expect(finaleListOf(8, false)).toMatchObject({ side: true, columns: 2, listed: 5, more: 0 });
+    expect(finaleListOf(31, false)).toMatchObject({ listed: 28, more: 0 });
+    expect(finaleListOf(32, false)).toMatchObject({ listed: 28, more: 1 });
+    // Under 3:2 one column: its rows are too wide for two.
+    expect(finaleListOf(31, true)).toMatchObject({ columns: 1, listed: FINALE_ROWS, more: 14 });
+    // The em budget: 14 rows of 1.84 em in the 26.25 em under the title.
+    expect(FINALE_ROWS * 1.84 - 0.1).toBeLessThanOrEqual(26.25);
+  });
+
+  it('30 teams: the podium and 27 ranked rows with time, hints and penalty, none counted', () => {
+    drawEn(
+      <ScreenFinale finale={rankingOf(30)} replay="done" closed onReplayDone={() => undefined} />,
+    );
+    expect(screen.getAllByTestId('podium-step')).toHaveLength(3);
+    const rows = screen.getAllByTestId('ranked-row');
+    expect(rows).toHaveLength(27);
+    expect(rows[26]).toHaveTextContent('Team 30');
+    expect(rows[26]).toHaveTextContent('+1:00');
+    expect(rows[26]).toHaveTextContent('2 hints');
+    expect(screen.getByTestId('ranked-list')).toHaveAttribute('data-columns', '2');
+    expect(screen.queryByText(/more teams/)).toBeNull();
     // Closed: the thanks take the closing text's line.
     expect(screen.getByText('Thanks for playing')).toBeInTheDocument();
     expect(screen.queryByText('The vault is open.')).toBeNull();
+  });
+
+  it('under 3:2: one column of ranked rows, the rest counted', () => {
+    narrow.on = true;
+    drawEn(
+      <ScreenFinale
+        finale={rankingOf(30)}
+        replay="done"
+        closed={false}
+        onReplayDone={() => undefined}
+      />,
+    );
+    expect(screen.getAllByTestId('ranked-row')).toHaveLength(FINALE_ROWS);
+    expect(screen.getByText(`and ${27 - FINALE_ROWS} more teams`)).toBeInTheDocument();
+  });
+
+  it('a few teams: podium steps share the width (4:3), the others under them', () => {
+    drawEn(
+      <ScreenFinale
+        finale={rankingOf(6)}
+        replay="done"
+        closed={false}
+        onReplayDone={() => undefined}
+      />,
+    );
+    expect(screen.getByTestId('podium')).toHaveAttribute('data-layout', 'row');
+    expect(screen.getAllByTestId('ranked-row')).toHaveLength(3);
+  });
+
+  it('team names at least 1.4 em everywhere a team is named', () => {
+    motion.level = 'fade';
+    const { unmount } = drawEn(<SplitReplay finale={rankingOf(13)} onDone={() => undefined} />);
+    for (const th of screen.getAllByRole('rowheader')) expect(emOf(th)).toBeGreaterThanOrEqual(1.4);
+    unmount();
+    motion.level = 'full';
+    const replay = drawEn(<SplitReplay finale={rankingOf(30)} onDone={() => undefined} />);
+    for (const l of screen.getAllByTestId('replay-lane'))
+      expect(emOf(within(l).getByText(/^Team \d+$/))).toBeGreaterThanOrEqual(1.4);
+    replay.unmount();
+    const finale = drawEn(
+      <ScreenFinale
+        finale={rankingOf(30)}
+        replay="done"
+        closed={false}
+        onReplayDone={() => undefined}
+      />,
+    );
+    for (const row of [
+      ...screen.getAllByTestId('ranked-row'),
+      ...screen.getAllByTestId('podium-step'),
+    ])
+      expect(emOf(within(row).getByText(/^Team \d+$/))).toBeGreaterThanOrEqual(1.4);
+    finale.unmount();
+    drawEn(
+      <RaceTrack
+        board={boardOf({
+          teams: Array.from({ length: 30 }, (_, i) =>
+            summaryOf({ id: `t${i}`, name: `Team ${i}` }),
+          ),
+        })}
+        now={NOW}
+      />,
+    );
+    for (const n of document.querySelectorAll('[data-lane-name]'))
+      expect(emOf(n)).toBeGreaterThanOrEqual(1.4);
+  });
+
+  it('the race and the replay fill their columns the same way: down, then across', () => {
+    const teams = Array.from({ length: 12 }, (_, i) =>
+      summaryOf({ id: `t${i}`, name: `Team ${i}` }),
+    );
+    const { unmount } = drawEn(<RaceTrack board={boardOf({ teams })} now={NOW} />);
+    const track = screen.getByRole('list', { name: 'Race' });
+    const trackFlow = [track.dataset.flow, track.style.gridTemplateRows];
+    unmount();
+    drawEn(<SplitReplay finale={rankingOf(12)} onDone={() => undefined} />);
+    const lanes = screen.getByTestId('replay-lanes');
+    expect([lanes.dataset.flow, lanes.style.gridTemplateRows]).toEqual(trackFlow);
+    expect(trackFlow).toEqual(['column', 'repeat(6, minmax(0, 1fr))']);
   });
 });
