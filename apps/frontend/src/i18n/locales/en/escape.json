@@ -44,5 +44,12 @@
     "yourTeam": "Your team",
     "you": "(you)",
     "offline": "Offline"
+  },
+  "clues": {
+    "title": "My clues",
+    "none": "No clues for you on this stage",
+    "everyone": "Everyone",
+    "imageAlt": "{{stage}}, clue {{index}}",
+    "openDocument": "Open the document"
   }
 }

@@ -47,5 +47,12 @@
     "yourTeam": "Votre équipe",
     "you": "(vous)",
     "offline": "Hors ligne"
+  },
+  "clues": {
+    "title": "Mes indices",
+    "none": "Aucun indice pour vous à cette étape",
+    "everyone": "Tout le monde",
+    "imageAlt": "{{stage}}, indice {{index}}",
+    "openDocument": "Ouvrir le document"
   }
 }

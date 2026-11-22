@@ -41,5 +41,12 @@
     "yourTeam": "あなたのチーム",
     "you": "（あなた）",
     "offline": "オフライン"
+  },
+  "clues": {
+    "title": "自分の手がかり",
+    "none": "このステージにあなた向けの手がかりはありません",
+    "everyone": "全員",
+    "imageAlt": "{{stage}}、手がかり {{index}}",
+    "openDocument": "資料を開く"
   }
 }

@@ -47,5 +47,12 @@
     "yourTeam": "La tua squadra",
     "you": "(tu)",
     "offline": "Non in linea"
+  },
+  "clues": {
+    "title": "I miei indizi",
+    "none": "Nessun indizio per te in questa fase",
+    "everyone": "Tutti",
+    "imageAlt": "{{stage}}, indizio {{index}}",
+    "openDocument": "Apri il documento"
   }
 }

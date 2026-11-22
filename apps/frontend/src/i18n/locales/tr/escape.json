@@ -44,5 +44,12 @@
     "yourTeam": "Takımın",
     "you": "(sen)",
     "offline": "Çevrimdışı"
+  },
+  "clues": {
+    "title": "İpuçlarım",
+    "none": "Bu aşamada sana ipucu yok",
+    "everyone": "Herkes",
+    "imageAlt": "{{stage}}, ipucu {{index}}",
+    "openDocument": "Belgeyi aç"
   }
 }

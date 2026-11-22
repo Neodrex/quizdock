@@ -41,5 +41,12 @@
     "yourTeam": "你的队伍",
     "you": "（你）",
     "offline": "离线"
+  },
+  "clues": {
+    "title": "我的线索",
+    "none": "本关没有给你的线索",
+    "everyone": "所有人",
+    "imageAlt": "{{stage}}，线索 {{index}}",
+    "openDocument": "打开文档"
   }
 }

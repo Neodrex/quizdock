@@ -50,5 +50,12 @@
     "yourTeam": "Twoja drużyna",
     "you": "(ty)",
     "offline": "Rozłączony"
+  },
+  "clues": {
+    "title": "Moje wskazówki",
+    "none": "Brak wskazówek dla ciebie na tym etapie",
+    "everyone": "Wszyscy",
+    "imageAlt": "{{stage}}, wskazówka {{index}}",
+    "openDocument": "Otwórz dokument"
   }
 }

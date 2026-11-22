@@ -41,5 +41,12 @@
     "yourTeam": "你的隊伍",
     "you": "（你）",
     "offline": "離線"
+  },
+  "clues": {
+    "title": "我的線索",
+    "none": "本關沒有給你的線索",
+    "everyone": "所有人",
+    "imageAlt": "{{stage}}，線索 {{index}}",
+    "openDocument": "開啟文件"
   }
 }

@@ -44,5 +44,12 @@
     "yourTeam": "आपकी टीम",
     "you": "(आप)",
     "offline": "ऑफ़लाइन"
+  },
+  "clues": {
+    "title": "मेरे सुराग",
+    "none": "इस चरण में आपके लिए कोई सुराग नहीं",
+    "everyone": "सभी",
+    "imageAlt": "{{stage}}, सुराग {{index}}",
+    "openDocument": "दस्तावेज़ खोलें"
   }
 }

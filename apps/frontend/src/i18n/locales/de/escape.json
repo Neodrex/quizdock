@@ -44,5 +44,12 @@
     "yourTeam": "Dein Team",
     "you": "(du)",
     "offline": "Offline"
+  },
+  "clues": {
+    "title": "Meine Hinweise",
+    "none": "Keine Hinweise für dich in dieser Etappe",
+    "everyone": "Alle",
+    "imageAlt": "{{stage}}, Hinweis {{index}}",
+    "openDocument": "Dokument öffnen"
   }
 }

@@ -47,5 +47,12 @@
     "yourTeam": "Tu equipo",
     "you": "(tú)",
     "offline": "Sin conexión"
+  },
+  "clues": {
+    "title": "Mis pistas",
+    "none": "No tienes pistas en esta etapa",
+    "everyone": "Todos",
+    "imageAlt": "{{stage}}, pista {{index}}",
+    "openDocument": "Abrir el documento"
   }
 }
