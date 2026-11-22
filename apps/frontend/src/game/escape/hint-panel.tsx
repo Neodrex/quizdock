@@ -49,8 +49,10 @@ export function HintPanel({
     setFailed(false);
     try {
       // A refusal (a teammate took it first: `no-hint`) closes too; the announcer says why.
-      await askHint(next.id);
-      asked.current = next.id;
+      // Only an accepted ask marks the hint asked: after a refusal (`rate-limited`) the
+      // player can try again.
+      const ack = await askHint(next.id);
+      if (ack.ok) asked.current = next.id;
       setAsking(false);
     } catch {
       setFailed(true);

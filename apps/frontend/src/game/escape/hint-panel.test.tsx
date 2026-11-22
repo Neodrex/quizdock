@@ -96,6 +96,23 @@ describe('HintPanel', () => {
     expect(askHint).toHaveBeenCalledTimes(1);
   });
 
+  it('a refused ask (rate-limited) can be asked again before the next state', async () => {
+    const askHint = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, reason: 'rate-limited' })
+      .mockResolvedValueOnce({ ok: true });
+    drawEn(<HintPanel state={withHints()} hintTags={{}} canPlay askHint={askHint} />);
+    fireEvent.click(hintButton());
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Get the hint' }));
+    });
+    fireEvent.click(hintButton());
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Get the hint' }));
+    });
+    expect(askHint).toHaveBeenCalledTimes(2);
+  });
+
   it('a free hint says so in the confirmation', () => {
     drawEn(
       <HintPanel
