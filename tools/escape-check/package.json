@@ -1,0 +1,13 @@
+{
+  "name": "escape-check",
+  "private": true,
+  "type": "module",
+  "description": "Two phones play an escape run against the dev stack (see two-phones.mjs).",
+  "scripts": {
+    "check": "node two-phones.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.65.1",
+    "socket.io-client": "^4.8.3"
+  }
+}
