@@ -176,9 +176,25 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
   const pause = (paused: boolean) => send('pause', 'escape:pause', { pin, paused });
   const adjustTime = (deltaS: number, teamId?: string) =>
     send('time', 'escape:adjust-time', { pin, deltaS, ...(teamId ? { teamId } : {}) });
-  /** How many hints it released (0: none left); undefined when one was already on its way. */
-  const hint = async (teamId?: string) =>
-    (await send('hint', 'escape:hint', { pin, ...(teamId ? { teamId } : {}) }))?.released;
+  /**
+   * How many hints it released (0: none left); undefined when one was already on its
+   * way. `hintId` (one team): the hint the host confirmed. When the team's next hint
+   * changed meanwhile the server refuses (`escape.hint-changed`), and the console
+   * reads the room again so the host sees the hint that is next now.
+   */
+  const hint = async (teamId?: string, hintId?: string) => {
+    try {
+      const ack = await send('hint', 'escape:hint', {
+        pin,
+        ...(teamId ? { teamId } : {}),
+        ...(teamId && hintId ? { hintId } : {}),
+      });
+      return ack?.released;
+    } catch (e) {
+      if ((e as { code?: string }).code === 'escape.hint-changed') setResync((n) => n + 1);
+      throw e;
+    }
+  };
   const unlock = (teamId: string, lockId: string) =>
     send('unlock', 'escape:unlock', { pin, teamId, lockId });
   const end = () => send('end', 'escape:end', { pin });

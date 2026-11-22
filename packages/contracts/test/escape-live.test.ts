@@ -72,6 +72,11 @@ describe('escape live schemas', () => {
     expect(escapeChooseTeamSchema.safeParse({ pin, teamId: null }).success).toBe(false);
   });
 
+  it('a hint names the expected hint only for one team', () => {
+    expect(escapeHintSchema.safeParse({ pin, teamId: 'a', hintId: 'h1' }).success).toBe(true);
+    expect(escapeHintSchema.safeParse({ pin, hintId: 'h1' }).success).toBe(false);
+  });
+
   it('refuses zero teams', () => {
     expect(escapeTeamsSchema.safeParse({ pin, mode: 'self', count: 0 }).success).toBe(false);
   });

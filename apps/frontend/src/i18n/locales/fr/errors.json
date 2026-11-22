@@ -262,7 +262,8 @@
     "time-up": "Le temps de cette équipe est écoulé. Donnez-lui d’abord du temps.",
     "escaped": "Cette équipe s’est déjà évadée : il n’y a plus rien à ouvrir.",
     "already-solved": "Ce cadenas est déjà ouvert.",
-    "unknown-lock": "Ce cadenas ne fait plus partie de l’étape en cours de l’équipe."
+    "unknown-lock": "Ce cadenas ne fait plus partie de l’étape en cours de l’équipe.",
+    "hint-changed": "Le prochain indice de cette équipe a changé entre-temps. Vérifiez le nouveau et donnez-le à nouveau."
   },
   "escape_template": {
     "invalid": "Ce modèle de jeu d’évasion n’est pas valide.",

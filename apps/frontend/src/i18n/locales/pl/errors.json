@@ -263,7 +263,8 @@
     "time-up": "Czas tej drużyny się skończył. Najpierw daj jej więcej czasu.",
     "escaped": "Ta drużyna już uciekła: nie ma nic więcej do otwarcia.",
     "already-solved": "Ta kłódka jest już otwarta.",
-    "unknown-lock": "Tej kłódki nie ma już na obecnym etapie drużyny."
+    "unknown-lock": "Tej kłódki nie ma już na obecnym etapie drużyny.",
+    "hint-changed": "Następna podpowiedź tej drużyny w międzyczasie się zmieniła. Sprawdź nową i daj ją ponownie."
   },
   "escape_template": {
     "invalid": "Ten szablon gry escape jest nieprawidłowy.",

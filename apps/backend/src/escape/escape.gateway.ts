@@ -161,7 +161,8 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
   ): Promise<Ok & { released: number }> {
     const hostId = this.requireHostId(socket);
     const dto = parse(escapeHintSchema, payload);
-    return { ok: true, released: await this.engine.hostHint(dto.pin, hostId, dto.teamId) };
+    const released = await this.engine.hostHint(dto.pin, hostId, dto.teamId, dto.hintId);
+    return { ok: true, released };
   }
 
   /** P1: one event with a flag pauses or resumes, as `host:pause`. */

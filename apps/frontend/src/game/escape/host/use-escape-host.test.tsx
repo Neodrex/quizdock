@@ -283,6 +283,31 @@ describe('useEscapeHost', () => {
     expect(emitted.at(-1)).toEqual({ event: 'escape:hint', payload: { pin: PIN } });
   });
 
+  it('a team hint names the confirmed hint; escape.hint-changed reads the room again', async () => {
+    const { result } = mount(seam({ attachSeq: 1 }));
+    await flush();
+    const syncs = sent('escape:sync').length;
+    acks.set('escape:hint', () => ({ ok: false, error: { code: 'escape.hint-changed' } }));
+    await act(async () => {
+      await expect(result.current.hint('t1', 'lobby-h1')).rejects.toMatchObject({
+        code: 'escape.hint-changed',
+      });
+    });
+    expect(emitted.filter((e) => e.event === 'escape:hint').at(-1)).toEqual({
+      event: 'escape:hint',
+      payload: { pin: PIN, teamId: 't1', hintId: 'lobby-h1' },
+    });
+    await flush();
+    expect(sent('escape:sync')).toHaveLength(syncs + 1);
+    // Another refusal reads nothing again.
+    acks.set('escape:hint', () => ({ ok: false, error: { code: 'escape.wrong_phase' } }));
+    await act(async () => {
+      await expect(result.current.hint('t1', 'lobby-h1')).rejects.toBeTruthy();
+    });
+    await flush();
+    expect(sent('escape:sync')).toHaveLength(syncs + 1);
+  });
+
   it('a second call while pending sends nothing; pending clears on the answer or an error', async () => {
     let answer: (r: unknown) => void = () => {};
     acks.set('escape:start', (_p, ack) => {

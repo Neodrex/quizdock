@@ -261,7 +261,8 @@
     "time-up": "This team's time is up. Give it more time first.",
     "escaped": "This team has already escaped: nothing is left to open.",
     "already-solved": "This lock is already open.",
-    "unknown-lock": "This lock is not on the team's current stage any more."
+    "unknown-lock": "This lock is not on the team's current stage any more.",
+    "hint-changed": "This team's next hint changed in the meantime. Check the new one and give it again."
   },
   "escape_template": {
     "invalid": "This escape template is not valid.",

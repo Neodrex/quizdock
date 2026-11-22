@@ -261,7 +261,8 @@
     "time-up": "Die Zeit dieses Teams ist abgelaufen. Gib ihm zuerst mehr Zeit.",
     "escaped": "Dieses Team ist bereits entkommen: Es gibt nichts mehr zu öffnen.",
     "already-solved": "Dieses Schloss ist bereits offen.",
-    "unknown-lock": "Dieses Schloss gehört nicht mehr zur aktuellen Etappe des Teams."
+    "unknown-lock": "Dieses Schloss gehört nicht mehr zur aktuellen Etappe des Teams.",
+    "hint-changed": "Der nächste Hinweis dieses Teams hat sich inzwischen geändert. Prüfe den neuen und gib ihn erneut."
   },
   "escape_template": {
     "invalid": "Diese Escape-Vorlage ist ungültig.",

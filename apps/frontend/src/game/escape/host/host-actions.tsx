@@ -23,8 +23,11 @@ import { type EscapeHostUi, type HostLockView, nextHintOf } from './host-reducer
 /** What the actions need of `useEscapeHost`. */
 export interface HostCommands {
   pending: EscapeHostUi['pending'];
-  /** How many teams got a hint (0: none left); undefined when one was already on its way. */
-  hint: (teamId?: string) => Promise<number | undefined>;
+  /**
+   * How many teams got a hint (0: none left); undefined when one was already on its
+   * way. `hintId`: the hint the host confirmed for that team (refused if it changed).
+   */
+  hint: (teamId?: string, hintId?: string) => Promise<number | undefined>;
   adjustTime: (deltaS: number, teamId?: string) => Promise<unknown>;
   unlock: (teamId: string, lockId: string) => Promise<unknown>;
   pause: (paused: boolean) => Promise<unknown>;
@@ -98,9 +101,10 @@ export function GiveHintButton({
     if (!next) setNote(t('host.actions.hintNone'));
     else setAsking(true);
   };
-  const confirm = async () => {
+  // The hint the confirm showed: the one the host agrees to pay for.
+  const confirm = async (hintId: string) => {
     setAsking(false);
-    const released = await run(() => commands.hint(team.id));
+    const released = await run(() => commands.hint(team.id, hintId));
     if (released === 0) setNote(t('host.actions.hintNone'));
   };
   return (
@@ -124,7 +128,7 @@ export function GiveHintButton({
         title={t('host.actions.hintTeamTitle', { team: team.name })}
         description={t('host.actions.hintTeamCost', { seconds: next?.penaltyS ?? 0 })}
         confirmLabel={t('host.actions.hintConfirm')}
-        onConfirm={() => void confirm()}
+        onConfirm={() => next && void confirm(next.id)}
         onCancel={() => setAsking(false)}
       >
         {next ? (

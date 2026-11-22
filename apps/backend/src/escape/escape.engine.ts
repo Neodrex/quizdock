@@ -491,9 +491,17 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /**
    * H2: the host releases the next hint, paid, to one team or to every team
-   * still playing (paused or not). The count of teams that got one.
+   * still playing (paused or not). The count of teams that got one. `hintId`
+   * (one team): the hint the host confirmed; another next hint (released
+   * meanwhile, or a new stage) is refused with `escape.hint-changed`, so the
+   * host never pays for a hint it did not read.
    */
-  async hostHint(pin: string, hostUserId: string, teamId?: string): Promise<number> {
+  async hostHint(
+    pin: string,
+    hostUserId: string,
+    teamId?: string,
+    hintId?: string,
+  ): Promise<number> {
     return this.mutate(pin, hostUserId, async (ref) => {
       if (ref.run.phase !== 'running') throw new BadRequestException('escape.wrong_phase');
       if (teamId !== undefined && !ref.run.teamIds.includes(teamId)) {
@@ -507,6 +515,9 @@ export class EscapeEngine implements OnModuleDestroy {
         const rec = stored.get(id);
         if (!rec || rec.timedOut || isTimedOut(ref.run.clock, rec.team, elapsed)) continue;
         const hint = nextHint(tpl, rec.team);
+        if (hintId !== undefined && (hint?.id !== hintId || rec.team.escapedAt !== null)) {
+          throw new BadRequestException('escape.hint-changed');
+        }
         const team = hint ? useHint(tpl, rec.team, hint.id) : rec.team;
         if (hint && team !== rec.team) released.push({ rec: { ...rec, team }, hintId: hint.id });
       }

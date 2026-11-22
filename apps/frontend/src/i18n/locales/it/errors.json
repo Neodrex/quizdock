@@ -262,7 +262,8 @@
     "time-up": "Il tempo di questa squadra è scaduto. Dalle prima altro tempo.",
     "escaped": "Questa squadra è già evasa: non resta niente da aprire.",
     "already-solved": "Questo lucchetto è già aperto.",
-    "unknown-lock": "Questo lucchetto non fa più parte della fase attuale della squadra."
+    "unknown-lock": "Questo lucchetto non fa più parte della fase attuale della squadra.",
+    "hint-changed": "Il prossimo indizio di questa squadra è cambiato nel frattempo. Controlla quello nuovo e dallo di nuovo."
   },
   "escape_template": {
     "invalid": "Questo modello di gioco di fuga non è valido.",

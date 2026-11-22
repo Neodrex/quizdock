@@ -261,7 +261,8 @@
     "time-up": "Bu takımın süresi doldu. Önce ona ek süre verin.",
     "escaped": "Bu takım zaten kaçtı: açılacak bir şey kalmadı.",
     "already-solved": "Bu kilit zaten açık.",
-    "unknown-lock": "Bu kilit artık takımın mevcut aşamasında değil."
+    "unknown-lock": "Bu kilit artık takımın mevcut aşamasında değil.",
+    "hint-changed": "Bu takımın sıradaki ipucu bu arada değişti. Yenisine bakıp tekrar verin."
   },
   "escape_template": {
     "invalid": "Bu kaçış oyunu şablonu geçerli değil.",

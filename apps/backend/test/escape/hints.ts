@@ -89,6 +89,25 @@ export function hintTests(ctx: EscapeContext): void {
     });
   });
 
+  it('H2: the host names the hint it confirmed; another next hint is refused, unpaid', async () => {
+    const { pin, teams, host } = await runningRoom(ctx, { players: 2, teams: 1 });
+    const [a] = teams.t1;
+    const lobbyH2 = vaultHeist.stages[0].hints[1];
+    // The team asks first: the host's confirm still showed the first hint.
+    expect(await ask(a, pin, lobbyH1.id)).toEqual({ ok: true });
+    expect(
+      await host.emitWithAck('escape:hint', { pin, teamId: 't1', hintId: lobbyH1.id }),
+    ).toMatchObject({ ok: false, error: { code: 'escape.hint-changed' } });
+    await eventually(async () => expect(a.last().view?.hints).toHaveLength(1));
+    expect(a.last().team?.hintPenaltyS).toBe(lobbyH1.penaltyS);
+    // The hint it now shows: released, paid.
+    const update = hintUpdate(a);
+    expect(
+      await host.emitWithAck('escape:hint', { pin, teamId: 't1', hintId: lobbyH2.id }),
+    ).toEqual({ ok: true, released: 1 });
+    expect(await update).toMatchObject({ hintId: lobbyH2.id, source: 'host' });
+  });
+
   it('H3: a timed hint is released by the ticker, free, without any request', async () => {
     const timed = await seedTemplate(ctx.h, {
       ...vaultHeist,

@@ -48,8 +48,13 @@ export const escapeAdjustTimeSchema = z.object({
     .refine((v) => v !== 0),
   teamId: id.optional(),
 });
-/** Absent `teamId`: every team. */
-export const escapeHintSchema = z.object({ pin, teamId: id.optional() });
+/**
+ * Absent `teamId`: every team. `hintId`, for one team only: the hint the host
+ * confirmed; refused (`escape.hint-changed`) when it is not the team's next one.
+ */
+export const escapeHintSchema = z
+  .object({ pin, teamId: id.optional(), hintId: id.optional() })
+  .refine((v) => v.hintId === undefined || v.teamId !== undefined);
 export const escapeUnlockSchema = z.object({ pin, teamId: id, lockId: id });
 
 // ── Player → server ──

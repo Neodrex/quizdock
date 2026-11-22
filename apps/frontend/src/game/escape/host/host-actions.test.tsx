@@ -32,6 +32,7 @@ const HOST_REFUSALS = [
   'escape.escaped',
   'escape.already-solved',
   'escape.unknown-lock',
+  'escape.hint-changed',
 ];
 
 function commandsOf(over: Partial<HostCommands> = {}): HostCommands {
@@ -77,7 +78,7 @@ describe('host actions', () => {
       expect(dialog()).toHaveTextContent('It adds 30 s to their score.');
       expect(commands.hint).not.toHaveBeenCalled();
       fireEvent.click(within(dialog()).getByRole('button', { name: 'Give the hint' }));
-      await waitFor(() => expect(commands.hint).toHaveBeenCalledWith('t1'));
+      await waitFor(() => expect(commands.hint).toHaveBeenCalledWith('t1', 'lobby-h1'));
     });
 
     it('the next hint skips the released ones', () => {
@@ -114,6 +115,18 @@ describe('host actions', () => {
       expect(screen.queryByRole('dialog')).toBeNull();
       expect(screen.getByRole('status')).toHaveTextContent('No hint left for this team.');
       expect(commands.hint).not.toHaveBeenCalled();
+    });
+
+    it('a hint that changed since the confirm is refused with its own text', async () => {
+      const commands = commandsOf({
+        hint: vi.fn(async () => {
+          throw refusalError({ code: 'escape.hint-changed' });
+        }),
+      });
+      drawEn(<GiveHintButton outline={outlineOf()} team={red} commands={commands} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Give hint' }));
+      fireEvent.click(within(dialog()).getByRole('button', { name: 'Give the hint' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(errorText('escape.hint-changed'));
     });
 
     it('a refusal shows its text', async () => {
