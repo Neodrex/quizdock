@@ -207,4 +207,28 @@ describe('useGameSession', () => {
     await waitFor(() => expect(result.current.view.status).toBe('no-session'));
     expect(clearPlayerSession).toHaveBeenCalled();
   });
+  describe('attachSeq', () => {
+    it('is 0 before a session, then counts each join and accepted reconnect', async () => {
+      loadPlayerSession.mockReturnValue(null);
+      const { result } = renderHook(() => useGameSession('482913', 'player'));
+      await waitFor(() => expect(result.current.view.status).toBe('no-session'));
+      expect(result.current.attachSeq).toBe(0);
+      act(() => result.current.markJoined());
+      expect(result.current.attachSeq).toBe(1);
+      loadPlayerSession.mockReturnValue({ pin: '482913', sessionToken: 't', playerId: 'p1' });
+      act(() => managerListeners.get('reconnect')?.());
+      expect(emitted.filter((e) => e.event === 'player:reconnect')).toHaveLength(1);
+      expect(result.current.attachSeq).toBe(2);
+    });
+
+    it('is not bumped by a refused reconnect', async () => {
+      loadPlayerSession.mockReturnValue({ pin: '482913', sessionToken: 't', playerId: 'p1' });
+      const { result } = renderHook(() => useGameSession('482913', 'player'));
+      await waitFor(() => expect(result.current.attachSeq).toBe(1));
+      setAckOk(false);
+      act(() => managerListeners.get('reconnect')?.());
+      expect(emitted.filter((e) => e.event === 'player:reconnect')).toHaveLength(2);
+      expect(result.current.attachSeq).toBe(1);
+    });
+  });
 });

@@ -313,6 +313,8 @@ export function useGameSession(pin: string, role: LiveRole, opts: { follow?: boo
   const [view, setView] = useState<GameView>(INITIAL_VIEW);
   // A projection window not paired yet: the code it shows for the host to type.
   const [pairingCode, setPairingCode] = useState<string | null>(null);
+  // Bumped each time a player's socket is (back) in the room: a join or an accepted reconnect.
+  const [attachSeq, setAttachSeq] = useState(0);
   const socketRef = useRef<GameSocket | null>(null);
   // A player's socket is in the room once joined or reconnected, until the connection drops.
   const attachedRef = useRef(false);
@@ -623,6 +625,7 @@ export function useGameSession(pin: string, role: LiveRole, opts: { follow?: boo
                   return;
                 }
                 attachedRef.current = true;
+                setAttachSeq((n) => n + 1);
                 flush();
               },
             );
@@ -650,6 +653,7 @@ export function useGameSession(pin: string, role: LiveRole, opts: { follow?: boo
   /** Joueur : à appeler après un `player:join` réussi pour quitter `no-session`. */
   const markJoined = () => {
     attachedRef.current = true;
+    setAttachSeq((n) => n + 1);
     setView((prev) => ({ ...prev, status: 'ready' }));
   };
   /**
@@ -673,6 +677,7 @@ export function useGameSession(pin: string, role: LiveRole, opts: { follow?: boo
     view,
     socket: socketRef.current,
     pairingCode,
+    attachSeq,
     markJoined,
     markReady,
     submitAnswer,
