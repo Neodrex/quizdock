@@ -105,6 +105,17 @@ describe('useEscapeHost', () => {
     expect(sent('escape:sync')).toHaveLength(2);
   });
 
+  it('a later attach (a reconnect, no reload) adds a "Reconnected" line; the first does not', async () => {
+    const { result, rerender } = mount();
+    await flush();
+    rerender(seam({ attachSeq: 1 }));
+    await flush();
+    expect(result.current.ui.feed).toEqual([]);
+    rerender(seam({ attachSeq: 2 }));
+    await flush();
+    expect(result.current.ui.feed.map((l) => l.key)).toEqual(['host.feed.reconnected']);
+  });
+
   it('retries a sync that got no answer', async () => {
     vi.useFakeTimers();
     acks.set('escape:sync', () => 'no-ack');

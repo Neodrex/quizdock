@@ -134,6 +134,17 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
     holdRef,
   });
 
+  // Back in the room after a drop (not a reload: that page starts at 1, and the kept
+  // feed says it): the feed marks where the missed events would have been.
+  const attachRef = useRef(session.attachSeq);
+  useEffect(() => {
+    const prev = attachRef.current;
+    attachRef.current = session.attachSeq;
+    if (prev > 0 && session.attachSeq > prev) {
+      dispatch({ type: 'feed', key: 'host.feed.reconnected', now: serverNow() });
+    }
+  }, [session.attachSeq]);
+
   // Room switch (§1.1): the lobby after a podium or a finale is host:back-to-lobby;
   // sync again, and a refusal hands the room back to the quiz console.
   const state = session.view.state;
