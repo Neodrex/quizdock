@@ -10,6 +10,16 @@ const motion = vi.hoisted(() => ({ level: 'full' as MotionLevel }));
 vi.mock('../../motion/level', () => ({ useMotionLevel: () => motion.level }));
 
 const finale = screenFinaleOf();
+/** `n` teams, t1…tn, ranked in reverse team order. */
+const many = (n: number) =>
+  screenFinaleOf({
+    ranking: Array.from({ length: n }, (_, i) => ({
+      ...finale.ranking[0],
+      teamId: `t${n - i}`,
+      name: `Team ${n - i}`,
+      place: i + 1,
+    })),
+  });
 const lane = (team: string) =>
   screen.getAllByTestId('replay-lane').find((l) => l.dataset.team === team)!;
 
@@ -79,5 +89,60 @@ describe('SplitReplay', () => {
     const onDone = vi.fn();
     drawEn(<SplitReplay finale={none} onDone={onDone} />);
     expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('a finale pushed again replays from the start, and calls onDone again', () => {
+    const onDone = vi.fn();
+    const { rerender } = drawEn(<SplitReplay finale={finale} onDone={onDone} />);
+    act(() => void vi.advanceTimersByTime(REPLAY_MS + 100));
+    expect(onDone).toHaveBeenCalledTimes(1);
+    rerender(<SplitReplay finale={screenFinaleOf()} onDone={onDone} />);
+    expect(screen.getByTestId('replay-clock')).toHaveTextContent('0:00');
+    act(() => void vi.advanceTimersByTime(REPLAY_MS + 100));
+    expect(onDone).toHaveBeenCalledTimes(2);
+  });
+
+  it('lanes in team order, whatever the ranking', () => {
+    drawEn(<SplitReplay finale={many(4)} onDone={() => undefined} />);
+    expect(screen.getAllByTestId('replay-lane').map((l) => l.dataset.team)).toEqual([
+      't1',
+      't2',
+      't3',
+      't4',
+    ]);
+  });
+
+  it('13 to 30 teams: two compact columns, every team shown', () => {
+    drawEn(<SplitReplay finale={many(13)} onDone={() => undefined} />);
+    expect(screen.getByTestId('replay-lanes')).toHaveAttribute('data-columns', '2');
+    expect(screen.getAllByTestId('replay-lane')).toHaveLength(13);
+    expect(screen.queryByTestId('replay-more')).toBeNull();
+  });
+
+  it('above 30: the top 12 and how many more', () => {
+    drawEn(<SplitReplay finale={many(31)} onDone={() => undefined} />);
+    expect(screen.getAllByTestId('replay-lane')).toHaveLength(12);
+    expect(screen.getByTestId('replay-more')).toHaveTextContent('and 19 more teams');
+  });
+
+  it('the table follows the same rule', () => {
+    motion.level = 'fade';
+    const { unmount } = drawEn(<SplitReplay finale={many(13)} onDone={() => undefined} />);
+    const tables = screen.getAllByTestId('split-table');
+    expect(tables).toHaveLength(2);
+    const heads = tables.map((tb) => within(tb).getAllByRole('columnheader').length - 1);
+    expect(heads).toEqual([7, 6]);
+    unmount();
+    drawEn(<SplitReplay finale={many(31)} onDone={() => undefined} />);
+    expect(within(screen.getByTestId('split-table')).getAllByRole('columnheader')).toHaveLength(13);
+    expect(screen.getByTestId('replay-more')).toHaveTextContent('and 19 more teams');
+  });
+
+  it('the penalty reads in the card’s colour: red is the icon’s only', () => {
+    drawEn(<SplitReplay finale={finale} onDone={() => undefined} />);
+    act(() => void vi.advanceTimersByTime(REPLAY_MS + 100));
+    const penalty = screen.getByTestId('replay-penalty');
+    expect(penalty.className).not.toContain('text-destructive');
+    expect(penalty.querySelector('svg')?.getAttribute('class')).toContain('text-destructive');
   });
 });

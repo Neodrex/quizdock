@@ -1,17 +1,28 @@
 import type { EscapeScreenFinale } from '@quiz-dock/contracts';
-import { CircleCheck, Hourglass } from 'lucide-react';
+import { AlarmClockPlus, CircleCheck, Hourglass } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useMotionLevel } from '../../motion/level';
 import { formatClock } from '../team-timer';
-import { frameAt, replayMsOf, runTimeAt, splitTableOf, type TeamFrame } from './replay-timeline';
+import {
+  frameAt,
+  replayMsOf,
+  replayTeamsOf,
+  runTimeAt,
+  splitTableOf,
+  type TeamFrame,
+} from './replay-timeline';
+
+type Ranked = EscapeScreenFinale['ranking'][number];
 
 /**
  * The split-time replay (M6 Task 6.12): the race played again once, about 20 s, on
  * `requestAnimationFrame`, then `onDone`. No "Skip": nothing is clicked on a TV. With
  * motion reduced (`fade`) or off (`none`) nothing slides: the split times show as a
- * table (stage × team), held for the replay's length, then `onDone`.
+ * table (stage × team), held for the replay's length, then `onDone`. Lanes and columns
+ * keep the team order; never a scroll (§1.8): two compact columns for 13–30 teams,
+ * above that the top 12 and how many more. A new finale (pushed again) replays.
  */
 export function SplitReplay({
   finale,
@@ -20,20 +31,29 @@ export function SplitReplay({
   finale: EscapeScreenFinale;
   onDone: () => void;
 }) {
+  // Each finale pushed is a run of its own: a fresh clock, a fresh `onDone`.
+  const [run, setRun] = useState({ finale, n: 0 });
+  if (run.finale !== finale) setRun({ finale, n: run.n + 1 });
+  return <ReplayRun key={run.n} finale={finale} onDone={onDone} />;
+}
+
+function ReplayRun({ finale, onDone }: { finale: EscapeScreenFinale; onDone: () => void }) {
   const level = useMotionLevel();
   const replayMs = replayMsOf(finale);
   const done = useRef(false);
   const finish = useRef(onDone);
-  finish.current = onDone;
-  const end = () => {
-    if (done.current) return;
-    done.current = true;
-    finish.current();
-  };
+  useEffect(() => {
+    finish.current = onDone;
+  }, [onDone]);
 
   const animated = level === 'full';
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
+    const end = () => {
+      if (done.current) return;
+      done.current = true;
+      finish.current();
+    };
     if (replayMs === 0) {
       end();
       return;
@@ -51,18 +71,32 @@ export function SplitReplay({
       else id = requestAnimationFrame(step);
     });
     return () => cancelAnimationFrame(id);
-  }, [finale, animated, replayMs]);
+  }, [animated, replayMs]);
 
   return animated ? (
     <Race finale={finale} t={runTimeAt(finale, elapsed)} />
   ) : (
-    <SplitTable finale={finale} />
+    <SplitTables finale={finale} />
+  );
+}
+
+function More({ count }: { count: number }) {
+  const { t } = useTranslation('escape');
+  if (count <= 0) return null;
+  return (
+    <p data-testid="replay-more" className="shrink-0 text-[1.1em] font-semibold">
+      {t('screen.track.more', { count })}
+    </p>
   );
 }
 
 function Race({ finale, t }: { finale: EscapeScreenFinale; t: number }) {
   const { t: tr } = useTranslation('escape');
   const frame = frameAt(finale, t);
+  const { teams, columns, more } = replayTeamsOf(finale);
+  const byId = new Map(frame.teams.map((x) => [x.teamId, x]));
+  const lanes = teams.map((r) => byId.get(r.teamId)!);
+  const compact = columns === 2;
   const stageCount = Math.max(1, finale.stages.length);
   return (
     <section
@@ -82,28 +116,36 @@ function Race({ finale, t }: { finale: EscapeScreenFinale; t: number }) {
           {formatClock(frame.t)}
         </span>
       </div>
-      <ol className="flex min-h-0 flex-1 flex-col justify-center gap-[0.4em]">
-        {frame.teams.map((team, i) => (
-          <ReplayLane
-            key={team.teamId}
-            team={team}
-            penaltyS={finale.ranking[i].hintPenaltyS}
-            stageCount={stageCount}
-          />
+      <ol
+        data-testid="replay-lanes"
+        data-columns={columns}
+        className={cn(
+          'min-h-0 flex-1 gap-[0.4em]',
+          compact ? 'grid grid-flow-col grid-cols-2 gap-x-[1em]' : 'flex flex-col justify-center',
+        )}
+        style={
+          compact
+            ? { gridTemplateRows: `repeat(${Math.ceil(lanes.length / 2)}, minmax(0, 1fr))` }
+            : undefined
+        }
+      >
+        {lanes.map((team) => (
+          <ReplayLane key={team.teamId} team={team} stageCount={stageCount} compact={compact} />
         ))}
       </ol>
+      <More count={more} />
     </section>
   );
 }
 
 function ReplayLane({
   team,
-  penaltyS,
   stageCount,
+  compact,
 }: {
   team: TeamFrame;
-  penaltyS: number;
   stageCount: number;
+  compact: boolean;
 }) {
   const { t } = useTranslation('escape');
   const share = Math.min(1, team.position / stageCount);
@@ -114,7 +156,8 @@ function ReplayLane({
       data-finished={team.finished || undefined}
       data-time-up={team.timeUp || undefined}
       className={cn(
-        'bg-card text-card-foreground flex min-w-0 items-center gap-[0.8em] rounded-[0.5em] border-[0.1em] px-[0.6em] py-[0.2em]',
+        'bg-card text-card-foreground flex min-h-0 min-w-0 items-center rounded-[0.5em] border-[0.1em] px-[0.6em]',
+        compact ? 'gap-[0.5em]' : 'gap-[0.8em] py-[0.2em]',
         team.timeUp && 'opacity-60 grayscale',
         team.finished && 'border-primary',
       )}
@@ -126,7 +169,12 @@ function ReplayLane({
         <span className="sr-only">{t('screen.track.placeLabel', { place: team.place })}</span>
         <span aria-hidden="true">{t('screen.track.place', { place: team.place })}</span>
       </span>
-      <span className="w-[10em] shrink-0 truncate text-[1.4em] leading-tight font-bold">
+      <span
+        className={cn(
+          'shrink-0 truncate text-[1.4em] leading-tight font-bold',
+          compact ? 'w-[6em]' : 'w-[10em]',
+        )}
+      >
         {team.name}
       </span>
       {/* The track: a segment per stage, the marker where the team stood. No text over it. */}
@@ -148,7 +196,12 @@ function ReplayLane({
           style={{ left: `${share * 100}%` }}
         />
       </div>
-      <div className="flex w-[11em] shrink-0 items-center justify-end gap-[0.5em] text-[1.1em] font-semibold tabular-nums">
+      <div
+        className={cn(
+          'flex shrink-0 items-center justify-end gap-[0.5em] text-[1.1em] font-semibold tabular-nums',
+          compact ? 'w-[8em]' : 'w-[11em]',
+        )}
+      >
         {team.timeUp ? (
           <span className="flex items-center gap-[0.2em] font-bold">
             <Hourglass aria-hidden className="size-[1em]" />
@@ -157,12 +210,17 @@ function ReplayLane({
         ) : (
           <>
             {team.finished && <CircleCheck aria-hidden className="size-[1.1em] shrink-0" />}
-            {team.finished && penaltyS > 0 && (
-              <span data-testid="replay-penalty" className="text-destructive font-bold">
+            {team.finished && team.penaltyS > 0 && (
+              // The words in the card's own colour (contrast); the red is the icon's.
+              <span
+                data-testid="replay-penalty"
+                className="flex items-center gap-[0.1em] font-bold"
+              >
+                <AlarmClockPlus aria-hidden className="text-destructive size-[1em]" />
                 <span className="sr-only">
-                  {t('screen.replay.penalty', { time: formatClock(penaltyS * 1000) })}
+                  {t('screen.replay.penalty', { time: formatClock(team.penaltyS * 1000) })}
                 </span>
-                <span aria-hidden="true">+{formatClock(penaltyS * 1000)}</span>
+                <span aria-hidden="true">+{formatClock(team.penaltyS * 1000)}</span>
               </span>
             )}
             <span className="font-mono">{formatClock(team.timeMs)}</span>
@@ -173,21 +231,53 @@ function ReplayLane({
   );
 }
 
-/** The split times without motion: a stage per row, a team per column, `m:ss` at each clear. */
-function SplitTable({ finale }: { finale: EscapeScreenFinale }) {
+/** The split times without motion: the shown teams, in two tables side by side past 12. */
+function SplitTables({ finale }: { finale: EscapeScreenFinale }) {
   const { t } = useTranslation('escape');
-  const rows = splitTableOf(finale);
+  const { teams, columns, more } = replayTeamsOf(finale);
+  const half = Math.ceil(teams.length / 2);
+  const groups = columns === 2 ? [teams.slice(0, half), teams.slice(half)] : [teams];
   return (
-    <table data-testid="split-table" className="w-full table-fixed text-[1.1em] tabular-nums">
-      <caption className="pb-[0.4em] text-left text-[1.5em] font-bold">
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-[0.4em]">
+      <h2 id="split-table-title" className="text-[1.5em] font-bold">
         {t('screen.replay.tableCaption')}
-      </caption>
+      </h2>
+      <div className="flex min-h-0 gap-[1em]">
+        {groups.map((group, g) => (
+          <SplitTable key={g} finale={finale} teams={group} compact={columns === 2} />
+        ))}
+      </div>
+      <More count={more} />
+    </div>
+  );
+}
+
+function SplitTable({
+  finale,
+  teams,
+  compact,
+}: {
+  finale: EscapeScreenFinale;
+  teams: Ranked[];
+  compact: boolean;
+}) {
+  const { t } = useTranslation('escape');
+  const rows = splitTableOf(finale, teams);
+  return (
+    <table
+      data-testid="split-table"
+      aria-labelledby="split-table-title"
+      className={cn(
+        'min-w-0 flex-1 table-fixed tabular-nums',
+        compact ? 'text-[0.9em]' : 'text-[1.1em]',
+      )}
+    >
       <thead>
         <tr>
           <th scope="col" className="w-[30%] text-left font-semibold">
             {t('screen.replay.stage')}
           </th>
-          {finale.ranking.map((r) => (
+          {teams.map((r) => (
             <th key={r.teamId} scope="col" className="truncate text-left text-[1.2em] font-bold">
               {r.name}
             </th>

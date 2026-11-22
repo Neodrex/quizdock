@@ -5,7 +5,8 @@ import type { EscapeScreenFinale } from '@quiz-dock/contracts';
  * screen finale carries. Each team's marker slides from stage to stage between its
  * clears; an escaped team reaches the finish at its escape time and then shows its hint
  * penalty and score (which may swap places); a team that timed out stops at the stage
- * it reached. The last frame's order is the ranking.
+ * it reached. The last frame's places are the ranking. Lanes keep the team order
+ * (owner question 5): the order of the lanes never gives the result away.
  */
 
 /** The replay's length for a run of any length. */
@@ -26,14 +27,16 @@ export interface TeamFrame {
   timeUp: boolean;
   /** The time the lane shows: the run time so far, then its score once finished. */
   timeMs: number;
-  /** The live place, 1-based. */
+  /** The live place, 1-based; teams level share one. */
   place: number;
+  /** The hint penalty shown once finished. */
+  penaltyS: number;
 }
 
 export interface Frame {
   /** The run time this frame shows. */
   t: number;
-  /** In ranking order (fixed lanes); `place` says who leads. */
+  /** In team order (fixed lanes); `place` says who leads. */
   teams: TeamFrame[];
 }
 
@@ -80,10 +83,47 @@ function positionAt(r: Ranked, t: number): number {
 const finishOf = (r: Ranked) =>
   r.escaped && r.stageClearedAt.length ? r.stageClearedAt[r.stageClearedAt.length - 1] : null;
 
+const collator = new Intl.Collator('en', { numeric: true });
+
+/** The teams in team order: their ids are `t1`, `t2`… in the order the run made them. */
+export function teamOrderOf(finale: EscapeScreenFinale): Ranked[] {
+  return [...finale.ranking].sort((a, b) => collator.compare(a.teamId, b.teamId));
+}
+
+/** Lanes on one screen without scrolling (M6 §1.8). */
+export const ONE_COLUMN_MAX = 12;
+export const TWO_COLUMNS_MAX = 30;
+
+export interface ReplayTeams {
+  /** The teams shown, in team order. */
+  teams: Ranked[];
+  /** 13–30 teams: two compact columns. */
+  columns: 1 | 2;
+  /** Above 30: the top 12 by place are shown, this many are not. */
+  more: number;
+}
+
+export function replayTeamsOf(finale: EscapeScreenFinale): ReplayTeams {
+  const n = finale.ranking.length;
+  if (n <= ONE_COLUMN_MAX) return { teams: teamOrderOf(finale), columns: 1, more: 0 };
+  if (n <= TWO_COLUMNS_MAX) return { teams: teamOrderOf(finale), columns: 2, more: 0 };
+  const top = new Set(
+    [...finale.ranking]
+      .sort((a, b) => a.place - b.place)
+      .slice(0, ONE_COLUMN_MAX)
+      .map((r) => r.teamId),
+  );
+  return {
+    teams: teamOrderOf(finale).filter((r) => top.has(r.teamId)),
+    columns: 1,
+    more: n - ONE_COLUMN_MAX,
+  };
+}
+
 export function frameAt(finale: EscapeScreenFinale, t: number): Frame {
   const maxT = maxTOf(finale);
   const end = t >= maxT;
-  const teams = finale.ranking.map((r) => {
+  const teams = teamOrderOf(finale).map((r) => {
     const finishAt = finishOf(r);
     const finished = finishAt !== null && t >= finishAt;
     const lastMoment = Math.max(finale.limitMs, ...r.stageClearedAt);
@@ -98,26 +138,30 @@ export function frameAt(finale: EscapeScreenFinale, t: number): Frame {
         timeMs:
           (finished || (end && r.escaped)) && r.scoreMs !== null ? r.scoreMs : Math.min(t, maxT),
         place: 0,
+        penaltyS: r.hintPenaltyS,
       } satisfies TeamFrame,
     };
   });
-  // Finished teams by score, then the others by how far they are; the ranking breaks ties.
-  // The last frame is the ranking itself.
-  const order = [...teams].sort((a, b) => {
-    if (end) return a.r.place - b.r.place;
-    const fa = a.frame.finished,
-      fb = b.frame.finished;
-    if (fa !== fb) return fa ? -1 : 1;
-    if (fa && fb) return a.frame.timeMs - b.frame.timeMs || a.r.place - b.r.place;
-    return b.frame.position - a.frame.position || a.r.place - b.r.place;
-  });
-  order.forEach((x, i) => {
-    x.frame.place = end ? x.r.place : i + 1;
-  });
+  // Finished teams by score, then the others by how far they are; level teams share a
+  // place. The last frame's places are the ranking's (ties included).
+  const ahead = (a: TeamFrame, b: TeamFrame) => {
+    if (a.finished !== b.finished) return a.finished;
+    if (a.finished) return a.timeMs < b.timeMs;
+    return a.position > b.position;
+  };
+  for (const x of teams) {
+    x.frame.place = end ? x.r.place : 1 + teams.filter((o) => ahead(o.frame, x.frame)).length;
+  }
   return { t: Math.min(t, maxT), teams: teams.map((x) => x.frame) };
 }
 
-/** The split times as a table: per stage, each team's run time at its clear (null: not cleared). */
-export function splitTableOf(finale: EscapeScreenFinale): (number | null)[][] {
-  return finale.stages.map((_, i) => finale.ranking.map((r) => r.stageClearedAt[i] ?? null));
+/**
+ * The split times as a table: per stage, each team's run time at its clear (null: not
+ * cleared), a column per team of `teams` (team order by default).
+ */
+export function splitTableOf(
+  finale: EscapeScreenFinale,
+  teams: Ranked[] = teamOrderOf(finale),
+): (number | null)[][] {
+  return finale.stages.map((_, i) => teams.map((r) => r.stageClearedAt[i] ?? null));
 }
