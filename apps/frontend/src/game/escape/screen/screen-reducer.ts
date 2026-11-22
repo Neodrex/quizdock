@@ -84,8 +84,7 @@ export type EscapeScreenAction =
   | { type: 'next'; now: number }
   | { type: 'screenFinale'; finale: EscapeScreenFinale; record: ScreenRecord | null }
   | { type: 'replay'; replay: 'playing' | 'done' }
-  | { type: 'closed' }
-  | { type: 'reset' };
+  | { type: 'closed' };
 
 function onBoard(ui: EscapeScreenUi, board: EscapeBoard): EscapeScreenUi {
   const prev = ui.board;
@@ -166,8 +165,6 @@ export function screenReducer(ui: EscapeScreenUi, a: EscapeScreenAction): Escape
       return { ...ui, replay: a.replay };
     case 'closed':
       return { ...ui, closed: true };
-    case 'reset':
-      return { ...initialScreenUi, seq: ui.seq };
   }
 }
 
