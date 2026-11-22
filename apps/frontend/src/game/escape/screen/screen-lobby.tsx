@@ -108,11 +108,17 @@ function JoinPanel({ pin, view }: { pin: string; view: Pick<GameView, 'joinBaseU
       <span className="max-w-[16em] text-center text-[1.5em] font-bold [overflow-wrap:anywhere]">
         {host}
       </span>
-      <span
-        aria-label={t('screen.lobby.pin', { digits: pin.split('').join(' ') })}
-        className="font-mono text-[6em] leading-none font-bold tracking-[0.1em] tabular-nums"
-      >
-        {pin}
+      {/* Read digit by digit; the large digits are for the room. */}
+      <span data-testid="lobby-pin">
+        <span className="sr-only">
+          {t('screen.lobby.pin', { digits: pin.split('').join(' ') })}
+        </span>
+        <span
+          aria-hidden="true"
+          className="font-mono text-[6em] leading-none font-bold tracking-[0.1em] tabular-nums"
+        >
+          {pin}
+        </span>
       </span>
     </div>
   );
@@ -133,7 +139,6 @@ function TeamCard({
   const more = team.members.length - shown.length;
   return (
     <li
-      aria-label={team.name}
       className={cn(
         'bg-card text-card-foreground flex min-h-0 min-w-0 flex-col gap-[0.4em] overflow-hidden rounded-[0.6em] border-[0.12em] p-[0.6em]',
         team.full && 'border-primary',

@@ -28,12 +28,21 @@ const forming = (over: Partial<EscapeBoard> = {}) =>
 
 const draw = (board: EscapeBoard) => drawEn(<ScreenLobby board={board} pin={PIN} view={VIEW} />);
 
-const card = (name: string) => screen.getByRole('listitem', { name });
+const card = (name: string) =>
+  screen.getByText(name, { selector: 'li > div > span' }).closest('li')!;
+/** The text a screen reader reads: aria-hidden subtrees left out. */
+const spoken = (el: Element) => {
+  const copy = el.cloneNode(true) as Element;
+  copy.querySelectorAll('[aria-hidden="true"]').forEach((n) => n.remove());
+  return copy.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+};
 
 describe('ScreenLobby', () => {
   it('shows the PIN in large digits, the QR of the join link and the join address', () => {
     draw(forming());
-    expect(screen.getByLabelText('PIN 1 2 3 4 5 6')).toHaveTextContent('123456');
+    const pin = screen.getByTestId('lobby-pin');
+    expect(spoken(pin)).toBe('PIN 1 2 3 4 5 6');
+    expect(within(pin).getByText('123456')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.getByRole('img', { name: 'QR code to join' })).toHaveAttribute(
       'data-value',
       'https://quiz.example/join/123456',
@@ -115,6 +124,7 @@ describe('ScreenLobby', () => {
     const grid = screen.getByRole('list', { name: 'Teams' });
     expect(grid).toHaveClass(cols);
     expect(grid.className).not.toMatch(/overflow-(auto|scroll|y-auto)/);
-    expect(within(grid).getAllByRole('listitem', { name: /^Team \d+$/ })).toHaveLength(count);
+    expect(grid.querySelectorAll(':scope > li')).toHaveLength(count);
+    expect(grid.querySelector(':scope > li[aria-label]')).toBeNull();
   });
 });

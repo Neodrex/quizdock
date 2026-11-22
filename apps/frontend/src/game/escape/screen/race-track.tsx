@@ -1,6 +1,5 @@
 import type { EscapeBoard } from '@quiz-dock/contracts';
 import { CircleCheck, Hourglass, Lightbulb, WifiOff } from 'lucide-react';
-import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { type MotionLevel, useMotionLevel } from '../../motion/level';
@@ -63,8 +62,7 @@ export function RaceTrack({ board, now }: { board: EscapeBoard; now: number }) {
   );
 }
 
-/** A lane redraws only when its team or its time changed (boards come every 100 ms). */
-const LaneRow = memo(function LaneRow({
+function LaneRow({
   lane,
   ownMs,
   compact,
@@ -79,7 +77,6 @@ const LaneRow = memo(function LaneRow({
   const out = lane.timedOut && !lane.escaped;
   return (
     <li
-      aria-label={lane.name}
       data-lane={lane.id}
       data-out={out || undefined}
       className={cn(
@@ -89,13 +86,16 @@ const LaneRow = memo(function LaneRow({
       )}
     >
       <span
-        aria-label={t('screen.track.placeLabel', { place: lane.place })}
+        data-place
         className="bg-primary text-primary-foreground flex min-w-[2.4em] shrink-0 justify-center rounded-full px-[0.3em] text-[1.1em] font-bold tabular-nums"
       >
-        {t('screen.track.place', { place: lane.place })}
+        <span className="sr-only">{t('screen.track.placeLabel', { place: lane.place })}</span>
+        <span aria-hidden="true">{t('screen.track.place', { place: lane.place })}</span>
       </span>
       <div className={cn('flex min-w-0 shrink-0 flex-col', compact ? 'w-[8em]' : 'w-[12em]')}>
-        <span className="truncate text-[1.4em] leading-tight font-bold">{lane.name}</span>
+        <span data-lane-name className="truncate text-[1.4em] leading-tight font-bold">
+          {lane.name}
+        </span>
         {!lane.escaped && !out && lane.stageTitle && (
           <span className="truncate text-[0.9em] font-medium">{lane.stageTitle}</span>
         )}
@@ -130,7 +130,7 @@ const LaneRow = memo(function LaneRow({
       </div>
     </li>
   );
-});
+}
 
 function Segments({ lane, motion }: { lane: Lane; motion: MotionLevel }) {
   const { t } = useTranslation('escape');

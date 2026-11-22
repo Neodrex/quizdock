@@ -19,7 +19,17 @@ const green = summaryOf({ id: 't3', name: 'Team Green', stageIndex: 2, stageTitl
 const draw = (teams: EscapeTeamSummary[], over: Partial<EscapeBoard> = {}) =>
   drawEn(<RaceTrack board={boardOf({ teams, ...over })} now={NOW} />);
 
-const lane = (name: string) => screen.getByRole('listitem', { name });
+const lane = (name: string) =>
+  screen.getByText(name, { selector: '[data-lane] span' }).closest('li')!;
+const lanes = (root: HTMLElement) => [...root.querySelectorAll<HTMLElement>('li[data-lane]')];
+const nameOf = (li: Element) => li.querySelector('[data-lane-name]')?.textContent;
+/** The text a screen reader reads: aria-hidden subtrees left out. */
+const spoken = (el: Element) => {
+  const copy = el.cloneNode(true) as Element;
+  copy.querySelectorAll('[aria-hidden="true"]').forEach((n) => n.remove());
+  return copy.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+};
+const badge = (li: Element) => li.querySelector<HTMLElement>('[data-place]')!;
 
 beforeEach(() => {
   motion.level = 'full';
@@ -28,14 +38,14 @@ beforeEach(() => {
 describe('RaceTrack', () => {
   it('draws one lane per team in team order, each with its place', () => {
     draw([red, blue, green]);
-    const names = screen
-      .getAllByRole('listitem')
-      .filter((li) => li.dataset.lane)
-      .map((li) => li.getAttribute('aria-label'));
-    expect(names).toEqual(['Team Red', 'Team Blue', 'Team Green']);
-    expect(within(lane('Team Green')).getByLabelText('Place 1')).toHaveTextContent('#1');
-    expect(within(lane('Team Red')).getByLabelText('Place 2')).toBeInTheDocument();
-    expect(within(lane('Team Blue')).getByLabelText('Place 3')).toBeInTheDocument();
+    const all = lanes(screen.getByRole('list', { name: 'Race' }));
+    expect(all.map(nameOf)).toEqual(['Team Red', 'Team Blue', 'Team Green']);
+    expect(all.some((li) => li.hasAttribute('aria-label'))).toBe(false);
+    const first = badge(lane('Team Green'));
+    expect(spoken(first)).toBe('Place 1');
+    expect(within(first).getByText('#1')).toHaveAttribute('aria-hidden', 'true');
+    expect(spoken(badge(lane('Team Red')))).toBe('Place 2');
+    expect(spoken(badge(lane('Team Blue')))).toBe('Place 3');
   });
 
   it('shows one segment per stage: done, current with its locks, ahead', () => {
@@ -71,7 +81,7 @@ describe('RaceTrack', () => {
         .getAllByTestId('stage-segment')
         .map((s) => s.dataset.state),
     ).toEqual(['done', 'done', 'done']);
-    expect(within(r).getByLabelText('Place 1')).toBeInTheDocument();
+    expect(spoken(badge(r))).toBe('Place 1');
     const b = lane('Team Blue');
     expect(within(b).getByText('Time up')).toBeInTheDocument();
     expect(b).toHaveAttribute('data-out', 'true');
@@ -93,7 +103,7 @@ describe('RaceTrack', () => {
     const track = screen.getByRole('list', { name: 'Race' });
     expect(track).toHaveClass('grid-cols-2');
     expect(track).toHaveAttribute('data-compact', 'true');
-    expect(within(track).getAllByRole('listitem', { name: /^Team \d+$/ })).toHaveLength(30);
+    expect(lanes(track)).toHaveLength(30);
   });
 
   it('above 30 teams shows the top 12 by place and counts the rest', () => {
@@ -102,11 +112,9 @@ describe('RaceTrack', () => {
     );
     draw(teams);
     const track = screen.getByRole('list', { name: 'Race' });
-    const shown = within(track).getAllByRole('listitem', { name: /^Team \d+$/ });
+    const shown = lanes(track);
     expect(shown).toHaveLength(12);
-    expect(shown.map((l) => l.getAttribute('aria-label'))).toEqual(
-      Array.from({ length: 12 }, (_, i) => `Team ${i}`),
-    );
+    expect(shown.map(nameOf)).toEqual(Array.from({ length: 12 }, (_, i) => `Team ${i}`));
     expect(screen.getByText('and 30 more teams')).toBeInTheDocument();
     expect(screen.getByText('Stage 1: 30')).toBeInTheDocument();
   });
