@@ -1,7 +1,7 @@
 import {
   type EscapeBoard,
   type EscapeHostState,
-  type EscapeOutline,
+  type EscapeHostOutline,
   type EscapePlayerState,
   GameState,
 } from '@quiz-dock/contracts';
@@ -19,7 +19,7 @@ import {
   seedTemplate,
   stateWhere,
 } from './escape-harness';
-import { leaksIn } from './leaks';
+import { answersOf, hostLeaks, leaksIn, stringsIn } from './leaks';
 
 /** Opening a run, syncing every kind of socket, forming teams and starting (Task 3.9). */
 export function lobbyTests(ctx: EscapeContext): void {
@@ -64,15 +64,22 @@ export function lobbyTests(ctx: EscapeContext): void {
     const host = ctx.h.connectHost();
     const pin = await createEscape(host, ctx.templateId);
     expect(pin).toMatch(/^\d{6}$/);
-    const outline = nextEvent<EscapeOutline>(host, 'escape:outline');
+    const outline = nextEvent<EscapeHostOutline>(host, 'escape:outline');
     const view = nextEvent<EscapeHostState>(host, 'escape:host');
     const board = nextEvent<EscapeBoard>(host, 'escape:board');
     expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
     const o = await outline;
     expect(o.templateId).toBe(ctx.templateId);
     expect(o.version).toBe(1);
-    // The answers, to the host console only.
-    expect(o.template.stages[0].locks[0]).toMatchObject({ kind: 'code', answer: '0417' });
+    // The host sees the lock, never what opens it (owner question 1).
+    expect(o.stages[0].locks[0]).toEqual({
+      id: 'lobby-door',
+      label: expect.any(String),
+      kind: 'code',
+    });
+    expect(hostLeaks([['escape:outline', o]], ctx.vault)).toEqual([]);
+    const strings = stringsIn(o);
+    for (const a of answersOf(ctx.vault)) expect(strings).not.toContain(a);
     expect(await view).toMatchObject({ teams: [], unassigned: [], templateVersion: 1 });
     expect(await board).toMatchObject({ phase: 'forming', title: 'Vault Heist', teams: [] });
   });

@@ -26,7 +26,7 @@ import {
   stateWhere,
   submitAs,
 } from './escape-harness';
-import { receivedLeaks, stringsIn } from './leaks';
+import { hostLeaks, receivedLeaks, stringsIn } from './leaks';
 
 /**
  * Task 3.16: one two-team, roles-mode Vault Heist run through sockets only,
@@ -388,7 +388,8 @@ export function vaultHeistRunTests(ctx: EscapeContext): void {
       // Every socket still in the room saw the finale (the lookout's first one had left).
       expect(events.has('escape:finale')).toBe(socket.connected);
     }
-    // The positive control: the host console did get the answers.
+    // The host console got its outline and every frame of the run, but no answer.
     expect(hostSeen.some(([e]) => e === 'escape:outline')).toBe(true);
+    expect(hostLeaks(hostSeen, tpl)).toEqual([]);
   });
 }

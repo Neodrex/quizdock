@@ -1,8 +1,8 @@
 /**
  * Live escape runs over Socket.IO (M3). Inbound payloads are zod schemas the
  * escape gateway parses; outbound payloads are plain interfaces. Phones only
- * ever get EscapePlayerState, EscapeTeamUpdate and EscapeFinale: answers leave
- * the server only in EscapeOutline, to the host console.
+ * ever get EscapePlayerState, EscapeTeamUpdate and EscapeFinale. Answers never
+ * leave the server: the host console's EscapeHostOutline has none either (M5).
  */
 import { z } from 'zod';
 import type { EscapeTemplateContent } from './escape';
@@ -260,11 +260,44 @@ export interface EscapeHostState {
   templateVersion: number;
 }
 
-/** The frozen template with its answers: host console only. */
-export interface EscapeOutline {
+type EscapeStageContent = EscapeTemplateContent['stages'][number];
+
+/**
+ * A lock as the host console sees it: what it is, never what opens it. Choice
+ * options and sequence items are labels only, items in template order; a
+ * combined lock lists the role of each part.
+ */
+export interface EscapeHostLock {
+  id: string;
+  label: string;
+  kind: EscapeStageContent['locks'][number]['kind'];
+  partRoles?: string[];
+  options?: { id: string; label: string; image: string | null }[];
+  items?: { id: string; label: string }[];
+}
+
+export interface EscapeHostStage {
+  id: string;
+  title: string;
+  intro: string;
+  unlockText: string;
+  locks: EscapeHostLock[];
+  clues: EscapeStageContent['clues'];
+  /** Every hint, released or not: the host decides whether to give the next one. */
+  hints: EscapeStageContent['hints'];
+}
+
+/** The frozen template without its answers: host console only (M5 owner question 1). */
+export interface EscapeHostOutline {
   templateId: string;
   version: number;
-  template: EscapeTemplateContent & { id: string };
+  title: string;
+  intro: string;
+  mode: EscapeTemplateContent['mode'];
+  difficulty: EscapeTemplateContent['difficulty'];
+  targetMinutes: number;
+  roles: EscapeTemplateContent['roles'];
+  stages: EscapeHostStage[];
 }
 
 export interface EscapeFinale {
@@ -376,8 +409,8 @@ export interface EscapeServerToClientEvents {
   'escape:host': (p: EscapeHostState) => void;
   /** To the host room, when one team changed. */
   'escape:host-team': (p: EscapeHostTeam) => void;
-  /** To the host room only, on sync: carries the answers. */
-  'escape:outline': (p: EscapeOutline) => void;
+  /** To the host room only, on sync: the run's template, without its answers. */
+  'escape:outline': (p: EscapeHostOutline) => void;
   /** To the whole PIN room. */
   'escape:finale': (p: EscapeFinale) => void;
 }

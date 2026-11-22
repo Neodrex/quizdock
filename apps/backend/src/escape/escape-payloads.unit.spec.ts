@@ -7,7 +7,7 @@ import {
   hintUpdateOf,
   hostStateOf,
   hostTeamOf,
-  outlineOf,
+  hostOutlineOf,
   playerStateOf,
   type RoomPlayer,
   type RunView,
@@ -15,8 +15,8 @@ import {
   timeUpOf,
 } from './escape-payloads';
 import { awards, newTeam, nextHint, rankTeams, submit, useHint } from './escape-rules';
-import type { EscapeTemplate, TeamState } from './escape.types';
-import { vaultHeist } from './samples';
+import type { EscapeTemplate, Same, TeamState } from './escape.types';
+import { lostLibrary, vaultHeist } from './samples';
 
 const tpl: EscapeTemplate = { ...vaultHeist, id: 'vh' };
 const NOW = 1_000_000;
@@ -283,26 +283,123 @@ describe('host payloads', () => {
     expect(state.teams.map((t) => t.id)).toEqual(['a', 'b']);
   });
 
-  it('outline carries the answers (positive control of the checker)', () => {
-    const outline = outlineOf(snap);
-    expect(outline.template).toEqual(tpl);
-    expect(outline.template).not.toBe(tpl);
-    const leaks = leaksIn(outline, tpl);
+  it('the template itself trips the checker (positive control)', () => {
+    const leaks = leaksIn(tpl, tpl);
     expect(leaks).toEqual(expect.arrayContaining([expect.stringContaining('secret key')]));
     expect(leaks).toEqual(
       expect.arrayContaining([expect.stringContaining('answer of lock lobby-door')]),
     );
   });
+});
 
-  it('outline drops keys the template type does not have', () => {
+describe('hostOutlineOf (owner question 1: no answers to the host)', () => {
+  const secret = new Set(['answer', 'answers', 'correct', 'order', 'parts']);
+  const keysIn = (value: unknown): string[] => {
+    if (Array.isArray(value)) return value.flatMap(keysIn);
+    if (value && typeof value === 'object') {
+      return Object.entries(value).flatMap(([k, v]) => [k, ...keysIn(v)]);
+    }
+    return [];
+  };
+
+  it.each([
+    ['Vault Heist', vaultHeist],
+    ['Lost Library', lostLibrary],
+  ])('%s: no answer key at any depth, and no answer value', (_name, content) => {
+    const t: EscapeTemplate = { ...content, id: 's' };
+    const outline = hostOutlineOf({ ...snap, template: t });
+    expect(keysIn(outline).filter((k) => secret.has(k))).toEqual([]);
+    // Every hint and clue may show (the host's view): only answers count as leaks.
+    const all = {
+      released: t.stages.flatMap((s) => s.hints.map((h) => h.id)),
+      roles: t.roles.map((r) => r.id),
+    };
+    expect(leaksIn(outline, t, all)).toEqual([]);
+  });
+
+  it('keeps what the host needs: locks, part roles, labels, hints and unlock texts', () => {
+    const outline = hostOutlineOf(snap);
+    expect(outline).toMatchObject({
+      templateId: 'vh',
+      version: 3,
+      title: tpl.title,
+      intro: tpl.intro,
+      mode: tpl.mode,
+      difficulty: tpl.difficulty,
+      targetMinutes: tpl.targetMinutes,
+      roles: tpl.roles,
+    });
+    expect(outline.stages).toHaveLength(tpl.stages.length);
+    for (const [i, stage] of tpl.stages.entries()) {
+      const out = outline.stages[i];
+      expect(out).toMatchObject({
+        id: stage.id,
+        title: stage.title,
+        intro: stage.intro,
+        unlockText: stage.unlockText,
+        clues: stage.clues,
+        hints: stage.hints,
+      });
+      for (const [j, lock] of stage.locks.entries()) {
+        const got = out.locks[j];
+        expect(got).toMatchObject({ id: lock.id, label: lock.label, kind: lock.kind });
+        if (lock.kind === 'combined') {
+          expect(got.partRoles).toEqual(lock.parts.map((p) => p.roleId));
+        }
+        if (lock.kind === 'choice') expect(got.options).toEqual(lock.options);
+        if (lock.kind === 'sequence') expect(got.items).toEqual(lock.items);
+      }
+    }
+    const kinds = tpl.stages.flatMap((s) => s.locks.map((l) => l.kind));
+    expect(new Set(kinds)).toEqual(new Set(['code', 'phrase', 'choice', 'sequence', 'combined']));
+  });
+
+  it('copies, and drops keys the template type does not have', () => {
     const extra = {
       ...tpl,
       secret: 'x',
       stages: [{ ...tpl.stages[0], note: 'y' }],
     } as unknown as EscapeTemplate;
-    const out = outlineOf({ ...snap, template: extra });
+    const out = hostOutlineOf({ ...snap, template: extra });
     expect(stringsIn(out)).not.toContain('x');
     expect(stringsIn(out)).not.toContain('y');
+    expect(out.roles).not.toBe(tpl.roles);
+  });
+
+  it('has exactly the host outline type', () => {
+    interface Expected {
+      templateId: string;
+      version: number;
+      title: string;
+      intro: string;
+      mode: 'roles' | 'parallel';
+      difficulty: 'standard' | 'hard';
+      targetMinutes: number;
+      roles: { id: string; name: string; description: string }[];
+      stages: {
+        id: string;
+        title: string;
+        intro: string;
+        unlockText: string;
+        locks: {
+          id: string;
+          label: string;
+          kind: 'code' | 'phrase' | 'choice' | 'sequence' | 'combined';
+          partRoles?: string[];
+          options?: { id: string; label: string; image: string | null }[];
+          items?: { id: string; label: string }[];
+        }[];
+        clues: {
+          id: string;
+          roleId: string | null;
+          kind: 'text' | 'image' | 'audio' | 'document';
+          body: string;
+        }[];
+        hints: { id: string; text: string; penaltyS: number; releaseAfterS: number | null }[];
+      }[];
+    }
+    const same: Same<ReturnType<typeof hostOutlineOf>, Expected> = true;
+    expect(same).toBe(true);
   });
 });
 

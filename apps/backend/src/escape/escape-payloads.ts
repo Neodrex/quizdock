@@ -1,7 +1,7 @@
 /**
  * Outbound escape payloads (M3 plan §2). The leak boundary: phones get
  * EscapePlayerState, whose `view` always comes from playerView; screens get
- * counts, names and stage titles; answers leave only in the host's outline.
+ * counts, names and stage titles; the host's outline has no answer either (M5).
  * Fields are copied one by one: no template object is ever spread.
  */
 
@@ -11,10 +11,11 @@ import type {
   EscapeClock,
   EscapeFinale,
   EscapeFormation,
+  EscapeHostLock,
+  EscapeHostOutline,
   EscapeHostState,
   EscapeHostTeam,
   EscapeMember,
-  EscapeOutline,
   EscapePlayerState,
   EscapeTeamClock,
   EscapeTeamSummary,
@@ -270,66 +271,48 @@ export function hostStateOf(v: RunView): EscapeHostState {
   };
 }
 
-function copyLock(l: Lock): Lock {
-  const base = { id: l.id, label: l.label };
+/** A lock without what opens it (owner question 1): labels and part roles only. */
+function hostLockOf(l: Lock): EscapeHostLock {
+  const base = { id: l.id, label: l.label, kind: l.kind };
   switch (l.kind) {
     case 'code':
-      return { ...base, kind: 'code', answer: l.answer };
     case 'phrase':
-      return { ...base, kind: 'phrase', answers: [...l.answers] };
+      return base;
     case 'choice':
-      return {
-        ...base,
-        kind: 'choice',
-        options: l.options.map(({ id, label, image }) => ({ id, label, image })),
-        correct: [...l.correct],
-      };
+      return { ...base, options: l.options.map(({ id, label, image }) => ({ id, label, image })) };
     case 'sequence':
-      return {
-        ...base,
-        kind: 'sequence',
-        items: l.items.map(({ id, label }) => ({ id, label })),
-        order: [...l.order],
-      };
+      return { ...base, items: l.items.map(({ id, label }) => ({ id, label })) };
     case 'combined':
-      return {
-        ...base,
-        kind: 'combined',
-        parts: l.parts.map(({ roleId, answer }) => ({ roleId, answer })),
-      };
+      return { ...base, partRoles: l.parts.map((p) => p.roleId) };
   }
 }
 
-/** The frozen template with its answers, for the host console only. */
-export function outlineOf(snap: EscapeSnapshot): EscapeOutline {
+/** The frozen template for the host console, without any answer (M5 §1.4). */
+export function hostOutlineOf(snap: EscapeSnapshot): EscapeHostOutline {
   const t = snap.template;
   return {
     templateId: snap.templateId,
     version: snap.version,
-    template: {
-      id: t.id,
-      title: t.title,
-      intro: t.intro,
-      difficulty: t.difficulty,
-      targetMinutes: t.targetMinutes,
-      mode: t.mode,
-      roles: t.roles.map(({ id, name, description }) => ({ id, name, description })),
-      stages: t.stages.map((s) => ({
-        id: s.id,
-        title: s.title,
-        intro: s.intro,
-        locks: s.locks.map(copyLock),
-        clues: s.clues.map(({ id, roleId, kind, body }) => ({ id, roleId, kind, body })),
-        hints: s.hints.map(({ id, text, penaltyS, releaseAfterS }) => ({
-          id,
-          text,
-          penaltyS,
-          releaseAfterS,
-        })),
-        unlockText: s.unlockText,
+    title: t.title,
+    intro: t.intro,
+    mode: t.mode,
+    difficulty: t.difficulty,
+    targetMinutes: t.targetMinutes,
+    roles: t.roles.map(({ id, name, description }) => ({ id, name, description })),
+    stages: t.stages.map((s) => ({
+      id: s.id,
+      title: s.title,
+      intro: s.intro,
+      unlockText: s.unlockText,
+      locks: s.locks.map(hostLockOf),
+      clues: s.clues.map(({ id, roleId, kind, body }) => ({ id, roleId, kind, body })),
+      hints: s.hints.map(({ id, text, penaltyS, releaseAfterS }) => ({
+        id,
+        text,
+        penaltyS,
+        releaseAfterS,
       })),
-      finale: t.finale,
-    },
+    })),
   };
 }
 

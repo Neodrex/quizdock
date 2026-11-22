@@ -14,7 +14,10 @@ import {
   escapeSubmitSchema,
   escapeTeamsSchema,
   escapeUnlockSchema,
+  type EscapeHostLock,
+  type EscapeHostOutline,
   type EscapePlayerState,
+  type EscapeServerToClientEvents,
 } from '../src/escape-live';
 
 const pin = '123456';
@@ -83,6 +86,20 @@ describe('EscapePlayerState', () => {
   it("gives the team's run time at its escape, or null", () => {
     expectTypeOf<NonNullable<EscapePlayerState['team']>['escapedMs']>().toEqualTypeOf<
       number | null
+    >();
+  });
+});
+
+describe('EscapeHostOutline (M5 owner question 1)', () => {
+  it('is what escape:outline carries', () => {
+    expectTypeOf<
+      Parameters<EscapeServerToClientEvents['escape:outline']>[0]
+    >().toEqualTypeOf<EscapeHostOutline>();
+  });
+
+  it('gives a lock no answer field', () => {
+    expectTypeOf<keyof EscapeHostLock>().toEqualTypeOf<
+      'id' | 'label' | 'kind' | 'partRoles' | 'options' | 'items'
     >();
   });
 });

@@ -116,3 +116,30 @@ export function receivedLeaks(
     return found;
   });
 }
+
+/**
+ * Leaks in what the host console `record()`ed (M5 owner question 1): it may read
+ * every hint and every role's clues, but no answer, in any frame.
+ */
+export function hostLeaks(seen: [string, unknown][], tpl: EscapeTemplate): string[] {
+  const scope: LeakScope = {
+    released: tpl.stages.flatMap((s) => s.hints.map((h) => h.id)),
+    roles: tpl.roles.map((r) => r.id),
+  };
+  return seen.flatMap(([event, p]) => leaksIn(p, tpl, scope).map((line) => `${event} ${line}`));
+}
+
+/** Every typed answer of a template, as written: code, phrase and combined parts. */
+export function answersOf(tpl: EscapeTemplate): string[] {
+  return tpl.stages.flatMap((s) =>
+    s.locks.flatMap((l) =>
+      l.kind === 'code'
+        ? [l.answer]
+        : l.kind === 'phrase'
+          ? l.answers
+          : l.kind === 'combined'
+            ? l.parts.map((p) => p.answer)
+            : [],
+    ),
+  );
+}

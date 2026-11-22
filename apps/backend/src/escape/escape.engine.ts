@@ -45,7 +45,7 @@ import {
   hintUpdateOf,
   hostStateOf,
   hostTeamOf,
-  outlineOf,
+  hostOutlineOf,
   playerStateOf,
   type RunView,
   submitUpdateOf,
@@ -250,7 +250,7 @@ export class EscapeEngine implements OnModuleDestroy {
       if (data.isHostControl && data.pin === pin && data.user?.id === ref.meta.hostUserId) {
         await socket.join(escapeRooms.host(pin));
         const v = await this.viewOf(ref);
-        socket.emit('escape:outline', outlineOf(ref.snap));
+        socket.emit('escape:outline', hostOutlineOf(ref.snap));
         socket.emit('escape:host', hostStateOf(v));
         socket.emit('escape:board', boardOf(v));
         return;
