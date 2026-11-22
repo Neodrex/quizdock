@@ -390,5 +390,21 @@
       "paused": "Пауза",
       "loading": "Загрузка квест-комнаты…"
     }
+  },
+  "screen": {
+    "lobby": {
+      "pin": "PIN-код {{digits}}",
+      "players_one": "{{count}} игрок",
+      "players_few": "{{count}} игрока",
+      "players_many": "{{count}} игроков",
+      "players_other": "{{count}} игрока",
+      "joined_one": "В зале {{count}} игрок",
+      "joined_few": "В зале {{count}} игрока",
+      "joined_many": "В зале {{count}} игроков",
+      "joined_other": "В зале {{count}} игрока",
+      "pickOnPhone": "Выберите команду на телефоне",
+      "waiting": "Ждут команду",
+      "teams": "Команды"
+    }
   }
 }

@@ -248,6 +248,11 @@ export function lastSecondsOf(board: EscapeBoard, now: number): boolean {
   return !!show && show.remainingMs <= LAST_SECONDS_MS;
 }
 
+export interface LobbyPlayer {
+  nickname: string;
+  connected: boolean;
+}
+
 export interface LobbyTeam {
   id: string;
   name: string;
@@ -255,8 +260,8 @@ export interface LobbyTeam {
   /** "3 / 5", or "3" without a cap. */
   label: string;
   full: boolean;
-  /** Nicknames, in join order (owner answer 1). */
-  members: string[];
+  /** Nicknames, in join order (owner answer 1), each with whether the phone is on. */
+  members: LobbyPlayer[];
 }
 
 export interface Lobby {
@@ -278,7 +283,9 @@ export function lobbyOf(board: EscapeBoard): Lobby {
       count: t.memberCount,
       label: maxSize === null ? `${t.memberCount}` : `${t.memberCount} / ${maxSize}`,
       full: maxSize !== null && t.memberCount >= maxSize,
-      members: board.roster.filter((r) => r.teamId === t.id).map((r) => r.nickname),
+      members: board.roster
+        .filter((r) => r.teamId === t.id)
+        .map((r) => ({ nickname: r.nickname, connected: r.connected })),
     })),
     unassigned: board.unassigned,
     waiting: board.roster.filter((r) => r.teamId === null).map((r) => r.nickname),

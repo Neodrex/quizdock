@@ -383,5 +383,19 @@
       "paused": "In pausa",
       "loading": "Caricamento dell’escape room…"
     }
+  },
+  "screen": {
+    "lobby": {
+      "pin": "Codice PIN {{digits}}",
+      "players_one": "{{count}} giocatore",
+      "players_many": "{{count}} giocatori",
+      "players_other": "{{count}} giocatori",
+      "joined_one": "{{count}} giocatore nella sala",
+      "joined_many": "{{count}} giocatori nella sala",
+      "joined_other": "{{count}} giocatori nella sala",
+      "pickOnPhone": "Scegli la tua squadra sul telefono",
+      "waiting": "In attesa di una squadra",
+      "teams": "Squadre"
+    }
   }
 }

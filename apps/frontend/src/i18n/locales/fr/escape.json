@@ -383,5 +383,19 @@
       "paused": "En pause",
       "loading": "Chargement de l’escape game…"
     }
+  },
+  "screen": {
+    "lobby": {
+      "pin": "Code PIN {{digits}}",
+      "players_one": "{{count}} joueur",
+      "players_many": "{{count}} joueurs",
+      "players_other": "{{count}} joueurs",
+      "joined_one": "{{count}} joueur dans la salle",
+      "joined_many": "{{count}} joueurs dans la salle",
+      "joined_other": "{{count}} joueurs dans la salle",
+      "pickOnPhone": "Choisissez votre équipe sur votre téléphone",
+      "waiting": "En attente d'une équipe",
+      "teams": "Équipes"
+    }
   }
 }

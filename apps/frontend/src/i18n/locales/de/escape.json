@@ -376,5 +376,17 @@
       "paused": "Pausiert",
       "loading": "Escape-Room wird geladen…"
     }
+  },
+  "screen": {
+    "lobby": {
+      "pin": "PIN-Code {{digits}}",
+      "players_one": "{{count}} Spieler",
+      "players_other": "{{count}} Spieler",
+      "joined_one": "{{count}} Spieler im Raum",
+      "joined_other": "{{count}} Spieler im Raum",
+      "pickOnPhone": "Wählt euer Team auf dem Handy",
+      "waiting": "Wartet auf ein Team",
+      "teams": "Teams"
+    }
   }
 }

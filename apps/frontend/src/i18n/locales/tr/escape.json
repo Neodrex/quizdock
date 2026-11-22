@@ -376,5 +376,17 @@
       "paused": "Duraklatıldı",
       "loading": "Kaçış odası yükleniyor…"
     }
+  },
+  "screen": {
+    "lobby": {
+      "pin": "PIN kodu {{digits}}",
+      "players_one": "{{count}} oyuncu",
+      "players_other": "{{count}} oyuncu",
+      "joined_one": "Salonda {{count}} oyuncu",
+      "joined_other": "Salonda {{count}} oyuncu",
+      "pickOnPhone": "Takımınızı telefonunuzdan seçin",
+      "waiting": "Takım bekliyor",
+      "teams": "Takımlar"
+    }
   }
 }

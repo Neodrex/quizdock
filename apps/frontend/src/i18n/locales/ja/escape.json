@@ -369,5 +369,15 @@
       "paused": "一時停止中",
       "loading": "脱出ゲームを読み込み中…"
     }
+  },
+  "screen": {
+    "lobby": {
+      "pin": "PINコード {{digits}}",
+      "players_other": "{{count}}人",
+      "joined_other": "参加者 {{count}}人",
+      "pickOnPhone": "スマートフォンでチームを選んでください",
+      "waiting": "チーム待ち",
+      "teams": "チーム"
+    }
   }
 }

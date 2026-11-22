@@ -369,5 +369,15 @@
       "paused": "已暫停",
       "loading": "正在載入密室逃脫…"
     }
+  },
+  "screen": {
+    "lobby": {
+      "pin": "PIN 碼 {{digits}}",
+      "players_other": "{{count}} 名玩家",
+      "joined_other": "房間內有 {{count}} 名玩家",
+      "pickOnPhone": "在手機上選擇你的隊伍",
+      "waiting": "等待分隊",
+      "teams": "隊伍"
+    }
   }
 }

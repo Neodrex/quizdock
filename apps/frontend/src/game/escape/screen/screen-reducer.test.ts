@@ -333,7 +333,11 @@ describe('lobbyOf', () => {
           count: 3,
           label: '3 / 5',
           full: false,
-          members: ['Ana', 'Ben', 'Cy'],
+          members: [
+            { nickname: 'Ana', connected: true },
+            { nickname: 'Ben', connected: false },
+            { nickname: 'Cy', connected: true },
+          ],
         },
         { id: 't2', name: 'Team Blue', count: 0, label: '0 / 5', full: false, members: [] },
       ],

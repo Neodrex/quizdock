@@ -376,5 +376,17 @@
       "paused": "Paused",
       "loading": "Loading the escape room…"
     }
+  },
+  "screen": {
+    "lobby": {
+      "pin": "PIN {{digits}}",
+      "players_one": "{{count}} player",
+      "players_other": "{{count}} players",
+      "joined_one": "{{count}} player in the room",
+      "joined_other": "{{count}} players in the room",
+      "pickOnPhone": "Pick your team on your phone",
+      "waiting": "Waiting for a team",
+      "teams": "Teams"
+    }
   }
 }

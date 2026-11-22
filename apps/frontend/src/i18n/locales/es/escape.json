@@ -383,5 +383,19 @@
       "paused": "En pausa",
       "loading": "Cargando la sala de escape…"
     }
+  },
+  "screen": {
+    "lobby": {
+      "pin": "Código PIN {{digits}}",
+      "players_one": "{{count}} jugador",
+      "players_many": "{{count}} jugadores",
+      "players_other": "{{count}} jugadores",
+      "joined_one": "{{count}} jugador en la sala",
+      "joined_many": "{{count}} jugadores en la sala",
+      "joined_other": "{{count}} jugadores en la sala",
+      "pickOnPhone": "Elige tu equipo en tu móvil",
+      "waiting": "Esperando equipo",
+      "teams": "Equipos"
+    }
   }
 }

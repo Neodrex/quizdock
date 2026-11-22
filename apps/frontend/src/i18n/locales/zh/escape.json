@@ -369,5 +369,15 @@
       "paused": "已暂停",
       "loading": "正在加载密室逃脱…"
     }
+  },
+  "screen": {
+    "lobby": {
+      "pin": "PIN 码 {{digits}}",
+      "players_other": "{{count}} 名玩家",
+      "joined_other": "房间内有 {{count}} 名玩家",
+      "pickOnPhone": "在手机上选择你的队伍",
+      "waiting": "等待分队",
+      "teams": "队伍"
+    }
   }
 }

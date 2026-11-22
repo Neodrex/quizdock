@@ -376,5 +376,17 @@
       "paused": "रुका हुआ",
       "loading": "एस्केप रूम लोड हो रहा है…"
     }
+  },
+  "screen": {
+    "lobby": {
+      "pin": "पिन {{digits}}",
+      "players_one": "{{count}} खिलाड़ी",
+      "players_other": "{{count}} खिलाड़ी",
+      "joined_one": "कमरे में {{count}} खिलाड़ी",
+      "joined_other": "कमरे में {{count}} खिलाड़ी",
+      "pickOnPhone": "अपने फ़ोन पर अपनी टीम चुनें",
+      "waiting": "टीम की प्रतीक्षा में",
+      "teams": "टीमें"
+    }
   }
 }

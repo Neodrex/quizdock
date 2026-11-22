@@ -390,5 +390,21 @@
       "paused": "Wstrzymano",
       "loading": "Wczytywanie escape roomu…"
     }
+  },
+  "screen": {
+    "lobby": {
+      "pin": "Kod PIN {{digits}}",
+      "players_one": "{{count}} gracz",
+      "players_few": "{{count}} graczy",
+      "players_many": "{{count}} graczy",
+      "players_other": "{{count}} gracza",
+      "joined_one": "{{count}} gracz w sali",
+      "joined_few": "{{count}} graczy w sali",
+      "joined_many": "{{count}} graczy w sali",
+      "joined_other": "{{count}} gracza w sali",
+      "pickOnPhone": "Wybierz drużynę na telefonie",
+      "waiting": "Czekają na drużynę",
+      "teams": "Drużyny"
+    }
   }
 }
