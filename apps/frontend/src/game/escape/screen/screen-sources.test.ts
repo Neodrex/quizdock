@@ -19,6 +19,8 @@ const FORBIDDEN: [string, RegExp][] = [
     /['"`]escape:(state|host|host-team|outline|finale|team-update|results)['"`]/,
   ],
   ['story lines or player ids', /\b(unlockText|playerId)\b/],
+  // Licence details no client is sent (M7 §1.4).
+  ['licence details', /\b(eventsLeft|organisationId|ESCAPE_STATIC_LICENCES)\b/],
   // In any quote, the folder itself (`'../host'`, its index) included.
   ['the console code', /(from\s+|import\(\s*|require\(\s*)['"`][^'"`]*\/host(\/[^'"`]*)?['"`]/],
   [
@@ -65,6 +67,8 @@ describe('the big screen never names the phone, host or answer payloads', () => 
       'host, phone or answer types',
     ]);
     expect(screenSourceFindings('t.unlockText')).toEqual(['story lines or player ids']);
+    expect(screenSourceFindings('l.eventsLeft')).toEqual(['licence details']);
+    expect(screenSourceFindings('ESCAPE_STATIC_LICENCES')).toEqual(['licence details']);
     expect(screenSourceFindings("import { a } from '../host/host-client'")).toEqual([
       'the console code',
     ]);

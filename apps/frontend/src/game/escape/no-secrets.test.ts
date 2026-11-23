@@ -16,6 +16,14 @@ const FORBIDDEN = [
   'EscapeBoard',
 ];
 
+/**
+ * Licence details no client is sent (M7 §1.4): the phone files may not name them.
+ * The create dialog is the host's: it lists the host's own licences over REST, with
+ * the events left, and only the rooms page (the console's) renders it.
+ */
+const LICENCE_SECRETS = ['eventsLeft', 'organisationId', 'ESCAPE_STATIC_LICENCES'];
+const HOST_LICENCE_PICKER = 'game/escape/session/create-dialog.tsx';
+
 const src = resolve(process.cwd(), 'src');
 
 function files(dir: string): string[] {
@@ -47,6 +55,12 @@ describe('the phone never names the host or board payloads', () => {
 
   it.each(scanned.map((p) => [p.slice(src.length + 1), p]))('%s', (_, path) => {
     const text = readFileSync(path, 'utf8');
-    expect(FORBIDDEN.filter((word) => text.includes(word))).toEqual([]);
+    const words = _ === HOST_LICENCE_PICKER ? FORBIDDEN : [...FORBIDDEN, ...LICENCE_SECRETS];
+    expect(words.filter((word) => text.includes(word))).toEqual([]);
+  });
+
+  it('keeps the licence picker the host’s alone', () => {
+    const phone = scanned.filter((p) => !p.endsWith(HOST_LICENCE_PICKER));
+    for (const p of phone) expect(readFileSync(p, 'utf8')).not.toMatch(/create-dialog/);
   });
 });

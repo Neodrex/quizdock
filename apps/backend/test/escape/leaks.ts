@@ -218,3 +218,59 @@ export function codesIn(value: unknown): string[] {
   }
   return [];
 }
+
+/** Keys of a licence that no client is sent (M7 §1.4). */
+const LICENCE_SECRET_KEYS = new Set(['licenceId', 'organisationId', 'eventsLeft', 'hosts']);
+
+export interface SessionLeakScope {
+  /** The room's licence: its id and organisation id must never appear as a value. */
+  licence?: { id: string; organisationId: string };
+  /** The race codes this socket may see (its own team's). Default: none. */
+  ownCodes?: Iterable<string>;
+}
+
+/**
+ * Session leaks in `frames` (M7 Task 7.20), as readable lines (empty when clean):
+ * - a key `licenceId`, `organisationId`, `eventsLeft` or `hosts`, at any depth;
+ * - a string equal to the licence's id or organisation id;
+ * - in an escape frame, a `code` not in `ownCodes` (another team's race code;
+ *   error frames have a `code` of their own, so they are not checked for it).
+ */
+export function sessionLeaksIn(
+  frames: [string, unknown][],
+  scope: SessionLeakScope = {},
+): string[] {
+  const own = new Set(scope.ownCodes ?? []);
+  const ids = new Map<string, string>();
+  if (scope.licence) {
+    ids.set(scope.licence.id, 'the licence id');
+    ids.set(scope.licence.organisationId, 'the organisation id');
+  }
+  return frames.flatMap(([event, p]) => {
+    const found: string[] = [];
+    const walk = (value: unknown, path: string): void => {
+      if (typeof value === 'string') {
+        const what = ids.get(value);
+        if (what) found.push(`${event} ${path}: ${what}`);
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.forEach((v, i) => walk(v, `${path}[${i}]`));
+        return;
+      }
+      if (value && typeof value === 'object') {
+        for (const [k, v] of Object.entries(value)) {
+          if (LICENCE_SECRET_KEYS.has(k)) found.push(`${event} ${path}.${k}: a licence detail`);
+          walk(v, `${path}.${k}`);
+        }
+      }
+    };
+    walk(p, '$');
+    if (event.startsWith('escape:')) {
+      for (const code of codesIn(p)) {
+        if (!own.has(code)) found.push(`${event}: another team's code ${code}`);
+      }
+    }
+    return found;
+  });
+}

@@ -26,6 +26,9 @@ const FORBIDDEN: [string, RegExp][] = [
   ['the order key', /\.order\b|\border\s*[:?]|['"]order['"]/],
   ['the old outline type', /\bEscapeOutline\b/],
   ['template content types', /\bEscapeTemplate(Detail|Content)Dto\w*/],
+  // The host learns its licence's organisation name, cap and events left, never
+  // the organisation id or the static licence setting (M7 §1.4).
+  ['licence internals', /\b(organisationId|ESCAPE_STATIC_LICENCES)\b/],
 ];
 
 /** The generated template calls any console file may name: the list only. */
