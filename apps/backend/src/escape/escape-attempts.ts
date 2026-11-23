@@ -3,6 +3,7 @@ import type { GameId } from '../game/game.keys';
 import { RedisService } from '../redis/redis.service';
 import { escapeKeys } from './escape.keys';
 import { EscapeTimings } from './escape-timings';
+import { CODE_ATTEMPTS_MAX, CODE_ATTEMPTS_WINDOW_S } from './race-codes';
 
 /**
  * Wrong answers per team (M3 plan U2), as pin-attempts: only failures count,
@@ -30,5 +31,17 @@ export class EscapeAttempts {
     // The first failure opens the window (SET … NX with its expiry); INCR keeps
     // that expiry, so a key never outlives its window.
     await this.redis.multi().set(key, '0', 'EX', this.timings.wrongWindowS, 'NX').incr(key).exec();
+  }
+
+  /** Whether a player typed `CODE_ATTEMPTS_MAX` wrong team codes in the window (M7 §1.7). */
+  async codesBlocked(gameId: GameId, playerId: string): Promise<boolean> {
+    const wrong = Number((await this.redis.get(escapeKeys.wrongCodes(gameId, playerId))) ?? 0);
+    return wrong >= CODE_ATTEMPTS_MAX;
+  }
+
+  /** Counts one wrong team code, as `count`. */
+  async countCode(gameId: GameId, playerId: string): Promise<void> {
+    const key = escapeKeys.wrongCodes(gameId, playerId);
+    await this.redis.multi().set(key, '0', 'EX', CODE_ATTEMPTS_WINDOW_S, 'NX').incr(key).exec();
   }
 }

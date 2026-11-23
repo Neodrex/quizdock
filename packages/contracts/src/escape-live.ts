@@ -126,6 +126,10 @@ export const escapeUnlockSchema = z.object({ pin, teamId: id, lockId: id });
 
 // ── Player → server ──
 export const escapeChooseTeamSchema = z.object({ pin, teamId: id });
+/** Team race (M7 §1.7): starts a team and gives its code. */
+export const escapeNewTeamSchema = z.object({ pin, name: z.string().trim().min(1).max(40) });
+/** Team race: joins a team by its code (any case, spaces allowed). */
+export const escapeJoinTeamSchema = z.object({ pin, code: z.string().max(16) });
 export const escapeSubmitSchema = z.object({
   pin,
   lockId: id,
@@ -154,6 +158,8 @@ export type EscapeAdjustTime = z.infer<typeof escapeAdjustTimeSchema>;
 export type EscapeHint = z.infer<typeof escapeHintSchema>;
 export type EscapeUnlock = z.infer<typeof escapeUnlockSchema>;
 export type EscapeChooseTeam = z.infer<typeof escapeChooseTeamSchema>;
+export type EscapeNewTeam = z.infer<typeof escapeNewTeamSchema>;
+export type EscapeJoinTeam = z.infer<typeof escapeJoinTeamSchema>;
 export type EscapeSubmit = z.infer<typeof escapeSubmitSchema>;
 export type EscapeAskHint = z.infer<typeof escapeAskHintSchema>;
 export type EscapeResults = z.infer<typeof escapeResultsSchema>;
@@ -262,6 +268,8 @@ export interface EscapePlayerState {
         escapedMs: number | null;
         timedOut: boolean;
         hintPenaltyS: number;
+        /** A team race: this team's code, for friends to join (never another team's). */
+        code?: string;
       })
     | null;
   /** playerView(tpl, team, me) while running; null before the start or without a team. */
@@ -551,6 +559,22 @@ export interface EscapeClientToServerEvents {
   'escape:finale': (p: EscapePin, ack: (res: EscapeAck) => void) => void;
   /** Player, in self formation: joins a team. */
   'escape:choose-team': (p: EscapeChooseTeam, ack: (res: EscapeAck) => void) => void;
+  /**
+   * Player, in a team race: starts a team (forming, or running without one).
+   * Refusals: `escape.not_in_session`, `escape.wrong_phase`.
+   */
+  'escape:new-team': (
+    p: EscapeNewTeam,
+    ack: (res: EscapeAck<{ teamId: string; code: string }>) => void,
+  ) => void;
+  /**
+   * Player, in a team race: joins a team by code. Refusals: `escape.team_code_unknown`,
+   * `escape.team_full`, `escape.too_many_codes` (5 wrong codes a minute), and as new-team.
+   */
+  'escape:join-team': (
+    p: EscapeJoinTeam,
+    ack: (res: EscapeAck<{ teamId: string }>) => void,
+  ) => void;
   /** Player: tries a lock. */
   'escape:submit': (p: EscapeSubmit, ack: (res: EscapeSubmitAck) => void) => void;
   /** Player: asks for the hint it was offered. */

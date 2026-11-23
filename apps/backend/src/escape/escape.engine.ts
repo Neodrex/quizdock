@@ -66,7 +66,16 @@ import { allDone, tickTeam } from './escape-tick';
 import { EscapeTicker } from './escape-ticker';
 import { validateTemplate } from './escape-template';
 import { EscapeTemplatesService } from './escape-templates.service';
-import { dealPlayers, makeTeams, moveMember, rolesFor, smallestTeam, teamOf } from './escape-teams';
+import {
+  dealPlayers,
+  makeTeams,
+  moveMember,
+  nextTeamId,
+  rolesFor,
+  smallestTeam,
+  teamOf,
+} from './escape-teams';
+import { RACE_TEAM_MAX, newCode, normaliseCode } from './race-codes';
 import { EscapeTimings } from './escape-timings';
 import { escapeRooms } from './escape.keys';
 import { EscapeStore } from './escape.store';
@@ -132,12 +141,16 @@ const frozen = (l: Licence): FrozenLicence => ({
   brand: l.brand ? { ...l.brand } : null,
 });
 
-const fresh = (team: TeamState): TeamRecord => ({
+const fresh = (team: TeamState, code?: string): TeamRecord => ({
   team,
   lastProgressAt: 0,
   stuck: false,
   timedOut: false,
+  ...(code ? { code } : {}),
 });
+
+/** A race team's name: the nickname, within the team name's 40 characters. */
+const soloName = (nickname: string): string => nickname.slice(0, 40) || 'Solo';
 
 /** The same roles per member, whatever the key and role order. */
 function sameRoles(a: Record<string, string[]>, b: Record<string, string[]>): boolean {
@@ -316,8 +329,25 @@ export class EscapeEngine implements OnModuleDestroy {
       // Group play (M7 §1.8): a host console that also joined as a player gets its phone state too.
       if (me) {
         const v = await this.viewOf(ref);
-        // F5: a late joiner in auto formation goes to the smallest team.
+        const race = v.session?.type === 'race';
+        // M7 §1.7: in a solo race, a player's first sync gives them their own team.
+        const solo =
+          race &&
+          v.session?.race?.format === 'solo' &&
+          ref.run.phase !== 'finale' &&
+          !teamOf(this.teamsOf(v), me.playerId);
+        if (solo) {
+          const nickname = v.players.find((p) => p.playerId === me.playerId)?.nickname ?? '';
+          const { ref: next, v: added } = await this.addTeam(ref, v, soloName(nickname));
+          await this.broadcast(
+            next,
+            await this.applyMove(next, added, me.playerId, added.run.teamIds.at(-1)!),
+          );
+          return;
+        }
+        // F5: a late joiner in auto formation goes to the smallest team (never in a race).
         const late =
+          !race &&
           ref.run.phase === 'running' &&
           ref.run.formation === 'auto' &&
           !teamOf(this.teamsOf(v), me.playerId);
@@ -458,6 +488,83 @@ export class EscapeEngine implements OnModuleDestroy {
     });
   }
 
+  /**
+   * M7 §1.7: a player of a team race starts a team, with a code for friends,
+   * and moves into it. Forming, or running for a player with no team yet.
+   */
+  async newTeam(
+    socket: EscapeSocket,
+    pin: string,
+    name: string,
+  ): Promise<{ teamId: string; code: string }> {
+    const me = playerOf(socket, pin);
+    if (!me) throw new BadRequestException('escape.not_joined');
+    return this.mutate(pin, undefined, async (ref) => {
+      const v = await this.viewOf(ref);
+      this.requireTeamRace(ref, v, me.playerId);
+      const taken = new Set(v.teams.flatMap((r) => (r.code ? [r.code] : [])));
+      const code = newCode(taken);
+      const { ref: next, v: added } = await this.addTeam(ref, v, name, code);
+      const teamId = added.run.teamIds.at(-1)!;
+      await this.broadcast(next, await this.applyMove(next, added, me.playerId, teamId));
+      return { teamId, code };
+    });
+  }
+
+  /**
+   * M7 §1.7: a player of a team race joins a team by its code (at most
+   * RACE_TEAM_MAX players). Wrong codes are counted per player: past
+   * CODE_ATTEMPTS_MAX in the window, every code is refused until it closes.
+   */
+  async joinTeam(socket: EscapeSocket, pin: string, input: string): Promise<{ teamId: string }> {
+    const me = playerOf(socket, pin);
+    if (!me) throw new BadRequestException('escape.not_joined');
+    return this.mutate(pin, undefined, async (ref) => {
+      const v = await this.viewOf(ref);
+      this.requireTeamRace(ref, v, me.playerId);
+      if (await this.attempts.codesBlocked(ref.id, me.playerId)) {
+        throw new BadRequestException('escape.too_many_codes');
+      }
+      const code = normaliseCode(input);
+      const to = code ? v.teams.find((r) => r.code === code) : undefined;
+      if (!to) {
+        await this.attempts.countCode(ref.id, me.playerId);
+        throw new NotFoundException('escape.team_code_unknown');
+      }
+      const teamId = to.team.id;
+      if (to.team.members.includes(me.playerId)) return { teamId };
+      if (to.team.members.length >= RACE_TEAM_MAX) {
+        throw new BadRequestException('escape.team_full');
+      }
+      await this.broadcast(ref, await this.applyMove(ref, v, me.playerId, teamId));
+      return { teamId };
+    });
+  }
+
+  /** A team race, forming, or running for a player without a team. */
+  private requireTeamRace(ref: RunRef, v: RunView, playerId: string): void {
+    if (v.session?.type !== 'race' || v.session.race?.format !== 'teams') {
+      throw new BadRequestException('escape.not_in_session');
+    }
+    const mine = teamOf(this.teamsOf(v), playerId);
+    const open = ref.run.phase === 'forming' || (ref.run.phase === 'running' && !mine);
+    if (!open) throw new BadRequestException('escape.wrong_phase');
+  }
+
+  /** A new empty team at the end of the run (a race's), saved; the run and view with it. */
+  private async addTeam(
+    ref: RunRef,
+    v: RunView,
+    name: string,
+    code?: string,
+  ): Promise<{ ref: RunRef; v: RunView }> {
+    const id = nextTeamId(ref.run.teamIds);
+    const rec = fresh(newTeam(ref.snap.template, id, name, []), code);
+    const run: EscapeRun = { ...ref.run, teamIds: [...ref.run.teamIds, id] };
+    await this.store.save(ref.id, { run, teams: [rec] });
+    return { ref: { ...ref, run }, v: { ...v, run, teams: [...v.teams, rec] } };
+  }
+
   // ── Start (S1–S3) ──
 
   async start(pin: string, hostUserId: string): Promise<void> {
@@ -467,10 +574,19 @@ export class EscapeEngine implements OnModuleDestroy {
       }
       const v = await this.viewOf(ref);
       const tpl = ref.snap.template;
-      // S1: empty teams go, then the connected unassigned join the smallest.
+      // S1: empty teams go, then the connected unassigned join the smallest; in a
+      // race (M7 §1.7) each of them plays solo, as a team of one.
+      const race = v.session?.type === 'race';
       let teams = this.teamsOf(v).filter((t) => t.members.length);
+      let ids = [...ref.run.teamIds];
       for (const p of v.players) {
         if (!p.connected || teamOf(teams, p.playerId)) continue;
+        if (race) {
+          const id = nextTeamId(ids);
+          ids = [...ids, id];
+          teams = [...teams, newTeam(tpl, id, soloName(p.nickname), [p.playerId])];
+          continue;
+        }
         const to = smallestTeam(teams, ref.run.maxSize);
         if (!to) break;
         teams = teams.map((t) => (t === to ? { ...t, members: [...t.members, p.playerId] } : t));
@@ -478,7 +594,10 @@ export class EscapeEngine implements OnModuleDestroy {
       if (!teams.length) throw new BadRequestException('escape.no_players');
       const live = this.pruneAndGetHolders(ref.id, v);
       // The same deal as the lobby preview, so every phone keeps its lobby role card.
-      const recs = teams.map((t) => fresh({ ...t, roles: dealRoles(tpl, t, live, 'forming') }));
+      const codes = new Map(v.teams.map((r) => [r.team.id, r.code]));
+      const recs = teams.map((t) =>
+        fresh({ ...t, roles: dealRoles(tpl, t, live, 'forming') }, codes.get(t.id)),
+      );
       const now = Date.now();
       const run: EscapeRun = {
         ...ref.run,
@@ -1049,10 +1168,13 @@ export class EscapeEngine implements OnModuleDestroy {
     durationMin?: number,
     session?: EscapeSession,
   ): Promise<void> {
+    // A race's teams hold one player (solo) or up to RACE_TEAM_MAX (team codes).
+    const race = (session ?? (await this.store.session(pin)))?.race;
+    const maxSize = !race ? 0 : race.format === 'solo' ? 1 : RACE_TEAM_MAX;
     const run: EscapeRun = {
       phase: 'forming',
       formation: 'auto',
-      maxSize: 0,
+      maxSize,
       teamIds: [],
       clock: {
         startedAt: 0,

@@ -1,9 +1,26 @@
 import type { EscapeTemplate } from './escape.types';
 import { newTeam } from './escape-rules';
-import { dealPlayers, makeTeams, moveMember, rolesFor, smallestTeam, teamOf } from './escape-teams';
+import {
+  dealPlayers,
+  makeTeams,
+  moveMember,
+  nextTeamId,
+  rolesFor,
+  smallestTeam,
+  teamOf,
+} from './escape-teams';
 import { tpl } from './fixtures';
 
 const sizes = (teams: { members: string[] }[]) => teams.map((t) => t.members.length);
+
+describe('nextTeamId', () => {
+  it('follows the highest t<n>, t1 for none', () => {
+    expect(nextTeamId([])).toBe('t1');
+    expect(nextTeamId(['t1', 't2'])).toBe('t3');
+    expect(nextTeamId(['t3', 't1'])).toBe('t4');
+    expect(nextTeamId(['x', 't9', 'tt'])).toBe('t10');
+  });
+});
 
 describe('makeTeams', () => {
   it('gives ids t1..tN and names Team 1..N', () => {

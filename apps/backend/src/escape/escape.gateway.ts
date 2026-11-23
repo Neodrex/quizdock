@@ -14,7 +14,9 @@ import {
   escapeChooseTeamSchema,
   escapeCreateSchema,
   escapeHintSchema,
+  escapeJoinTeamSchema,
   escapeMoveSchema,
+  escapeNewTeamSchema,
   escapeOpenSchema,
   escapePauseSchema,
   escapePinSchema,
@@ -134,6 +136,26 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     const dto = parse(escapeChooseTeamSchema, payload);
     await this.engine.chooseTeam(socket, dto.pin, dto.teamId);
     return OK;
+  }
+
+  /** M7 §1.7: a player of a team race starts a team; the ack gives its code. */
+  @SubscribeMessage('escape:new-team')
+  async newTeam(
+    @ConnectedSocket() socket: EscapeSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<Ok & { teamId: string; code: string }> {
+    const dto = parse(escapeNewTeamSchema, payload);
+    return { ok: true, ...(await this.engine.newTeam(socket, dto.pin, dto.name)) };
+  }
+
+  /** M7 §1.7: a player of a team race joins a team by its code. */
+  @SubscribeMessage('escape:join-team')
+  async joinTeam(
+    @ConnectedSocket() socket: EscapeSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<Ok & { teamId: string }> {
+    const dto = parse(escapeJoinTeamSchema, payload);
+    return { ok: true, ...(await this.engine.joinTeam(socket, dto.pin, dto.code)) };
   }
 
   /** U1–U5: refusals are in the ack (`{ ok: false, reason }`), not errors. */

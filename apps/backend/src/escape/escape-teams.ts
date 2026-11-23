@@ -23,6 +23,12 @@ export function makeTeams(count: number, names: string[] = []): TeamSlot[] {
   }));
 }
 
+/** The id after every `t<n>` of `ids`: t1 for none (races add teams one at a time). */
+export function nextTeamId(ids: readonly string[]): string {
+  const ns = ids.map((id) => /^t(\d+)$/.exec(id)).map((m) => (m ? Number(m[1]) : 0));
+  return `t${Math.max(0, ...ns) + 1}`;
+}
+
 /** The team with the fewest members (earlier on ties) below `maxSize` (0 or absent: no cap). */
 export function smallestTeam<T extends HasMembers>(teams: T[], maxSize = 0): T | null {
   let best: T | null = null;

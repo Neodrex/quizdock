@@ -40,6 +40,8 @@ export interface TeamRecord {
   lastProgressAt: number;
   stuck: boolean;
   timedOut: boolean;
+  /** A team race: the code friends join it by (M7 §1.7). */
+  code?: string;
 }
 
 /** A licence as a hosted room keeps it from its create: a change on the Site never alters it. */

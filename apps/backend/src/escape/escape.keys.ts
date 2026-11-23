@@ -15,6 +15,8 @@ export const escapeKeys = {
   members: (id: GameId) => `game:${id}:escape:members`,
   /** A team's wrong answers in the current window (SET NX EX + INCR, as pin-attempts). */
   wrong: (id: GameId, teamId: string) => `game:${id}:escape:wrong:${teamId}`,
+  /** Wrong team codes of one player in a race, counted in a window (M7 §1.7). */
+  wrongCodes: (id: GameId, playerId: string) => `game:${id}:escape:wrong-codes:${playerId}`,
   /** The PIN of the room the run was played in: who may read its results after the end. */
   room: (id: GameId) => `game:${id}:escape:room`,
   /** The user id of the run's host: who may read its results once the room is gone (M5). */

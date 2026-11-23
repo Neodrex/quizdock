@@ -66,6 +66,7 @@ const teamRecordSchema = z.object({
   lastProgressAt: ms,
   stuck: z.boolean(),
   timedOut: z.boolean(),
+  code: z.string().optional(),
 });
 const finaleSchema = z.object({
   gameId: z.string(),

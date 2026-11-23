@@ -14,6 +14,7 @@ import { hintTests } from '../../test/escape/hints';
 import { lobbyTests } from '../../test/escape/lobby';
 import { playTests } from '../../test/escape/play';
 import { presenceTests } from '../../test/escape/presence';
+import { raceSessionTests } from '../../test/escape/race';
 import { raceTests } from '../../test/escape/races';
 import { screenTests } from '../../test/escape/screen';
 import { phoneHostTests, sessionTests } from '../../test/escape/sessions';
@@ -56,4 +57,5 @@ describe('EscapeGateway (socket integration)', () => {
   describe('sessions', () => sessionTests(ctx));
   describe('caps', () => capTests(ctx));
   describe('phone host', () => phoneHostTests(ctx));
+  describe('race', () => raceSessionTests(ctx));
 });

@@ -151,6 +151,7 @@ export function playerStateOf(v: RunView, playerId: string): EscapePlayerState {
       escapedMs: rec.team.escapedAt,
       timedOut: rec.timedOut,
       hintPenaltyS: rec.team.hintPenaltyS,
+      ...(rec.code ? { code: rec.code } : {}),
     },
     view: live && rec ? playerView(tpl, rec.team, playerId, v.id) : null,
     nextHint: hint && { id: hint.id, penaltyS: hint.penaltyS },
