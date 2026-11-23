@@ -325,6 +325,8 @@ export class EscapeEngine implements OnModuleDestroy {
       // The room keeps its session (a licence id is then ignored); a quiz room gets
       // a hosted one, under the licence named or the host's only usable one.
       const kept = await this.store.session(pin);
+      // A race opened again before its startsAt keeps its timer (armed per PIN), so
+      // the scheduled time starts the new template's run.
       const snap = await this.freeze(hostUserId, dto.templateId, kept?.type ?? 'hosted');
       const session = kept
         ? undefined
