@@ -682,17 +682,20 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /**
    * M7 Task 7.11: a hosted room not started yet checks its licence again, then
-   * records the use (idempotent by the room's id). Fails closed: a refusal, the
-   * source unavailable included, refuses the start. True when a use was recorded.
+   * records the use (idempotent by the room's id) and stores `licenceUsed` at
+   * once, so a start that fails later does not use another event. Fails closed:
+   * a refusal, the source unavailable or no host included, refuses the start.
+   * The session to start with.
    */
   private async useLicence(
     ref: RunRef,
     v: RunView,
     host: LicenceHost | undefined,
     teams: readonly TeamState[],
-  ): Promise<boolean> {
+  ): Promise<EscapeSession | null> {
     const s = v.session;
-    if (s?.type !== 'hosted' || !s.licence || s.licenceUsed || !host) return false;
+    if (s?.type !== 'hosted' || !s.licence || s.licenceUsed) return s;
+    if (!host) throw new ForbiddenException(LICENCE_REQUIRED);
     const now = Date.now();
     const checked = await this.licences.check(host, s.licence.id, now);
     if (!checked.ok) throw new ForbiddenException(licenceErrorCode(checked.reason));
@@ -704,7 +707,9 @@ export class EscapeEngine implements OnModuleDestroy {
       players: teams.reduce((n, t) => n + t.members.length, 0),
     });
     if (!use.ok) throw new ForbiddenException(licenceErrorCode(use.reason));
-    return true;
+    const used = { ...s, licenceUsed: true };
+    await this.store.writeSession(ref.pin, used);
+    return used;
   }
 
   /** A race waiting for its start keeps its room alive. */
@@ -756,7 +761,7 @@ export class EscapeEngine implements OnModuleDestroy {
         throw new BadRequestException('escape.no_players');
       }
       // Owner question 4: a hosted event uses its licence at the room's first start.
-      const used = await this.useLicence(ref, v, host, teams);
+      const stored = await this.useLicence(ref, v, host, teams);
       const live = this.pruneAndGetHolders(ref.id, v);
       // The same deal as the lobby preview, so every phone keeps its lobby role card.
       const codes = new Map(v.teams.map((r) => [r.team.id, r.code]));
@@ -780,12 +785,11 @@ export class EscapeEngine implements OnModuleDestroy {
       // Atomic: a host gone meanwhile comes back to the run (prevState).
       const was = await this.store.setGameState(ref.id, GameState.Escape);
       this.scheduler.disarm(pin);
-      let session = v.session;
+      let session = stored;
       if (session?.race && !session.race.started) {
         session = { ...session, race: { ...session.race, started: true } };
+        await this.store.writeSession(pin, session);
       }
-      if (session && used) session = { ...session, licenceUsed: true };
-      if (session !== v.session && session) await this.store.writeSession(pin, session);
       await this.keepAlive(pin, ref.id);
       // S3.
       if (this.wrote(was)) {

@@ -473,6 +473,41 @@ export function sessionTests(ctx: EscapeContext): void {
     }
   });
 
+  it('a start that fails after the use is recorded keeps it: the last event still starts the room', async () => {
+    useLicences(ctx.h, [{ ...ACME_LICENCE, eventsLeft: 1 }]);
+    const { host, pin } = await readyRoom('hosted', { licenceId: 'acme' });
+    const save = jest.spyOn(store(), 'save').mockRejectedValueOnce(new Error('redis down'));
+    try {
+      expect(await host.emitWithAck('escape:start', { pin })).toMatchObject({ ok: false });
+    } finally {
+      save.mockRestore();
+    }
+    expect(await phaseOf(pin)).toBe('forming');
+    expect((await store().session(pin))?.licenceUsed).toBe(true);
+    expect(await eventsLeft('acme')).toBe(0);
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    expect(await phaseOf(pin)).toBe('running');
+  });
+
+  it('a hosted room not started yet never starts without a host (fails closed)', async () => {
+    useLicences(ctx.h, DEV_LICENCES);
+    const { pin } = await readyRoom('hosted', { licenceId: 'acme' });
+    const recordUse = jest.spyOn(port(), 'recordUse');
+    try {
+      const inner = ctx.h.app.get(EscapeEngine) as unknown as {
+        startRun(pin: string, host: undefined): Promise<boolean>;
+      };
+      await expect(inner.startRun(pin, undefined)).rejects.toMatchObject({
+        message: 'escape.licence_required',
+      });
+      expect(recordUse).not.toHaveBeenCalled();
+    } finally {
+      recordUse.mockRestore();
+    }
+    expect(await phaseOf(pin)).toBe('forming');
+    expect(await eventsLeft('acme')).toBe(2);
+  });
+
   it('group play and races never call the licence port', async () => {
     const check = jest.spyOn(port(), 'check');
     const recordUse = jest.spyOn(port(), 'recordUse');
