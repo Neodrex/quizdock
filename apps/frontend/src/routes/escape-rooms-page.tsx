@@ -22,44 +22,52 @@ import { allowsAnonymousParticipants } from '../config';
 import { type EscapeRoomOptions, createEscapeRoom } from '../game/escape/host/host-client';
 import { addSampleRooms, canLaunch, publishRoom } from '../game/escape/host/host-templates';
 import { LaunchAccessDialog } from '../game/launch-access-dialog';
+import { CreateSessionDialog, type SessionChoice } from '../game/escape/session/create-dialog';
 
 /**
- * Opens a room and goes to its console. Runs from the click handler, never from an
- * effect (StrictMode would open two rooms), and once at a time: a second click while
- * one is opening does nothing. Under OIDC with open access offered, it asks how
- * players get in first, unless the host remembered a choice (as `useLaunchSession`).
+ * Opens a room and goes to its console (group play: to the host's own phone join).
+ * Runs from the click handler, never from an effect (StrictMode would open two
+ * rooms), and once at a time: a second click while one is opening does nothing.
+ * Under OIDC with open access offered, it asks how players get in first, unless the
+ * host remembered a choice (as `useLaunchSession`); then the session type (M7).
  */
-function useOpenRoom() {
-  const { t } = useTranslation('live');
+function useOpenRoom(rooms: EscapeTemplateListItemDto[]) {
   const navigate = useNavigate();
   const busyRef = useRef(false);
   const [opening, setOpening] = useState<string | null>(null);
-  const [error, setError] = useState<{ id: string; text: string } | null>(null);
   const [asking, setAsking] = useState<string | null>(null);
+  const [choosing, setChoosing] = useState<{ id: string; options: EscapeRoomOptions } | null>(null);
 
-  const start = async (id: string, options: EscapeRoomOptions) => {
+  const release = () => {
+    busyRef.current = false;
+    setOpening(null);
+  };
+
+  const choose = (id: string, options: EscapeRoomOptions) => {
     setOpening(id);
-    try {
-      const { pin } = await createEscapeRoom(id, options);
-      await navigate({ to: '/session/$pin/console', params: { pin } });
-    } catch (e) {
-      setError({ id, text: e instanceof Error ? e.message : t('errors.launchFailed') });
-    } finally {
-      busyRef.current = false;
-      setOpening(null);
-    }
+    setChoosing({ id, options });
+  };
+
+  /** From the session dialog: a refusal rejects, and the dialog shows it. */
+  const create = async (choice: SessionChoice) => {
+    if (!choosing) return;
+    const { pin } = await createEscapeRoom(choosing.id, { ...choosing.options, ...choice });
+    setChoosing(null);
+    release();
+    // Group play: the creating phone joins its own room as a player, on the same socket.
+    if (choice.sessionType === 'group') await navigate({ href: `/join/${pin}?host=1` });
+    else await navigate({ to: '/session/$pin/console', params: { pin } });
   };
 
   const open = async (id: string) => {
     if (busyRef.current) return;
     busyRef.current = true;
-    setError(null);
-    if (getAuthMode() !== 'oidc' || !allowsAnonymousParticipants()) return start(id, {});
+    if (getAuthMode() !== 'oidc' || !allowsAnonymousParticipants()) return choose(id, {});
     // Unreadable preferences only cost the shortcut: the dialog asks.
     const remembered = await meControllerGetPreferences()
       .then((res) => res.data.participantAccess)
       .catch(() => undefined);
-    if (remembered) return start(id, { participantAccess: remembered });
+    if (remembered) return choose(id, { participantAccess: remembered });
     setAsking(id);
   };
 
@@ -70,21 +78,33 @@ function useOpenRoom() {
     if (remember) {
       void meControllerUpdatePreferences({ participantAccess: access }).catch(() => undefined);
     }
-    void start(id, { participantAccess: access });
+    choose(id, { participantAccess: access });
   };
 
+  const template = rooms.find((r) => r.id === choosing?.id);
   const dialog = (
-    <LaunchAccessDialog
-      open={asking !== null}
-      onConfirm={onConfirm}
-      onCancel={() => {
-        setAsking(null);
-        busyRef.current = false;
-      }}
-    />
+    <>
+      <LaunchAccessDialog
+        open={asking !== null}
+        onConfirm={onConfirm}
+        onCancel={() => {
+          setAsking(null);
+          release();
+        }}
+      />
+      <CreateSessionDialog
+        open={choosing !== null}
+        template={{ title: template?.title ?? '', mode: template?.mode ?? null }}
+        onCreate={create}
+        onCancel={() => {
+          setChoosing(null);
+          release();
+        }}
+      />
+    </>
   );
 
-  return { open, opening, error, dialog };
+  return { open, opening, dialog };
 }
 
 /**
@@ -108,7 +128,7 @@ export function EscapeRoomsPage() {
   // The list only: no content, so no answers (owner question 1).
   const list = useEscapeTemplatesControllerList();
   const rooms = list.data?.data ?? [];
-  const room = useOpenRoom();
+  const room = useOpenRoom(rooms);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [publishing, setPublishing] = useState<string | null>(null);
@@ -194,10 +214,7 @@ export function EscapeRoomsPage() {
                 opening={room.opening === r.id}
                 busy={room.opening !== null}
                 publishing={publishing === r.id}
-                error={
-                  (room.error?.id === r.id ? room.error.text : null) ??
-                  (publishError?.id === r.id ? publishError.text : null)
-                }
+                error={publishError?.id === r.id ? publishError.text : null}
                 onOpen={openIfLaunchable(r, room.open)}
                 onPublish={() => void onPublish(r.id)}
               />

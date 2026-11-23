@@ -423,5 +423,52 @@
         "photoFinishPair": "写真判定：{{a}}と{{b}}"
       }
     }
+  },
+  "session": {
+    "create": {
+      "title": "{{title}} をどう進めますか？",
+      "type": "セッションの種類",
+      "group": {
+        "label": "グループプレイ",
+        "hint": "最大6人、1台のスマホで進行"
+      },
+      "race": {
+        "label": "レース",
+        "hint": "最大500人、自動で開始、公開ボード"
+      },
+      "hosted": {
+        "label": "ホストするイベント",
+        "hint": "あなたのライセンス、ブランド、すべてのツール"
+      },
+      "rolesOnly": "このルームには役割が必要です：ホストするイベントのみ",
+      "licence": "ライセンス",
+      "pickLicence": "ライセンスを選択",
+      "licenceLoading": "ライセンスを読み込み中…",
+      "noLicence": "利用できるライセンスがありません",
+      "licenceLine": "{{name}} · {{players}} · {{events}} · {{date}}まで",
+      "unnamed": "名前のないライセンス",
+      "players_other": "{{count}}人",
+      "eventsLeft_other": "残り{{count}}回",
+      "annual": "年間",
+      "format": "レース形式",
+      "solo": {
+        "label": "ソロ",
+        "hint": "全員が1人で参加"
+      },
+      "teams": {
+        "label": "チーム",
+        "hint": "チームコードで最大3人のチーム、ソロも可"
+      },
+      "start": "開始",
+      "startByHost": "自分で開始する",
+      "startByHostHint": "コンソールの開始ボタンで",
+      "startAt": "自動で開始",
+      "startAtHint": "指定時刻に、不在でも",
+      "startIn": "開始まで（分）",
+      "startRange": "今から{{min}}〜{{max}}分後。",
+      "submit": "作成",
+      "creating": "作成中…",
+      "failed": "ルームを開けませんでした。もう一度お試しください。"
+    }
   }
 }

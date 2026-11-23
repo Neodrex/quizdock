@@ -423,5 +423,52 @@
         "photoFinishPair": "险胜：{{a}} 和 {{b}}"
       }
     }
+  },
+  "session": {
+    "create": {
+      "title": "如何进行「{{title}}」？",
+      "type": "会话类型",
+      "group": {
+        "label": "小组游戏",
+        "hint": "最多 6 名玩家，由一部手机主持"
+      },
+      "race": {
+        "label": "竞赛",
+        "hint": "最多 500 人，自动开始，公开排行榜"
+      },
+      "hosted": {
+        "label": "主持活动",
+        "hint": "你的许可证、你的品牌、全部工具"
+      },
+      "rolesOnly": "此房间需要角色：仅限主持活动",
+      "licence": "许可证",
+      "pickLicence": "选择许可证",
+      "licenceLoading": "正在加载你的许可证…",
+      "noLicence": "没有可用的许可证",
+      "licenceLine": "{{name}} · {{players}} · {{events}} · 至 {{date}}",
+      "unnamed": "未命名许可证",
+      "players_other": "{{count}} 名玩家",
+      "eventsLeft_other": "剩余 {{count}} 场",
+      "annual": "年度",
+      "format": "竞赛形式",
+      "solo": {
+        "label": "单人",
+        "hint": "每个人独自参赛"
+      },
+      "teams": {
+        "label": "组队",
+        "hint": "凭队伍代码组成最多 3 人的队伍；也可单人"
+      },
+      "start": "开始",
+      "startByHost": "由我开始",
+      "startByHostHint": "控制台上有开始按钮",
+      "startAt": "自动开始",
+      "startAtHint": "在设定时间开始，即使你不在",
+      "startIn": "几分钟后开始",
+      "startRange": "从现在起 {{min}} 到 {{max}} 分钟之间。",
+      "submit": "创建",
+      "creating": "正在创建…",
+      "failed": "无法打开房间，请重试。"
+    }
   }
 }

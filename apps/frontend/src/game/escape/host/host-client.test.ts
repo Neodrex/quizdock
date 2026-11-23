@@ -41,6 +41,25 @@ describe('createEscapeRoom', () => {
     expect(emitted.at(-1)!.payload).not.toHaveProperty('durationMin');
   });
 
+  it('sends the session type, the licence and the race (M7)', async () => {
+    acks.set('escape:create', { pin: '482913' });
+    await createEscapeRoom('tpl-1', {
+      sessionType: 'race',
+      race: { format: 'teams', startsAt: 5_000_000 },
+    });
+    expect(emitted.at(-1)!.payload).toEqual({
+      templateId: 'tpl-1',
+      sessionType: 'race',
+      race: { format: 'teams', startsAt: 5_000_000 },
+    });
+    await createEscapeRoom('tpl-1', { sessionType: 'hosted', licenceId: 'acme' });
+    expect(emitted.at(-1)!.payload).toEqual({
+      templateId: 'tpl-1',
+      sessionType: 'hosted',
+      licenceId: 'acme',
+    });
+  });
+
   it('rejects with the code of a refusal', async () => {
     acks.set('escape:create', { ok: false, error: { code: 'escape_template.invalid' } });
     await expect(createEscapeRoom('tpl-1')).rejects.toMatchObject({

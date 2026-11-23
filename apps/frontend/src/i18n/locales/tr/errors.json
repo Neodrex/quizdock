@@ -263,7 +263,19 @@
     "escaped": "Bu takım zaten kaçtı: açılacak bir şey kalmadı.",
     "already-solved": "Bu kilit zaten açık.",
     "unknown-lock": "Bu kilit artık takımın mevcut aşamasında değil.",
-    "hint-changed": "Bu takımın sıradaki ipucu bu arada değişti. Yenisine bakıp tekrar verin."
+    "hint-changed": "Bu takımın sıradaki ipucu bu arada değişti. Yenisine bakıp tekrar verin.",
+    "not_in_session": "Bu oturum türü buna izin vermiyor.",
+    "licence_required": "Yönetilen bir etkinlik için bir lisans seçin.",
+    "licence_not_found": "Bu lisans yok ya da size ait değil.",
+    "licence_not_facilitator": "Bu lisansta kolaylaştırıcı değilsiniz.",
+    "licence_not_yet_valid": "Bu lisans henüz geçerli değil.",
+    "licence_expired": "Bu lisansın süresi doldu.",
+    "licence_no_events_left": "Bu lisansta kalan etkinlik yok.",
+    "licence_unavailable": "Lisanslar şu anda kontrol edilemiyor. Biraz sonra tekrar deneyin.",
+    "session_mode": "Bu oda roller gerektiriyor: yalnızca yönetilen etkinlikler.",
+    "race_start_out_of_range": "Bir yarış şu andan itibaren 1 ile 180 dakika arasında başlar.",
+    "team_code_unknown": "Bu koda sahip bir takım yok.",
+    "too_many_codes": "Çok fazla deneme, bir dakika bekleyin."
   },
   "escape_template": {
     "invalid": "Bu kaçış oyunu şablonu geçerli değil.",

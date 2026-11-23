@@ -264,7 +264,19 @@
     "escaped": "Cette équipe s’est déjà évadée : il n’y a plus rien à ouvrir.",
     "already-solved": "Ce cadenas est déjà ouvert.",
     "unknown-lock": "Ce cadenas ne fait plus partie de l’étape en cours de l’équipe.",
-    "hint-changed": "Le prochain indice de cette équipe a changé entre-temps. Vérifiez le nouveau et donnez-le à nouveau."
+    "hint-changed": "Le prochain indice de cette équipe a changé entre-temps. Vérifiez le nouveau et donnez-le à nouveau.",
+    "not_in_session": "Ce type de session ne le permet pas.",
+    "licence_required": "Choisissez une licence pour animer un événement.",
+    "licence_not_found": "Cette licence n’existe pas ou n’est pas la vôtre.",
+    "licence_not_facilitator": "Vous n’êtes pas animateur sur cette licence.",
+    "licence_not_yet_valid": "Cette licence n’est pas encore valable.",
+    "licence_expired": "Cette licence a expiré.",
+    "licence_no_events_left": "Cette licence n’a plus d’événement disponible.",
+    "licence_unavailable": "Impossible de vérifier les licences pour l’instant. Réessayez dans un moment.",
+    "session_mode": "Cette salle a des rôles : événement animé uniquement.",
+    "race_start_out_of_range": "Une course démarre entre 1 et 180 minutes à partir de maintenant.",
+    "team_code_unknown": "Aucune équipe n’a ce code.",
+    "too_many_codes": "Trop d’essais, attendez une minute."
   },
   "escape_template": {
     "invalid": "Ce modèle de jeu d’évasion n’est pas valide.",

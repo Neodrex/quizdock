@@ -435,5 +435,54 @@
         "photoFinishPair": "Fotofinish: {{a}} und {{b}}"
       }
     }
+  },
+  "session": {
+    "create": {
+      "title": "Wie läuft {{title}}?",
+      "type": "Sitzungstyp",
+      "group": {
+        "label": "Gruppenspiel",
+        "hint": "Bis zu 6 Spieler, ein Handy leitet es"
+      },
+      "race": {
+        "label": "Rennen",
+        "hint": "Bis zu 500, startet von selbst, öffentliche Tafel"
+      },
+      "hosted": {
+        "label": "Moderiertes Event",
+        "hint": "Deine Lizenz, deine Marke, alle Werkzeuge"
+      },
+      "rolesOnly": "Dieser Raum braucht Rollen: nur moderierte Events",
+      "licence": "Lizenz",
+      "pickLicence": "Lizenz wählen",
+      "licenceLoading": "Deine Lizenzen werden geladen…",
+      "noLicence": "Keine Lizenz verfügbar",
+      "licenceLine": "{{name}} · {{players}} · {{events}} · bis {{date}}",
+      "unnamed": "Lizenz ohne Namen",
+      "players_one": "{{count}} Spieler",
+      "players_other": "{{count}} Spieler",
+      "eventsLeft_one": "noch {{count}} Event",
+      "eventsLeft_other": "noch {{count}} Events",
+      "annual": "Jahreslizenz",
+      "format": "Rennformat",
+      "solo": {
+        "label": "Solo",
+        "hint": "Jeder spielt allein"
+      },
+      "teams": {
+        "label": "Teams",
+        "hint": "Teams bis 3 per Teamcode; solo erlaubt"
+      },
+      "start": "Start",
+      "startByHost": "Ich starte es",
+      "startByHostHint": "Ein Start-Knopf in der Konsole",
+      "startAt": "Startet von selbst",
+      "startAtHint": "Zur festen Zeit, auch ohne dich",
+      "startIn": "Start in (Minuten)",
+      "startRange": "Zwischen {{min}} und {{max}} Minuten ab jetzt.",
+      "submit": "Erstellen",
+      "creating": "Wird erstellt…",
+      "failed": "Der Raum ließ sich nicht öffnen. Versuche es erneut."
+    }
   }
 }

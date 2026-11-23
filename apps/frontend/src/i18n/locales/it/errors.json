@@ -264,7 +264,19 @@
     "escaped": "Questa squadra è già evasa: non resta niente da aprire.",
     "already-solved": "Questo lucchetto è già aperto.",
     "unknown-lock": "Questo lucchetto non fa più parte della fase attuale della squadra.",
-    "hint-changed": "Il prossimo indizio di questa squadra è cambiato nel frattempo. Controlla quello nuovo e dallo di nuovo."
+    "hint-changed": "Il prossimo indizio di questa squadra è cambiato nel frattempo. Controlla quello nuovo e dallo di nuovo.",
+    "not_in_session": "Questo tipo di sessione non lo consente.",
+    "licence_required": "Scegli una licenza per condurre un evento.",
+    "licence_not_found": "Questa licenza non esiste o non è tua.",
+    "licence_not_facilitator": "Non sei un facilitatore su questa licenza.",
+    "licence_not_yet_valid": "Questa licenza non è ancora valida.",
+    "licence_expired": "Questa licenza è scaduta.",
+    "licence_no_events_left": "Questa licenza non ha più eventi disponibili.",
+    "licence_unavailable": "Al momento non è possibile verificare le licenze. Riprova tra poco.",
+    "session_mode": "Questa sala richiede i ruoli: solo eventi condotti.",
+    "race_start_out_of_range": "Una gara parte tra 1 e 180 minuti da adesso.",
+    "team_code_unknown": "Nessuna squadra ha questo codice.",
+    "too_many_codes": "Troppi tentativi, aspetta un minuto."
   },
   "escape_template": {
     "invalid": "Questo modello di gioco di fuga non è valido.",

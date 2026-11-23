@@ -263,7 +263,19 @@
     "escaped": "Dieses Team ist bereits entkommen: Es gibt nichts mehr zu öffnen.",
     "already-solved": "Dieses Schloss ist bereits offen.",
     "unknown-lock": "Dieses Schloss gehört nicht mehr zur aktuellen Etappe des Teams.",
-    "hint-changed": "Der nächste Hinweis dieses Teams hat sich inzwischen geändert. Prüfe den neuen und gib ihn erneut."
+    "hint-changed": "Der nächste Hinweis dieses Teams hat sich inzwischen geändert. Prüfe den neuen und gib ihn erneut.",
+    "not_in_session": "Dieser Sitzungstyp erlaubt das nicht.",
+    "licence_required": "Wähle eine Lizenz, um ein Event zu leiten.",
+    "licence_not_found": "Diese Lizenz gibt es nicht oder sie gehört dir nicht.",
+    "licence_not_facilitator": "Du bist auf dieser Lizenz nicht als Moderator eingetragen.",
+    "licence_not_yet_valid": "Diese Lizenz ist noch nicht gültig.",
+    "licence_expired": "Diese Lizenz ist abgelaufen.",
+    "licence_no_events_left": "Diese Lizenz hat keine Events mehr.",
+    "licence_unavailable": "Lizenzen können gerade nicht geprüft werden. Versuche es gleich noch einmal.",
+    "session_mode": "Dieser Raum braucht Rollen: nur moderierte Events.",
+    "race_start_out_of_range": "Ein Rennen startet in 1 bis 180 Minuten ab jetzt.",
+    "team_code_unknown": "Kein Team hat diesen Code.",
+    "too_many_codes": "Zu viele Versuche, warte eine Minute."
   },
   "escape_template": {
     "invalid": "Diese Escape-Vorlage ist ungültig.",

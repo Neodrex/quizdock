@@ -447,5 +447,54 @@
         "photoFinishPair": "Photo-finish : {{a}} et {{b}}"
       }
     }
+  },
+  "session": {
+    "create": {
+      "title": "Comment jouer {{title}} ?",
+      "type": "Type de session",
+      "group": {
+        "label": "Jeu entre amis",
+        "hint": "Jusqu’à 6 joueurs, un seul téléphone mène la partie"
+      },
+      "race": {
+        "label": "Course",
+        "hint": "Jusqu’à 500, démarre toute seule, tableau public"
+      },
+      "hosted": {
+        "label": "Événement animé",
+        "hint": "Votre licence, votre marque, tous les outils"
+      },
+      "rolesOnly": "Cette salle a des rôles : événement animé uniquement",
+      "licence": "Licence",
+      "pickLicence": "Choisissez une licence",
+      "licenceLoading": "Chargement de vos licences…",
+      "noLicence": "Aucune licence disponible",
+      "licenceLine": "{{name}} · {{players}} · {{events}} · jusqu’au {{date}}",
+      "unnamed": "Licence sans nom",
+      "players_one": "{{count}} joueur",
+      "players_other": "{{count}} joueurs",
+      "eventsLeft_one": "{{count}} événement restant",
+      "eventsLeft_other": "{{count}} événements restants",
+      "annual": "annuelle",
+      "format": "Format de la course",
+      "solo": {
+        "label": "En solo",
+        "hint": "Chacun court seul"
+      },
+      "teams": {
+        "label": "En équipes",
+        "hint": "Équipes de 3 au plus avec un code d’équipe ; solo possible"
+      },
+      "start": "Départ",
+      "startByHost": "Je la lance moi-même",
+      "startByHostHint": "Un bouton Démarrer sur la console",
+      "startAt": "Démarre toute seule",
+      "startAtHint": "À l’heure dite, même en votre absence",
+      "startIn": "Démarre dans (minutes)",
+      "startRange": "Entre {{min}} et {{max}} minutes à partir de maintenant.",
+      "submit": "Créer",
+      "creating": "Création…",
+      "failed": "Impossible d’ouvrir la salle. Réessayez."
+    }
   }
 }

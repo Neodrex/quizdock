@@ -263,7 +263,19 @@
     "escaped": "This team has already escaped: nothing is left to open.",
     "already-solved": "This lock is already open.",
     "unknown-lock": "This lock is not on the team's current stage any more.",
-    "hint-changed": "This team's next hint changed in the meantime. Check the new one and give it again."
+    "hint-changed": "This team's next hint changed in the meantime. Check the new one and give it again.",
+    "not_in_session": "This session type does not allow that.",
+    "licence_required": "Pick a licence to run a hosted event.",
+    "licence_not_found": "This licence does not exist or is not yours.",
+    "licence_not_facilitator": "You are not a facilitator on this licence.",
+    "licence_not_yet_valid": "This licence is not valid yet.",
+    "licence_expired": "This licence has expired.",
+    "licence_no_events_left": "This licence has no events left.",
+    "licence_unavailable": "Licences cannot be checked right now. Try again in a moment.",
+    "session_mode": "This room needs roles: hosted events only.",
+    "race_start_out_of_range": "A race starts between 1 and 180 minutes from now.",
+    "team_code_unknown": "No team has this code.",
+    "too_many_codes": "Too many tries, wait a minute."
   },
   "escape_template": {
     "invalid": "This escape template is not valid.",

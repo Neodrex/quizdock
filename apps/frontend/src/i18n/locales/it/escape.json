@@ -447,5 +447,54 @@
         "photoFinishPair": "Fotofinish: {{a}} e {{b}}"
       }
     }
+  },
+  "session": {
+    "create": {
+      "title": "Come vuoi giocare {{title}}?",
+      "type": "Tipo di sessione",
+      "group": {
+        "label": "Gioco di gruppo",
+        "hint": "Fino a 6 giocatori, un telefono la gestisce"
+      },
+      "race": {
+        "label": "Gara",
+        "hint": "Fino a 500, parte da sola, classifica pubblica"
+      },
+      "hosted": {
+        "label": "Evento condotto",
+        "hint": "La tua licenza, il tuo marchio, tutti gli strumenti"
+      },
+      "rolesOnly": "Questa sala richiede i ruoli: solo eventi condotti",
+      "licence": "Licenza",
+      "pickLicence": "Scegli una licenza",
+      "licenceLoading": "Caricamento delle tue licenze…",
+      "noLicence": "Nessuna licenza disponibile",
+      "licenceLine": "{{name}} · {{players}} · {{events}} · fino al {{date}}",
+      "unnamed": "Licenza senza nome",
+      "players_one": "{{count}} giocatore",
+      "players_other": "{{count}} giocatori",
+      "eventsLeft_one": "{{count}} evento rimasto",
+      "eventsLeft_other": "{{count}} eventi rimasti",
+      "annual": "annuale",
+      "format": "Formato della gara",
+      "solo": {
+        "label": "In solitaria",
+        "hint": "Ognuno gareggia da solo"
+      },
+      "teams": {
+        "label": "A squadre",
+        "hint": "Squadre fino a 3 con un codice; anche da soli"
+      },
+      "start": "Partenza",
+      "startByHost": "La faccio partire io",
+      "startByHostHint": "Un pulsante Avvia nella console",
+      "startAt": "Parte da sola",
+      "startAtHint": "All’ora stabilita, anche se non ci sei",
+      "startIn": "Parte tra (minuti)",
+      "startRange": "Tra {{min}} e {{max}} minuti da adesso.",
+      "submit": "Crea",
+      "creating": "Creazione…",
+      "failed": "Impossibile aprire la sala. Riprova."
+    }
   }
 }

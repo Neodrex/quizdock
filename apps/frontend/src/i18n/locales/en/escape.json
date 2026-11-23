@@ -435,5 +435,54 @@
         "photoFinishPair": "Photo finish: {{a}} and {{b}}"
       }
     }
+  },
+  "session": {
+    "create": {
+      "title": "How will you run {{title}}?",
+      "type": "Session type",
+      "group": {
+        "label": "Group play",
+        "hint": "Up to 6 players, one phone runs it"
+      },
+      "race": {
+        "label": "Race",
+        "hint": "Up to 500, starts on its own, public board"
+      },
+      "hosted": {
+        "label": "Hosted event",
+        "hint": "Your licence, your brand, every tool"
+      },
+      "rolesOnly": "This room needs roles: hosted events only",
+      "licence": "Licence",
+      "pickLicence": "Pick a licence",
+      "licenceLoading": "Loading your licences…",
+      "noLicence": "No licence available",
+      "licenceLine": "{{name}} · {{players}} · {{events}} · until {{date}}",
+      "unnamed": "Unnamed licence",
+      "players_one": "{{count}} player",
+      "players_other": "{{count}} players",
+      "eventsLeft_one": "{{count}} event left",
+      "eventsLeft_other": "{{count}} events left",
+      "annual": "annual",
+      "format": "Race format",
+      "solo": {
+        "label": "Solo",
+        "hint": "Everyone races alone"
+      },
+      "teams": {
+        "label": "Teams",
+        "hint": "Teams of up to 3 by a team code; solo allowed"
+      },
+      "start": "Start",
+      "startByHost": "I’ll start it",
+      "startByHostHint": "A Start button on the console",
+      "startAt": "Starts on its own",
+      "startAtHint": "At a set time, even if you are away",
+      "startIn": "Starts in (minutes)",
+      "startRange": "Between {{min}} and {{max}} minutes from now.",
+      "submit": "Create",
+      "creating": "Creating…",
+      "failed": "The room could not be opened. Try again."
+    }
   }
 }

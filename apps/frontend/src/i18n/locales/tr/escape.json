@@ -435,5 +435,54 @@
         "photoFinishPair": "Foto finiş: {{a}} ve {{b}}"
       }
     }
+  },
+  "session": {
+    "create": {
+      "title": "{{title}} nasıl oynanacak?",
+      "type": "Oturum türü",
+      "group": {
+        "label": "Grup oyunu",
+        "hint": "En fazla 6 oyuncu, tek telefon yönetir"
+      },
+      "race": {
+        "label": "Yarış",
+        "hint": "En fazla 500, kendiliğinden başlar, herkese açık tablo"
+      },
+      "hosted": {
+        "label": "Yönetilen etkinlik",
+        "hint": "Lisansınız, markanız, tüm araçlar"
+      },
+      "rolesOnly": "Bu oda roller gerektiriyor: yalnızca yönetilen etkinlikler",
+      "licence": "Lisans",
+      "pickLicence": "Bir lisans seçin",
+      "licenceLoading": "Lisanslarınız yükleniyor…",
+      "noLicence": "Kullanılabilir lisans yok",
+      "licenceLine": "{{name}} · {{players}} · {{events}} · {{date}} tarihine kadar",
+      "unnamed": "Adsız lisans",
+      "players_one": "{{count}} oyuncu",
+      "players_other": "{{count}} oyuncu",
+      "eventsLeft_one": "{{count}} etkinlik kaldı",
+      "eventsLeft_other": "{{count}} etkinlik kaldı",
+      "annual": "yıllık",
+      "format": "Yarış biçimi",
+      "solo": {
+        "label": "Tek kişilik",
+        "hint": "Herkes tek başına yarışır"
+      },
+      "teams": {
+        "label": "Takımlar",
+        "hint": "Takım koduyla en fazla 3 kişilik takımlar; tek başına da olur"
+      },
+      "start": "Başlangıç",
+      "startByHost": "Ben başlatacağım",
+      "startByHostHint": "Konsolda bir Başlat düğmesi",
+      "startAt": "Kendiliğinden başlar",
+      "startAtHint": "Belirlenen saatte, siz yokken bile",
+      "startIn": "Başlama (dakika sonra)",
+      "startRange": "Şu andan itibaren {{min}} ile {{max}} dakika arası.",
+      "submit": "Oluştur",
+      "creating": "Oluşturuluyor…",
+      "failed": "Oda açılamadı. Tekrar deneyin."
+    }
   }
 }

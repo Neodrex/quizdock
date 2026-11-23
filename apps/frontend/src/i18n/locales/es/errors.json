@@ -264,7 +264,19 @@
     "escaped": "Este equipo ya ha escapado: no queda nada por abrir.",
     "already-solved": "Este candado ya está abierto.",
     "unknown-lock": "Este candado ya no está en la etapa actual del equipo.",
-    "hint-changed": "La siguiente pista de este equipo ha cambiado mientras tanto. Revisa la nueva y vuelve a darla."
+    "hint-changed": "La siguiente pista de este equipo ha cambiado mientras tanto. Revisa la nueva y vuelve a darla.",
+    "not_in_session": "Este tipo de sesión no lo permite.",
+    "licence_required": "Elige una licencia para dirigir un evento.",
+    "licence_not_found": "Esta licencia no existe o no es tuya.",
+    "licence_not_facilitator": "No eres facilitador en esta licencia.",
+    "licence_not_yet_valid": "Esta licencia aún no es válida.",
+    "licence_expired": "Esta licencia ha caducado.",
+    "licence_no_events_left": "A esta licencia no le quedan eventos.",
+    "licence_unavailable": "Ahora no se pueden comprobar las licencias. Inténtalo de nuevo en un momento.",
+    "session_mode": "Esta sala necesita roles: solo eventos dirigidos.",
+    "race_start_out_of_range": "Una carrera empieza entre 1 y 180 minutos a partir de ahora.",
+    "team_code_unknown": "Ningún equipo tiene este código.",
+    "too_many_codes": "Demasiados intentos, espera un minuto."
   },
   "escape_template": {
     "invalid": "Esta plantilla de juego de escape no es válida.",

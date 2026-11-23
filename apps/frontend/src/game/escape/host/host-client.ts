@@ -1,4 +1,8 @@
-import type { EscapeClientToServerEvents, ParticipantAccess } from '@quiz-dock/contracts';
+import type {
+  EscapeClientToServerEvents,
+  EscapeSessionType,
+  ParticipantAccess,
+} from '@quiz-dock/contracts';
 import { connectHost, emitWithAckOrError, type GameSocket } from '../../game-client';
 
 /** The console's commands: each answers `{ok:true, …}` or a refusal with its error code. */
@@ -35,6 +39,12 @@ export function hostCommand<E extends HostEvent>(
 export interface EscapeRoomOptions {
   pickOwnName?: boolean;
   participantAccess?: ParticipantAccess;
+  /** M7: absent, the server takes a hosted event (a legacy create). */
+  sessionType?: EscapeSessionType;
+  /** Hosted only. */
+  licenceId?: string;
+  /** Race only: solo or teams, and a scheduled start (server epoch ms). */
+  race?: { format: 'solo' | 'teams'; startsAt?: number };
 }
 
 /**

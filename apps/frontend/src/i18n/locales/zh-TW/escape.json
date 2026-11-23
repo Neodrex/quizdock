@@ -423,5 +423,52 @@
         "photoFinishPair": "險勝：{{a}} 和 {{b}}"
       }
     }
+  },
+  "session": {
+    "create": {
+      "title": "如何進行「{{title}}」？",
+      "type": "工作階段類型",
+      "group": {
+        "label": "小組遊戲",
+        "hint": "最多 6 名玩家，由一支手機主持"
+      },
+      "race": {
+        "label": "競賽",
+        "hint": "最多 500 人，自動開始，公開排行榜"
+      },
+      "hosted": {
+        "label": "主持活動",
+        "hint": "你的授權、你的品牌、全部工具"
+      },
+      "rolesOnly": "此房間需要角色：僅限主持活動",
+      "licence": "授權",
+      "pickLicence": "選擇授權",
+      "licenceLoading": "正在載入你的授權…",
+      "noLicence": "沒有可用的授權",
+      "licenceLine": "{{name}} · {{players}} · {{events}} · 至 {{date}}",
+      "unnamed": "未命名授權",
+      "players_other": "{{count}} 名玩家",
+      "eventsLeft_other": "剩餘 {{count}} 場",
+      "annual": "年度",
+      "format": "競賽形式",
+      "solo": {
+        "label": "單人",
+        "hint": "每個人獨自參賽"
+      },
+      "teams": {
+        "label": "組隊",
+        "hint": "憑隊伍代碼組成最多 3 人的隊伍；也可單人"
+      },
+      "start": "開始",
+      "startByHost": "由我開始",
+      "startByHostHint": "控制台上有開始按鈕",
+      "startAt": "自動開始",
+      "startAtHint": "在設定時間開始，即使你不在",
+      "startIn": "幾分鐘後開始",
+      "startRange": "從現在起 {{min}} 到 {{max}} 分鐘之間。",
+      "submit": "建立",
+      "creating": "正在建立…",
+      "failed": "無法開啟房間，請重試。"
+    }
   }
 }

@@ -262,7 +262,19 @@
     "escaped": "這個隊伍已經逃脫：沒有可以再打開的了。",
     "already-solved": "這把鎖已經打開了。",
     "unknown-lock": "這把鎖已不在該隊伍目前的關卡中。",
-    "hint-changed": "這個隊伍的下一則提示在這段期間已改變。請查看新的提示後再給出。"
+    "hint-changed": "這個隊伍的下一則提示在這段期間已改變。請查看新的提示後再給出。",
+    "not_in_session": "此工作階段類型不允許該操作。",
+    "licence_required": "請選擇一個授權來主持活動。",
+    "licence_not_found": "此授權不存在或不屬於你。",
+    "licence_not_facilitator": "你不是此授權的主持人。",
+    "licence_not_yet_valid": "此授權尚未生效。",
+    "licence_expired": "此授權已過期。",
+    "licence_no_events_left": "此授權已沒有剩餘場次。",
+    "licence_unavailable": "暫時無法驗證授權，請稍後再試。",
+    "session_mode": "此房間需要角色：僅限主持活動。",
+    "race_start_out_of_range": "競賽須在 1 到 180 分鐘後開始。",
+    "team_code_unknown": "沒有隊伍使用此代碼。",
+    "too_many_codes": "嘗試次數過多，請等待一分鐘。"
   },
   "escape_template": {
     "invalid": "此密室逃脫範本無效。",

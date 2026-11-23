@@ -459,5 +459,58 @@
         "photoFinishPair": "Fotofinisz: {{a}} i {{b}}"
       }
     }
+  },
+  "session": {
+    "create": {
+      "title": "Jak poprowadzisz {{title}}?",
+      "type": "Typ sesji",
+      "group": {
+        "label": "Gra w grupie",
+        "hint": "Do 6 graczy, jeden telefon prowadzi grę"
+      },
+      "race": {
+        "label": "Wyścig",
+        "hint": "Do 500, startuje sam, publiczna tablica"
+      },
+      "hosted": {
+        "label": "Wydarzenie prowadzone",
+        "hint": "Twoja licencja, twoja marka, wszystkie narzędzia"
+      },
+      "rolesOnly": "Ten pokój wymaga ról: tylko wydarzenia prowadzone",
+      "licence": "Licencja",
+      "pickLicence": "Wybierz licencję",
+      "licenceLoading": "Wczytywanie licencji…",
+      "noLicence": "Brak dostępnej licencji",
+      "licenceLine": "{{name}} · {{players}} · {{events}} · do {{date}}",
+      "unnamed": "Licencja bez nazwy",
+      "players_one": "{{count}} gracz",
+      "players_few": "{{count}} graczy",
+      "players_many": "{{count}} graczy",
+      "players_other": "{{count}} gracza",
+      "eventsLeft_one": "zostało {{count}} wydarzenie",
+      "eventsLeft_few": "zostały {{count}} wydarzenia",
+      "eventsLeft_many": "zostało {{count}} wydarzeń",
+      "eventsLeft_other": "zostało {{count}} wydarzenia",
+      "annual": "roczna",
+      "format": "Format wyścigu",
+      "solo": {
+        "label": "Solo",
+        "hint": "Każdy ściga się sam"
+      },
+      "teams": {
+        "label": "Drużyny",
+        "hint": "Drużyny do 3 osób z kodem; solo też można"
+      },
+      "start": "Start",
+      "startByHost": "Uruchomię go sam",
+      "startByHostHint": "Przycisk Start w konsoli",
+      "startAt": "Startuje sam",
+      "startAtHint": "O ustalonej porze, nawet pod twoją nieobecność",
+      "startIn": "Start za (minuty)",
+      "startRange": "Od {{min}} do {{max}} minut od teraz.",
+      "submit": "Utwórz",
+      "creating": "Tworzenie…",
+      "failed": "Nie udało się otworzyć pokoju. Spróbuj ponownie."
+    }
   }
 }

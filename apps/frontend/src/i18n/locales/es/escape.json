@@ -447,5 +447,54 @@
         "photoFinishPair": "Foto finish: {{a}} y {{b}}"
       }
     }
+  },
+  "session": {
+    "create": {
+      "title": "¿Cómo vas a jugar {{title}}?",
+      "type": "Tipo de sesión",
+      "group": {
+        "label": "Juego en grupo",
+        "hint": "Hasta 6 jugadores, un teléfono la dirige"
+      },
+      "race": {
+        "label": "Carrera",
+        "hint": "Hasta 500, empieza sola, marcador público"
+      },
+      "hosted": {
+        "label": "Evento dirigido",
+        "hint": "Tu licencia, tu marca, todas las herramientas"
+      },
+      "rolesOnly": "Esta sala necesita roles: solo eventos dirigidos",
+      "licence": "Licencia",
+      "pickLicence": "Elige una licencia",
+      "licenceLoading": "Cargando tus licencias…",
+      "noLicence": "No hay ninguna licencia disponible",
+      "licenceLine": "{{name}} · {{players}} · {{events}} · hasta el {{date}}",
+      "unnamed": "Licencia sin nombre",
+      "players_one": "{{count}} jugador",
+      "players_other": "{{count}} jugadores",
+      "eventsLeft_one": "queda {{count}} evento",
+      "eventsLeft_other": "quedan {{count}} eventos",
+      "annual": "anual",
+      "format": "Formato de la carrera",
+      "solo": {
+        "label": "En solitario",
+        "hint": "Cada uno corre solo"
+      },
+      "teams": {
+        "label": "Por equipos",
+        "hint": "Equipos de hasta 3 con un código; también en solitario"
+      },
+      "start": "Inicio",
+      "startByHost": "La empiezo yo",
+      "startByHostHint": "Un botón Empezar en la consola",
+      "startAt": "Empieza sola",
+      "startAtHint": "A la hora fijada, aunque no estés",
+      "startIn": "Empieza en (minutos)",
+      "startRange": "Entre {{min}} y {{max}} minutos a partir de ahora.",
+      "submit": "Crear",
+      "creating": "Creando…",
+      "failed": "No se pudo abrir la sala. Inténtalo de nuevo."
+    }
   }
 }

@@ -262,7 +262,19 @@
     "escaped": "该队伍已经逃脱：没有可以再打开的了。",
     "already-solved": "这把锁已经打开了。",
     "unknown-lock": "这把锁已不在该队伍当前的关卡中。",
-    "hint-changed": "该队伍的下一条提示在此期间已变化。请查看新的提示后再给出。"
+    "hint-changed": "该队伍的下一条提示在此期间已变化。请查看新的提示后再给出。",
+    "not_in_session": "此会话类型不允许该操作。",
+    "licence_required": "请选择一个许可证来主持活动。",
+    "licence_not_found": "此许可证不存在或不属于你。",
+    "licence_not_facilitator": "你不是此许可证的主持人。",
+    "licence_not_yet_valid": "此许可证尚未生效。",
+    "licence_expired": "此许可证已过期。",
+    "licence_no_events_left": "此许可证已没有剩余场次。",
+    "licence_unavailable": "暂时无法验证许可证，请稍后再试。",
+    "session_mode": "此房间需要角色：仅限主持活动。",
+    "race_start_out_of_range": "竞赛须在 1 到 180 分钟后开始。",
+    "team_code_unknown": "没有队伍使用此代码。",
+    "too_many_codes": "尝试次数过多，请等待一分钟。"
   },
   "escape_template": {
     "invalid": "此密室逃脱模板无效。",

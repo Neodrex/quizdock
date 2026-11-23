@@ -265,7 +265,19 @@
     "escaped": "Ta drużyna już uciekła: nie ma nic więcej do otwarcia.",
     "already-solved": "Ta kłódka jest już otwarta.",
     "unknown-lock": "Tej kłódki nie ma już na obecnym etapie drużyny.",
-    "hint-changed": "Następna podpowiedź tej drużyny w międzyczasie się zmieniła. Sprawdź nową i daj ją ponownie."
+    "hint-changed": "Następna podpowiedź tej drużyny w międzyczasie się zmieniła. Sprawdź nową i daj ją ponownie.",
+    "not_in_session": "Ten typ sesji na to nie pozwala.",
+    "licence_required": "Wybierz licencję, aby poprowadzić wydarzenie.",
+    "licence_not_found": "Ta licencja nie istnieje lub nie należy do ciebie.",
+    "licence_not_facilitator": "Nie jesteś prowadzącym na tej licencji.",
+    "licence_not_yet_valid": "Ta licencja nie jest jeszcze ważna.",
+    "licence_expired": "Ta licencja wygasła.",
+    "licence_no_events_left": "Na tej licencji nie zostały żadne wydarzenia.",
+    "licence_unavailable": "Nie można teraz sprawdzić licencji. Spróbuj ponownie za chwilę.",
+    "session_mode": "Ten pokój wymaga ról: tylko wydarzenia prowadzone.",
+    "race_start_out_of_range": "Wyścig zaczyna się od 1 do 180 minut od teraz.",
+    "team_code_unknown": "Żadna drużyna nie ma tego kodu.",
+    "too_many_codes": "Zbyt wiele prób, odczekaj minutę."
   },
   "escape_template": {
     "invalid": "Ten szablon gry escape jest nieprawidłowy.",

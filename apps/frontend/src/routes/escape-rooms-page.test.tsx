@@ -48,6 +48,17 @@ const broken = {
   stageCount: null,
 };
 
+const devLicence = {
+  id: 'dev',
+  organisationName: null,
+  package: 'annual',
+  participantCap: 500,
+  expiresAt: Date.UTC(2027, 0, 1),
+  eventsLeft: null,
+  hasBrand: false,
+};
+const library = { ...draft, id: 'e4', status: 'published', version: 1 };
+
 function signedIn() {
   localStorage.setItem('live.localUser', 'Animateur');
 }
@@ -197,14 +208,27 @@ describe('/escape', () => {
     signedIn();
     let open: (v: { pin: string }) => void = () => {};
     createEscapeRoom.mockImplementation(() => new Promise((r) => (open = r)));
-    mockApi([{ path: '/escape-templates', body: [item] }]);
+    mockApi([
+      { path: '/escape-templates', body: [item] },
+      { path: '/escape-licences', body: [devLicence] },
+    ]);
     const { router } = renderApp('/escape');
     await screen.findByRole('article', { name: 'Vault Heist' });
     const create = within(card('Vault Heist')).getByRole('button', { name: 'Créer la salle' });
     fireEvent.click(create);
     fireEvent.click(create);
+    // The session dialog comes first: a roles template is a hosted event.
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('radio', { name: /Événement animé/ })).toBeChecked();
+    await within(dialog).findByRole('combobox', { name: 'Licence' });
+    const go = within(dialog).getByRole('button', { name: 'Créer' });
+    fireEvent.click(go);
+    fireEvent.click(go);
     expect(createEscapeRoom).toHaveBeenCalledTimes(1);
-    expect(createEscapeRoom).toHaveBeenCalledWith('e1', {});
+    expect(createEscapeRoom).toHaveBeenCalledWith('e1', {
+      sessionType: 'hosted',
+      licenceId: 'dev',
+    });
     open({ pin: '482913' });
     await waitFor(() => expect(router.state.location.pathname).toBe('/session/482913/console'));
   });
@@ -215,6 +239,7 @@ describe('/escape', () => {
     mockApi([
       { path: '/escape-templates', body: [item] },
       { path: '/me/preferences', body: {} },
+      { path: '/escape-licences', body: [devLicence] },
       {
         path: '/me',
         body: { id: 'u1', displayName: 'Hôte', email: null, roles: ['host'], subject: 'kc' },
@@ -225,8 +250,16 @@ describe('/escape', () => {
     fireEvent.click(within(card('Vault Heist')).getByRole('button', { name: 'Créer la salle' }));
     fireEvent.click(await screen.findByRole('radio', { name: /Accès libre/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Lancer' }));
+    // Then the session type.
+    const dialog = await screen.findByRole('dialog', { name: /Comment jouer Vault Heist/ });
+    await within(dialog).findByRole('combobox', { name: 'Licence' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
     await waitFor(() =>
-      expect(createEscapeRoom).toHaveBeenCalledWith('e1', { participantAccess: 'open' }),
+      expect(createEscapeRoom).toHaveBeenCalledWith('e1', {
+        participantAccess: 'open',
+        sessionType: 'hosted',
+        licenceId: 'dev',
+      }),
     );
     await waitFor(() => expect(router.state.location.pathname).toBe('/session/482913/console'));
   });
@@ -238,16 +271,69 @@ describe('/escape', () => {
         code: 'escape_template.invalid',
       }),
     );
-    mockApi([{ path: '/escape-templates', body: [item] }]);
+    mockApi([
+      { path: '/escape-templates', body: [item] },
+      { path: '/escape-licences', body: [devLicence] },
+    ]);
     renderApp('/escape');
     await screen.findByRole('article', { name: 'Vault Heist' });
     fireEvent.click(within(card('Vault Heist')).getByRole('button', { name: 'Créer la salle' }));
-    expect(await within(card('Vault Heist')).findByRole('alert')).toHaveTextContent(
+    const dialog = await screen.findByRole('dialog');
+    await within(dialog).findByRole('combobox', { name: 'Licence' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    // The refusal stays in the dialog, which can try again or be closed.
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
       'Ce modèle de jeu d’évasion n’est pas valide.',
     );
-    expect(
-      within(card('Vault Heist')).getByRole('button', { name: 'Créer la salle' }),
-    ).toBeEnabled();
+    expect(within(dialog).getByRole('button', { name: 'Créer' })).toBeEnabled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Annuler' }));
+    await waitFor(() =>
+      expect(
+        within(card('Vault Heist')).getByRole('button', { name: 'Créer la salle' }),
+      ).toBeEnabled(),
+    );
+  });
+
+  it('group play goes to the host’s own phone join', async () => {
+    signedIn();
+    createEscapeRoom.mockResolvedValue({ pin: '482913' });
+    mockApi([
+      { path: '/escape-templates', body: [library] },
+      { path: '/escape-licences', body: [] },
+    ]);
+    const { router } = renderApp('/escape');
+    await screen.findByRole('article', { name: 'Lost Library' });
+    fireEvent.click(within(card('Lost Library')).getByRole('button', { name: 'Créer la salle' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('radio', { name: /Jeu entre amis/ })).toBeChecked();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    await waitFor(() =>
+      expect(createEscapeRoom).toHaveBeenCalledWith('e4', { sessionType: 'group' }),
+    );
+    await waitFor(() => expect(router.state.location.pathname).toBe('/join/482913'));
+    expect(router.state.location.searchStr).toBe('?host=1');
+  });
+
+  it('a race goes to the console', async () => {
+    signedIn();
+    createEscapeRoom.mockResolvedValue({ pin: '482913' });
+    mockApi([
+      { path: '/escape-templates', body: [library] },
+      { path: '/escape-licences', body: [] },
+    ]);
+    const { router } = renderApp('/escape');
+    await screen.findByRole('article', { name: 'Lost Library' });
+    fireEvent.click(within(card('Lost Library')).getByRole('button', { name: 'Créer la salle' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('radio', { name: /Course/ }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    await waitFor(() =>
+      expect(createEscapeRoom).toHaveBeenCalledWith('e4', {
+        sessionType: 'race',
+        race: { format: 'solo' },
+      }),
+    );
+    await waitFor(() => expect(router.state.location.pathname).toBe('/session/482913/console'));
   });
 
   it('buttons are tap-sized (laptop and tablet)', async () => {
