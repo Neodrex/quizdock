@@ -325,9 +325,16 @@ export class EscapeEngine implements OnModuleDestroy {
     const meta = await this.game.getMeta(pin);
     if (!meta) throw new NotFoundException('session.not_found');
     await this.openOn(pin, meta.id, hostUserId, snap, dto.durationMin, session);
+    // M8: the Site learns the PIN. Another room that opened the race first wins
+    // (`not-open`): this one closes. Any other failure is best effort (logged).
+    if (session.race?.siteRaceId) {
+      const opened = await this.races.opened(session.race.siteRaceId, pin);
+      if (!opened.ok && opened.reason === 'not-open') {
+        await this.modules.get(GameEngine, { strict: false }).end(pin, hostUserId);
+        throw new ConflictException('escape.race_not_open');
+      }
+    }
     if (session.race?.startsAt) this.armRace(pin, session.race.startsAt);
-    // M8: the Site learns the PIN (best effort: a refusal is logged by the port).
-    if (session.race?.siteRaceId) await this.races.opened(session.race.siteRaceId, pin);
     return pin;
   }
 

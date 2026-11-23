@@ -100,21 +100,29 @@ describe('SiteRaces', () => {
     expect(calls[0].path).toBe('/api/live/races/..%2Flicences%2Fusable/claim');
   });
 
-  it('opened sends the PIN; a refusal is logged, not thrown', async () => {
+  it('opened sends the PIN and gives the Site’s answer; a refusal is logged, not thrown', async () => {
     const { races, calls, log } = fakeSite(
       { raw: { ok: true } },
       { raw: { ok: false, reason: 'not-open' } },
+      { raw: { ok: false, reason: 'not-found' } },
     );
-    await races.opened(RACE, '123456');
+    expect(await races.opened(RACE, '123456')).toEqual({ ok: true });
     expect(calls[0]).toEqual({ path: `/api/live/races/${RACE}/opened`, body: { pin: '123456' } });
-    await expect(races.opened(RACE, '123456')).resolves.toBeUndefined();
+    expect(await races.opened(RACE, '123456')).toEqual({ ok: false, reason: 'not-open' });
     expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('not-open'));
+    expect(await races.opened(RACE, '123456')).toEqual({ ok: false, reason: 'not-found' });
+  });
+
+  it('opened with the Site down or an unknown refusal is unavailable', async () => {
+    const { races } = fakeSite(down, { raw: { ok: false, reason: 'later' } });
+    expect(await races.opened(RACE, '123456')).toEqual({ ok: false, reason: 'unavailable' });
+    expect(await races.opened(RACE, '123456')).toEqual({ ok: false, reason: 'unavailable' });
   });
 
   it('Live PINs (6 digits) match what the Site takes; anything else is not sent', async () => {
     expect(SITE_PIN.test('012345')).toBe(true);
     const { races, post, log } = fakeSite({ raw: { ok: true } });
-    await races.opened(RACE, 'a b');
+    expect(await races.opened(RACE, 'a b')).toEqual({ ok: false, reason: 'unavailable' });
     expect(post).not.toHaveBeenCalled();
     expect(log.warn).toHaveBeenCalledTimes(1);
   });

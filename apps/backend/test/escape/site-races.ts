@@ -1,8 +1,9 @@
 import { Logger } from '@nestjs/common';
-import type { EscapeFinale } from '@quiz-dock/contracts';
+import { type EscapeFinale, GameState } from '@quiz-dock/contracts';
 import type { Socket } from 'socket.io-client';
 import { EscapeEngine } from '../../src/escape/escape.engine';
 import { EscapeStore } from '../../src/escape/escape.store';
+import { GameService } from '../../src/game/game.service';
 import type { RaceResults } from '../../src/escape/races/race.port';
 import { SiteRaces } from '../../src/escape/races/site-races';
 import { lostLibrary } from '../../src/escape/samples';
@@ -126,10 +127,41 @@ export function siteRaceTests(ctx: EscapeContext): void {
       expect(calls(openedPath)).toEqual([{ path: openedPath, body: { pin } }]);
     });
 
-    it('a refused opened is logged; the room stays open', async () => {
-      site.answers.set(openedPath, { ok: false, reason: 'not-open' });
+    it('an opened refused as not-found, or the Site down, is logged; the room stays open', async () => {
+      site.answers.set(openedPath, { ok: false, reason: 'not-found' });
       const { pin } = await siteRace();
       expect((await store().session(pin))?.race?.siteRaceId).toBe(RACE);
+      site.answers.delete(openedPath); // the stub answers 404: unavailable
+      const other = await siteRace();
+      expect((await store().session(other.pin))?.race?.siteRaceId).toBe(RACE);
+    });
+
+    it('two creates race to open the same race: exactly one room survives', async () => {
+      let winner: string | null = null;
+      site.answers.set(openedPath, (body: unknown) => {
+        const { pin } = body as { pin: string };
+        winner ??= pin;
+        return winner === pin ? { ok: true } : { ok: false, reason: 'not-open' };
+      });
+      const acks = await Promise.all(
+        [ctx.h.connectHost(), ctx.h.connectHost()].map((host) =>
+          createAs(host, library, 'race', { race: { format: 'solo', siteRaceId: RACE } }),
+        ),
+      );
+      const won = acks.filter((a) => a.pin);
+      expect(won).toEqual([{ pin: winner }]);
+      expect(acks.filter((a) => !a.pin)).toMatchObject([refused('escape.race_not_open')]);
+      const pins = calls(openedPath).map((c) => (c.body as { pin: string }).pin);
+      expect(pins).toHaveLength(2);
+      const loser = pins.find((p) => p !== winner)!;
+      const games = ctx.h.app.get(GameService);
+      const won_ = (await games.getMeta(winner!))!;
+      expect(won_.state).not.toBe(GameState.Ended);
+      expect((await games.getMeta(loser))?.state ?? GameState.Ended).toBe(GameState.Ended);
+      expect(await games.listActiveHostGames(won_.hostUserId)).not.toContainEqual(
+        expect.objectContaining({ pin: loser }),
+      );
+      expect(ctx.h.app.get(EscapeEngine).inProcess(won_.id, loser).scheduled).toBe(false);
     });
 
     /** A solo Site race (the claim says solo) run to its finale by the host. */

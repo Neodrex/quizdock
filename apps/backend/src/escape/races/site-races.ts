@@ -6,6 +6,7 @@ import { siteBrandSchema } from '../site/site-brand';
 import {
   RACE_RESULTS_TOP,
   type RaceClaim,
+  type RaceOpened,
   type RacePort,
   type RaceResults,
   type SiteRace,
@@ -17,6 +18,11 @@ export const SITE_PIN = /^[A-Za-z0-9-]{1,16}$/;
 const answer = z.union([
   z.object({ ok: z.literal(true) }),
   z.object({ ok: z.literal(false), reason: z.string().max(64) }),
+]);
+
+const openedAnswer = z.union([
+  z.object({ ok: z.literal(true) }),
+  z.object({ ok: z.literal(false), reason: z.enum(['not-found', 'not-open']) }),
 ]);
 
 /**
@@ -52,15 +58,17 @@ export class SiteRaces implements RacePort {
     return res.ok ? res.value : { ok: false, reason: 'unavailable' };
   }
 
-  async opened(siteRaceId: string, pin: string): Promise<void> {
+  async opened(siteRaceId: string, pin: string): Promise<RaceOpened> {
     if (!SITE_PIN.test(pin)) {
       this.log.warn(`site race ${siteRaceId}: PIN ${pin} is not one the Site takes; not reported`);
-      return;
+      return { ok: false, reason: 'unavailable' };
     }
-    const res = await this.site.post(this.path(siteRaceId, 'opened'), { pin }, answer);
-    if (res.ok && !res.value.ok) {
+    const res = await this.site.post(this.path(siteRaceId, 'opened'), { pin }, openedAnswer);
+    if (!res.ok) return { ok: false, reason: 'unavailable' };
+    if (!res.value.ok) {
       this.log.warn(`site race ${siteRaceId}: opened refused (${res.value.reason})`);
     }
+    return res.value;
   }
 
   async finished(siteRaceId: string, results: RaceResults): Promise<void> {

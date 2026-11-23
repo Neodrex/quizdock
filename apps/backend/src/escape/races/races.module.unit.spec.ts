@@ -29,6 +29,6 @@ describe('the race port (ESCAPE_SITE_URL)', () => {
     const none: RacePort = new NoRaces();
     const host = { userId: 'u1', email: null, oidcSubject: 's' };
     expect(await none.claim(host, 'r1')).toEqual({ ok: false, reason: 'not-found' });
-    await expect(none.opened('r1', '123456')).resolves.toBeUndefined();
+    expect(await none.opened('r1', '123456')).toEqual({ ok: true });
   });
 });

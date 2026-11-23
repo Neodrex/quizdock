@@ -1,7 +1,7 @@
 /**
  * The race port (M8 §1.2): a channel race scheduled on the Site, opened on
- * Live. Live claims it at create (the Site's title, start, format and brand
- * win), tells the Site the PIN, and reports the top teams after the finale.
+ * Live. Live claims it at create (the Site's start, format and brand win),
+ * tells the Site the PIN, and reports the top teams after the finale.
  */
 import type { LicenceBrand, LicenceHost } from '../licences/licence.port';
 
@@ -16,6 +16,11 @@ export interface SiteRace {
 }
 
 export type RaceRefusal = 'not-found' | 'not-allowed' | 'not-open' | 'unavailable';
+
+/** The Site's answer to `opened`: `not-open` means another room won the race to open it. */
+export type RaceOpened =
+  | { ok: true }
+  | { ok: false; reason: 'not-found' | 'not-open' | 'unavailable' };
 
 export type RaceClaim = { ok: true; race: SiteRace } | { ok: false; reason: RaceRefusal };
 
@@ -44,8 +49,11 @@ export const RACE_RESULTS_TOP = 20;
 
 export interface RacePort {
   claim(host: LicenceHost, siteRaceId: string): Promise<RaceClaim>;
-  /** Best effort: a refusal or failure is logged, never thrown. */
-  opened(siteRaceId: string, pin: string): Promise<void>;
+  /**
+   * The Site's answer, never thrown; a refusal or failure is logged. The
+   * caller closes its room on `not-open` (another room opened the race first).
+   */
+  opened(siteRaceId: string, pin: string): Promise<RaceOpened>;
   /** Best effort, one retry: a refusal or failure is logged, never thrown. */
   finished(siteRaceId: string, results: RaceResults): Promise<void>;
 }
