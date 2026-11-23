@@ -932,7 +932,7 @@ export const SETTINGS = {
   ESCAPE_SITE_URL: define({
     key: 'ESCAPE_SITE_URL',
     description:
-      'The escape-room Site that `ESCAPE_LICENCE_SOURCE=site` asks for licences and races (its internal API, under `/api/live/`). Unreachable or refusing: hosted events and Site races are refused, nothing else is.',
+      'The escape-room Site (its internal API under `/api/live/`). When set, Site races are enabled, and it also serves licences when `ESCAPE_LICENCE_SOURCE=site`. Needs `ESCAPE_SITE_TOKEN`, or start-up fails. Unreachable or refusing: Site races and Site-licensed events are refused, nothing else is.',
     category: 'access',
     criticality: 'C2',
     schema: text(),
