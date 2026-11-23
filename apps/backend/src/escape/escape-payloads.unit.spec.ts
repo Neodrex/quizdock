@@ -7,6 +7,7 @@ import {
   boardOf,
   finaleFor,
   finaleOf,
+  raceResultsOf,
   hintUpdateOf,
   hostSessionOf,
   hostStateOf,
@@ -403,7 +404,7 @@ describe('host payloads', () => {
         type: 'race',
         cap: 500,
         licence: null,
-        race: { format: 'teams', startsAt: 5, started: false },
+        race: { format: 'teams', startsAt: 5, started: false, siteRaceId: 'site-1', brand: null },
       },
     });
     expect(race).toMatchObject({
@@ -412,6 +413,7 @@ describe('host payloads', () => {
       race: { format: 'teams', startsAt: 5, started: false },
       tools: [...toolsOf('race')],
     });
+    expect(JSON.stringify(race)).not.toMatch(/site-1|siteRaceId/);
   });
 
   it('the template itself trips the checker (positive control)', () => {
@@ -457,7 +459,13 @@ describe('playerSessionOf (M7 §1.4)', () => {
         ...group,
         type: 'race' as const,
         phoneHostUserId: null,
-        race: { format: 'solo' as const, startsAt: 123, started: false },
+        race: {
+          format: 'solo' as const,
+          startsAt: 123,
+          started: false,
+          siteRaceId: null,
+          brand: null,
+        },
       },
     };
     expect(playerSessionOf(race, 'p1')).toEqual({
@@ -861,7 +869,7 @@ describe('race scale (M7 §1.7)', () => {
   const raceSession: EscapeSession = {
     type: 'race',
     cap: 500,
-    race: { format: 'solo', startsAt: null, started: true },
+    race: { format: 'solo', startsAt: null, started: true, siteRaceId: null, brand: null },
     licence: null,
     licenceUsed: false,
     phoneHostUserId: null,
@@ -973,6 +981,28 @@ describe('race scale (M7 §1.7)', () => {
     expect(screen.ranking).toHaveLength(RACE_FINALE_TOP);
     expect(screen.totalTeams).toBe(500);
     expect(screenFinaleOf(finale, { ...v, session: null }).ranking).toHaveLength(500);
+  });
+
+  it('raceResultsOf (M8): the finale’s top 20 for the Site, names only, the total and the PIN', () => {
+    const v = { ...soloView(500), run: { ...running, phase: 'finale' as const } };
+    const finale = finaleOf(v, 'g1');
+    const out = raceResultsOf(finale, '123456', 42);
+    expect(out).toMatchObject({ pin: '123456', endedAt: 42, totalTeams: 500 });
+    expect(out.top).toHaveLength(20);
+    expect(out.top[0]).toEqual({
+      place: finale.ranking[0].place,
+      name: finale.ranking[0].name,
+      escaped: false,
+      timeMs: null,
+      stages: finale.ranking[0].stagesCleared,
+    });
+    expect(out.top.map((r) => r.place)).toEqual(finale.ranking.slice(0, 20).map((r) => r.place));
+    expect(JSON.stringify(out)).not.toMatch(/"p\d+"|"t\d+"|playerId|teamId|members/);
+    const escaped = {
+      ...finale,
+      ranking: [{ ...finale.ranking[0], escaped: true, scoreMs: 600_000 }],
+    };
+    expect(raceResultsOf(escaped, '1', 1).top[0]).toMatchObject({ escaped: true, timeMs: 600_000 });
   });
 });
 

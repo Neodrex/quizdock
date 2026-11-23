@@ -87,7 +87,10 @@ export function createAs(
   host: Socket,
   templateId: string,
   sessionType?: 'group' | 'race' | 'hosted',
-  opts: { licenceId?: string; race?: { format: 'solo' | 'teams'; startsAt?: number } } = {},
+  opts: {
+    licenceId?: string;
+    race?: { format: 'solo' | 'teams'; startsAt?: number; siteRaceId?: string };
+  } = {},
 ): Promise<{ pin?: string; ok?: false; error?: { code: string } }> {
   return host.emitWithAck('escape:create', {
     templateId,

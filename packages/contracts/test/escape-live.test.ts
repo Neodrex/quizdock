@@ -111,6 +111,13 @@ describe('session types (M7 §1.1)', () => {
     expect(create({ sessionType: 'race', race: { format: 'pairs' } }).success).toBe(false);
   });
 
+  it('a race may name the Site race it opens (M8 §1.2)', () => {
+    const race = (r: Record<string, unknown>) => create({ sessionType: 'race', race: r });
+    expect(race({ format: 'solo', siteRaceId: 'r-1' }).success).toBe(true);
+    expect(race({ format: 'solo', siteRaceId: '' }).success).toBe(false);
+    expect(race({ format: 'solo', siteRaceId: 'x'.repeat(65) }).success).toBe(false);
+  });
+
   it('escape:open takes an optional licence id', () => {
     expect(escapeOpenSchema.safeParse({ pin, templateId: 't1', licenceId: 'acme' }).success).toBe(
       true,

@@ -135,13 +135,17 @@ export function sessionLeakTests(ctx: EscapeContext): void {
           ['escape:state', { team: { code: 'ABCD' }, x: { eventsLeft: 1 } }],
           ['escape:host', { session: { licence: { organisationName: 'acme-org' } } }],
           ['exception', { code: 'escape.team_full' }],
+          ['escape:board', { race: { siteRaceId: 'r-1' }, note: 'r-1' }],
         ],
-        { licence: ACME },
+        { licence: ACME, siteRaceId: 'r-1' },
       ),
     ).toEqual([
       'escape:state $.x.eventsLeft: a licence detail',
       "escape:state: another team's code ABCD",
       'escape:host $.session.licence.organisationName: the organisation id',
+      'escape:board $.race.siteRaceId: a licence detail',
+      'escape:board $.race.siteRaceId: the Site race id',
+      'escape:board $.note: the Site race id',
     ]);
   });
 }

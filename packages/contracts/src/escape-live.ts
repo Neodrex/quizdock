@@ -75,6 +75,11 @@ export const escapeCreateSchema = z
       .object({
         format: z.enum(['solo', 'teams']),
         startsAt: z.number().int().positive().optional(),
+        /**
+         * M8: the Site race this room opens. The server claims it and takes the
+         * Site's start and format over the ones sent here.
+         */
+        siteRaceId: id.optional(),
       })
       .optional(),
   })

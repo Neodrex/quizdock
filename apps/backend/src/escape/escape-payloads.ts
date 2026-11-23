@@ -33,6 +33,7 @@ import { deadlineAt, remainingMs, runElapsed, stageOpenedAt } from './escape-clo
 import type { EscapeRun, EscapeSession, EscapeSnapshot, TeamRecord } from './escape-live.types';
 import { awards, hashOrder, nextHint, playerView, rankTeams } from './escape-rules';
 import { type SessionLimits, limitsOf } from './escape-session';
+import { RACE_RESULTS_TOP, type RaceResults } from './races/race.port';
 import type { EscapeTemplate, Lock, Stage, SubmitResult, TeamState } from './escape.types';
 
 /** A player of the room, as the engine sees it (R1 decides `connected`). */
@@ -538,6 +539,26 @@ export function screenFinaleOf(finale: EscapeFinale, v: RunView): EscapeScreenFi
       teamwork: a.teamwork,
       photoFinish: a.photoFinish && [a.photoFinish[0], a.photoFinish[1]],
     },
+  };
+}
+
+/**
+ * M8: what a Site race's room reports after its finale: the finale's ranking
+ * (hint penalties included, as the podium shows it), top RACE_RESULTS_TOP rows,
+ * team names only (in a solo race, the player's nickname), never an id.
+ */
+export function raceResultsOf(finale: EscapeFinale, pin: string, endedAt: number): RaceResults {
+  return {
+    pin,
+    endedAt,
+    totalTeams: finale.ranking.length,
+    top: finale.ranking.slice(0, RACE_RESULTS_TOP).map((r) => ({
+      place: r.place,
+      name: r.name,
+      escaped: r.escaped,
+      timeMs: r.escaped ? r.scoreMs : null,
+      stages: r.stagesCleared,
+    })),
   };
 }
 

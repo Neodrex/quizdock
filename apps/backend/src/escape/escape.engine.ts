@@ -1,11 +1,13 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
   Logger,
   NotFoundException,
   type OnModuleDestroy,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import {
@@ -64,6 +66,7 @@ import {
   hostTeamOf,
   hostOutlineOf,
   lookOf,
+  raceResultsOf,
   playerStateOf,
   finaleFor,
   type RunView,
@@ -99,6 +102,7 @@ import {
   type LicenceHost,
   type LicencePort,
 } from './licences/licence.port';
+import { RACE_PORT, type RacePort, type SiteRace } from './races/race.port';
 import { SerialQueue } from './serial-queue';
 
 type EscapeServer = Server<
@@ -231,6 +235,7 @@ export class EscapeEngine implements OnModuleDestroy {
     private readonly attempts: EscapeAttempts,
     private readonly modules: ModuleRef,
     @Inject(LICENCE_PORT) private readonly licences: LicencePort,
+    @Inject(RACE_PORT) private readonly races: RacePort,
   ) {}
 
   bindServer(server: EscapeServer): void {
@@ -321,6 +326,8 @@ export class EscapeEngine implements OnModuleDestroy {
     if (!meta) throw new NotFoundException('session.not_found');
     await this.openOn(pin, meta.id, hostUserId, snap, dto.durationMin, session);
     if (session.race?.startsAt) this.armRace(pin, session.race.startsAt);
+    // M8: the Site learns the PIN (best effort: a refusal is logged by the port).
+    if (session.race?.siteRaceId) await this.races.opened(session.race.siteRaceId, pin);
     return pin;
   }
 
@@ -1253,6 +1260,7 @@ export class EscapeEngine implements OnModuleDestroy {
         .emit('escape:team-update', timeUpOf(rec.team.id));
     }
     await this.sendFinale(ref, finale, final);
+    this.reportRace(ref.pin, final.session, finale);
     return finale;
   }
 
@@ -1275,6 +1283,18 @@ export class EscapeEngine implements OnModuleDestroy {
         s.emit('escape:finale', finaleFor(finale, team, limits));
       } else s.emit('escape:screen-finale', screen);
     }
+  }
+
+  /**
+   * M8: a Site race's top teams go back to the Site after its finale. Not
+   * awaited: the port retries once and logs, and the finale never waits.
+   */
+  private reportRace(pin: string, session: EscapeSession | null, finale: EscapeFinale): void {
+    const siteRaceId = session?.race?.siteRaceId;
+    if (!siteRaceId) return;
+    void this.races
+      .finished(siteRaceId, raceResultsOf(finale, pin, Date.now()))
+      .catch((err: Error) => this.log.warn(`site race ${siteRaceId}: ${err.message}`));
   }
 
   /** The room's keys and the run's get their TTL again. */
@@ -1429,8 +1449,10 @@ export class EscapeEngine implements OnModuleDestroy {
     if (type === 'race') {
       // escapeCreateSchema gives every race its race data.
       if (!dto.race) throw new BadRequestException('validation');
-      const { format } = dto.race;
-      const startsAt = dto.race.startsAt ?? null;
+      // M8: a Site race is claimed first; its start, format and brand win.
+      const site = dto.race.siteRaceId ? await this.claimRace(host, dto.race.siteRaceId) : null;
+      const format = site?.format ?? dto.race.format;
+      const startsAt = site ? site.startsAt : (dto.race.startsAt ?? null);
       const lead = startsAt === null ? null : startsAt - Date.now();
       // 5 s of slack on both bounds: the dialog's "in 1 minute" reaches us a little late.
       const min = this.timings.raceMinLeadMs - RACE_LEAD_SLACK_MS;
@@ -1438,10 +1460,37 @@ export class EscapeEngine implements OnModuleDestroy {
       if (lead !== null && (lead < min || lead > max)) {
         throw new BadRequestException('escape.race_start_out_of_range');
       }
-      return { ...base, type, cap: capOf(type), race: { format, startsAt, started: false } };
+      const race = {
+        format,
+        startsAt,
+        started: false,
+        siteRaceId: dto.race.siteRaceId ?? null,
+        brand: site?.brand ? { ...site.brand } : null,
+      };
+      return { ...base, type, cap: capOf(type), race };
     }
     const licence = await this.licenceFor(host, dto.licenceId);
     return { ...base, type, cap: capOf(type, licence), licence: frozen(licence) };
+  }
+
+  /** M8: the Site race this create opens, or the refusal as `escape.race_*`. */
+  private async claimRace(host: LicenceHost, siteRaceId: string): Promise<SiteRace> {
+    const claimed = await this.races.claim(host, siteRaceId);
+    if (claimed.ok) return claimed.race;
+    switch (claimed.reason) {
+      case 'not-found':
+        throw new NotFoundException('escape.race_not_found');
+      case 'not-allowed':
+        throw new ForbiddenException('escape.race_not_allowed');
+      case 'not-open':
+        throw new ConflictException('escape.race_not_open');
+      case 'unavailable':
+        throw new ServiceUnavailableException('escape.race_unavailable');
+      default: {
+        const never: never = claimed.reason;
+        return never;
+      }
+    }
   }
 
   /** The licence a hosted event runs under: the one chosen, or the host's only usable one. */

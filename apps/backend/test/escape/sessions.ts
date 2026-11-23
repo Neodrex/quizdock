@@ -85,6 +85,8 @@ export function sessionTests(ctx: EscapeContext): void {
       format: 'solo',
       startsAt,
       started: false,
+      siteRaceId: null,
+      brand: null,
     });
     const out = refused('escape.race_start_out_of_range');
     for (const at of [Date.now() + 240 * MIN, Date.now() - MIN, Date.now() + 10_000]) {
@@ -107,6 +109,8 @@ export function sessionTests(ctx: EscapeContext): void {
       format: 'teams',
       startsAt: null,
       started: false,
+      siteRaceId: null,
+      brand: null,
     });
   });
 

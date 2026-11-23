@@ -65,6 +65,10 @@ export interface EscapeSession {
     started: boolean;
     /** The scheduled start found nobody in: only the host starts it now. */
     noPlayers?: boolean;
+    /** M8: the Site race this room opened; never sent to a client. */
+    siteRaceId: string | null;
+    /** M8: the Site race's channel brand, frozen at create; only its look goes out. */
+    brand: LicenceBrand | null;
   } | null;
   /** Hosted only. */
   licence: FrozenLicence | null;

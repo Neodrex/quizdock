@@ -109,6 +109,9 @@ const sessionSchema = z.object({
       startsAt: ms.nullable(),
       started: z.boolean(),
       noPlayers: z.boolean().optional(),
+      // Rooms stored before M8 have neither.
+      siteRaceId: z.string().nullable().default(null),
+      brand: licenceBrandSchema.nullable().default(null),
     })
     .nullable(),
   licence: z

@@ -5,6 +5,7 @@
  */
 import type { Logger } from '@nestjs/common';
 import type { z } from 'zod';
+import type { LicenceHost } from '../licences/licence.port';
 
 /** Where the Site is (ESCAPE_SITE_URL) and the token it expects (ESCAPE_SITE_TOKEN). */
 export interface SiteAccess {
@@ -20,6 +21,9 @@ export type SiteResult<T> =
   | { ok: false; reason: 'unavailable'; cause: SiteFailure };
 
 export const SITE_TIMEOUT_MS = 3000;
+
+/** The host as the Site matches it: by OIDC subject (its user id) only; the email for its logs. */
+export const siteHostOf = (host: LicenceHost) => ({ subject: host.oidcSubject, email: host.email });
 
 /**
  * The settings checked at boot: an http(s) URL and a token that is not blank.

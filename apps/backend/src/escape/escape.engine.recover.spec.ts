@@ -9,6 +9,7 @@ import { EscapeTimings } from './escape-timings';
 import { EscapeEngine } from './escape.engine';
 import type { EscapeStore } from './escape.store';
 import { NoLicences } from './licences/no-licences';
+import { NoRaces } from './races/no-races';
 
 const run = (phase: EscapeRun['phase']): EscapeRun => ({
   phase,
@@ -53,6 +54,7 @@ describe('EscapeEngine.recover (bindServer)', () => {
       {} as EscapeAttempts,
       { get: () => ({}) } as unknown as ModuleRef,
       new NoLicences(),
+      new NoRaces(),
     );
     const ticker = (engine as unknown as { ticker: { start: (...a: unknown[]) => void } }).ticker;
     const start = jest.spyOn(ticker, 'start').mockImplementation(() => undefined);
@@ -66,7 +68,7 @@ describe('EscapeEngine.recover (bindServer)', () => {
     const race = (startsAt: number | null, started = false): EscapeSession => ({
       type: 'race',
       cap: 500,
-      race: { format: 'solo', startsAt, started },
+      race: { format: 'solo', startsAt, started, siteRaceId: null, brand: null },
       licence: null,
       licenceUsed: false,
       phoneHostUserId: null,
@@ -97,6 +99,7 @@ describe('EscapeEngine.recover (bindServer)', () => {
       {} as EscapeAttempts,
       { get: () => ({}) } as unknown as ModuleRef,
       new NoLicences(),
+      new NoRaces(),
     );
     const scheduler = (engine as unknown as { scheduler: { arm: (...a: unknown[]) => void } })
       .scheduler;
@@ -112,7 +115,7 @@ describe('EscapeEngine.recover (bindServer)', () => {
     const good: EscapeSession = {
       type: 'race',
       cap: 500,
-      race: { format: 'solo', startsAt: at, started: false },
+      race: { format: 'solo', startsAt: at, started: false, siteRaceId: null, brand: null },
       licence: null,
       licenceUsed: false,
       phoneHostUserId: null,
@@ -139,6 +142,7 @@ describe('EscapeEngine.recover (bindServer)', () => {
       {} as EscapeAttempts,
       { get: () => ({}) } as unknown as ModuleRef,
       new NoLicences(),
+      new NoRaces(),
     );
     const internals = engine as unknown as {
       scheduler: { arm: (...a: unknown[]) => void };

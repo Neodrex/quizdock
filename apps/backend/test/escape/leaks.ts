@@ -220,18 +220,27 @@ export function codesIn(value: unknown): string[] {
 }
 
 /** Keys of a licence that no client is sent (M7 §1.4). */
-const LICENCE_SECRET_KEYS = new Set(['licenceId', 'organisationId', 'eventsLeft', 'hosts']);
+const LICENCE_SECRET_KEYS = new Set([
+  'licenceId',
+  'organisationId',
+  'eventsLeft',
+  'hosts',
+  'siteRaceId',
+]);
 
 export interface SessionLeakScope {
   /** The room's licence: its id and organisation id must never appear as a value. */
   licence?: { id: string; organisationId: string };
   /** The race codes this socket may see (its own team's). Default: none. */
   ownCodes?: Iterable<string>;
+  /** M8: the Site race the room opened: its id must never appear as a value. */
+  siteRaceId?: string;
 }
 
 /**
  * Session leaks in `frames` (M7 Task 7.20), as readable lines (empty when clean):
- * - a key `licenceId`, `organisationId`, `eventsLeft` or `hosts`, at any depth;
+ * - a key `licenceId`, `organisationId`, `eventsLeft`, `hosts` or `siteRaceId`, at any depth;
+ * - a string equal to the Site race id (M8), when given;
  * - a string equal to the licence's id or organisation id;
  * - in an escape frame, a `code` not in `ownCodes` (another team's race code;
  *   error frames have a `code` of their own, so they are not checked for it).
@@ -246,6 +255,7 @@ export function sessionLeaksIn(
     ids.set(scope.licence.id, 'the licence id');
     ids.set(scope.licence.organisationId, 'the organisation id');
   }
+  if (scope.siteRaceId) ids.set(scope.siteRaceId, 'the Site race id');
   return frames.flatMap(([event, p]) => {
     const found: string[] = [];
     const walk = (value: unknown, path: string): void => {

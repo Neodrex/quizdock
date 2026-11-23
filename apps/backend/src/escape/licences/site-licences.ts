@@ -1,7 +1,7 @@
 import { type Logger, ServiceUnavailableException } from '@nestjs/common';
 import { z } from 'zod';
-import type { SiteClient } from '../site/site-client';
-import { licenceBrandSchema } from './brand-schema';
+import { type SiteClient, siteHostOf } from '../site/site-client';
+import { siteBrandSchema } from '../site/site-brand';
 import type {
   Licence,
   LicenceCheck,
@@ -27,14 +27,6 @@ const SITE_REFUSALS = [
 ] as const;
 const USE_REFUSALS = ['not-found', 'not-yet-valid', 'expired', 'no-events-left'] as const;
 
-const isHttps = (v: string) => {
-  try {
-    return new URL(v).protocol === 'https:';
-  } catch {
-    return false;
-  }
-};
-
 /**
  * `ESCAPE_LICENCE_SOURCE=site` (M8 Task 8.13): the licences, facilitators and
  * uses live on the Site, asked through its internal API (§1.2). The host is
@@ -52,18 +44,7 @@ export class SiteLicences implements LicencePort {
     private readonly site: Pick<SiteClient, 'post'>,
     private readonly log: Pick<Logger, 'warn'>,
   ) {
-    // The Site sends a logo only when it is https; anything else is dropped here too.
-    const brand = z
-      .object({ logoUrl: z.string().nullable() })
-      .passthrough()
-      .transform((b) => {
-        if (b.logoUrl !== null && !isHttps(b.logoUrl)) {
-          this.log.warn('site licence: a logo that is not https was dropped');
-          return { ...b, logoUrl: null };
-        }
-        return b;
-      })
-      .pipe(licenceBrandSchema);
+    const brand = siteBrandSchema(this.log);
     this.licence = z.object({
       id: z.string().min(1).max(64),
       organisationId: z.string().min(1).max(64),
@@ -87,7 +68,7 @@ export class SiteLicences implements LicencePort {
     if (kept && now - kept.at >= 0 && now - kept.at < USABLE_CACHE_MS) return kept.list;
     const res = await this.site.post(
       '/api/live/licences/usable',
-      { host: hostOf(host) },
+      { host: siteHostOf(host) },
       z.array(this.licence),
     );
     if (!res.ok) throw new ServiceUnavailableException(LICENCE_UNAVAILABLE);
@@ -98,7 +79,7 @@ export class SiteLicences implements LicencePort {
   async check(host: LicenceHost, licenceId: string): Promise<LicenceCheck> {
     const res = await this.site.post(
       '/api/live/licences/check',
-      { host: hostOf(host), licenceId },
+      { host: siteHostOf(host), licenceId },
       this.checkAnswer,
     );
     return res.ok ? res.value : { ok: false, reason: 'unavailable' };
@@ -122,6 +103,3 @@ export class SiteLicences implements LicencePort {
     return res.value.ok ? { ok: true } : { ok: false, reason: res.value.reason };
   }
 }
-
-/** The host as the Site matches it: by subject only; the email for its logs. */
-const hostOf = (host: LicenceHost) => ({ subject: host.oidcSubject, email: host.email });
