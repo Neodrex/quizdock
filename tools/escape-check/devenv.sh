@@ -20,7 +20,9 @@ export PORT=3000 VITE_API_URL=http://localhost:3000
 # as in apps/backend/src/escape/licences/dev-licences.ts: sessions.mjs's hosted part
 # needs them (and a fresh backend: the static source counts Acme's uses in memory).
 _dev_licence='{"id":"dev-licence","organisationId":"dev-org","package":"annual","participantCap":500,"validFrom":null,"expiresAt":4102444800000,"eventsLeft":null,"brand":null,"hosts":["*"]}'
-_acme='{"id":"acme","organisationId":"acme-org","package":"bundle","participantCap":8,"validFrom":null,"expiresAt":4102444800000,"eventsLeft":2,"brand":{"name":"Acme","logoUrl":"http://localhost:5173/escape-dev/acme-logo.png","accent":"#c2410c","background":null,"baseTheme":"classic","intro":"Welcome to the Acme team escape."},"hosts":["*"]}'
+# The Acme logo is served by Live's frontend: at URL when set (5174 when the Site
+# holds 5173, plan M8 §5 item 12).
+_acme='{"id":"acme","organisationId":"acme-org","package":"bundle","participantCap":8,"validFrom":null,"expiresAt":4102444800000,"eventsLeft":2,"brand":{"name":"Acme","logoUrl":"'"${URL:-http://localhost:5173}"'/escape-dev/acme-logo.png","accent":"#c2410c","background":null,"baseTheme":"classic","intro":"Welcome to the Acme team escape."},"hosts":["*"]}'
 _expired='{"id":"expired-co","organisationId":"expired-org","package":"single","participantCap":30,"validFrom":null,"expiresAt":1577836800000,"eventsLeft":1,"brand":null,"hosts":["*"]}'
 export ESCAPE_LICENCE_SOURCE=static
 if [ "${LICENCES:-dev}" = all ]; then
