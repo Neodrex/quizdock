@@ -1,3 +1,7 @@
+/**
+ * Races of the M6 screens: state writes of the escape engine against the
+ * host's absence, in both orders. Not the M7 races of players (`race.ts`).
+ */
 import { GameState } from '@quiz-dock/contracts';
 import { GameEngine } from '../../src/game/game.engine';
 import { gameHash } from '../../src/game/game-hash';

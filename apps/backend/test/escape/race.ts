@@ -22,17 +22,7 @@ import {
   seedTemplate,
   stateWhere,
 } from './escape-harness';
-
-/** Every value under a `code` key of `value`, at any depth. */
-export function codesIn(value: unknown): string[] {
-  if (Array.isArray(value)) return value.flatMap(codesIn);
-  if (value && typeof value === 'object') {
-    return Object.entries(value).flatMap(([k, v]) =>
-      k === 'code' && typeof v === 'string' ? [v] : codesIn(v),
-    );
-  }
-  return [];
-}
+import { codesIn } from './leaks';
 
 /** Races (M7 Tasks 7.7–7.9): solo teams, team codes, scheduled starts, scale. */
 export function raceSessionTests(ctx: EscapeContext): void {
