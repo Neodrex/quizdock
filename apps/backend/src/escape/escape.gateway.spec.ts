@@ -7,6 +7,7 @@ import {
   useLicences,
   useStaticLicenceSource,
 } from '../../test/escape/escape-harness';
+import { brandTests } from '../../test/escape/brand';
 import { capTests } from '../../test/escape/caps';
 import { clockTests } from '../../test/escape/clock';
 import { finaleTests } from '../../test/escape/finale';
@@ -58,4 +59,5 @@ describe('EscapeGateway (socket integration)', () => {
   describe('caps', () => capTests(ctx));
   describe('phone host', () => phoneHostTests(ctx));
   describe('race', () => raceSessionTests(ctx));
+  describe('brand', () => brandTests(ctx));
 });

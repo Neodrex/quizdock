@@ -62,6 +62,7 @@ import {
   hostStateOf,
   hostTeamOf,
   hostOutlineOf,
+  lookOf,
   playerStateOf,
   finaleFor,
   type RunView,
@@ -349,6 +350,11 @@ export class EscapeEngine implements OnModuleDestroy {
     await this.mutate(pin, undefined, async (ref) => {
       const { data } = socket;
       const hostConsole = isHostConsole(data, pin, ref.meta.hostUserId);
+      const me = playerOf(socket, pin);
+      // M7 §1.9: the room's look, once per sync, before anything it colours.
+      if (hostConsole || me) {
+        socket.emit('escape:look', lookOf(await this.store.session(pin)));
+      }
       if (hostConsole) {
         await socket.join(escapeRooms.host(pin));
         const v = await this.viewOf(ref);
@@ -358,7 +364,6 @@ export class EscapeEngine implements OnModuleDestroy {
         // M7 §1.7: a race whose start was missed (the host away then) starts now.
         due = this.startDue(v);
       }
-      const me = playerOf(socket, pin);
       // Group play (M7 §1.8): a host console that also joined as a player gets its phone state too.
       if (me) {
         const v = await this.viewOf(ref);
@@ -404,6 +409,7 @@ export class EscapeEngine implements OnModuleDestroy {
       await socket.leave(escapeRooms.host(pin));
       await socket.join(escapeRooms.board(pin));
       const v = await this.viewOf(ref);
+      socket.emit('escape:look', lookOf(v.session));
       socket.emit('escape:board', boardOf(v));
       // M6 §1.6: a screen back in the finale gets the screen finale, never the full one.
       const stored = ref.run.phase === 'finale' ? await this.store.results(ref.id) : null;

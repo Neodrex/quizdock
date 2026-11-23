@@ -6,6 +6,7 @@
  */
 import { z } from 'zod';
 import type { EscapeTemplateContent } from './escape';
+import type { ThemeValues } from './theme';
 
 const pin = z.string().regex(/^\d{6}$/); // allocatePin: 6 digits
 const id = z.string().min(1).max(64);
@@ -313,6 +314,22 @@ export interface EscapeBoardSession {
   startsAt: number | null;
   /** The whole room, also when `teams` holds only a race's top teams. */
   totals: { teams: number; players: number; escaped: number };
+}
+
+/** A hosted event's brand as every client shows it (M7 §1.9): no licence details. */
+export interface EscapeBrand {
+  /** The organisation as shown ("Acme Ltd"). */
+  name: string;
+  /** An https image (null: the name alone). */
+  logoUrl: string | null;
+  /** Plain text, at most 280 characters, for the screen lobby. */
+  intro: string | null;
+}
+
+/** escape:look: the room's colours and brand, static per room. null/null: unbranded. */
+export interface EscapeLook {
+  theme: ThemeValues | null;
+  brand: EscapeBrand | null;
 }
 
 export interface EscapeBoard {
@@ -624,4 +641,6 @@ export interface EscapeServerToClientEvents {
   'escape:finale': (p: EscapeFinale) => void;
   /** To every other socket of the PIN room (screens, copies), and to a screen's sync in the finale. */
   'escape:screen-finale': (p: EscapeScreenFinale) => void;
+  /** To every synced socket (console, phone, screen, follow copy), once per sync. */
+  'escape:look': (p: EscapeLook) => void;
 }

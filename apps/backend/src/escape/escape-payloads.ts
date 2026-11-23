@@ -17,6 +17,7 @@ import type {
   EscapeHostSession,
   EscapeHostState,
   EscapeHostTeam,
+  EscapeLook,
   EscapeMember,
   EscapePlayerSession,
   EscapePlayerState,
@@ -27,6 +28,7 @@ import type {
   EscapeTeamUpdate,
 } from '@quiz-dock/contracts';
 import { toolsOf } from '@quiz-dock/contracts';
+import { brandThemeOf } from './brand-theme';
 import { deadlineAt, remainingMs, runElapsed, stageOpenedAt } from './escape-clock';
 import type { EscapeRun, EscapeSession, EscapeSnapshot, TeamRecord } from './escape-live.types';
 import { awards, hashOrder, nextHint, playerView, rankTeams } from './escape-rules';
@@ -536,5 +538,18 @@ export function screenFinaleOf(finale: EscapeFinale, v: RunView): EscapeScreenFi
       teamwork: a.teamwork,
       photoFinish: a.photoFinish && [a.photoFinish[0], a.photoFinish[1]],
     },
+  };
+}
+
+/**
+ * escape:look (M7 §1.9): a hosted event's brand as a theme, plus its name, logo
+ * and intro. Never the licence's id, organisation or uses. Unbranded otherwise.
+ */
+export function lookOf(session: EscapeSession | null): EscapeLook {
+  const brand = session?.type === 'hosted' ? session.licence?.brand : null;
+  if (!brand) return { theme: null, brand: null };
+  return {
+    theme: brandThemeOf(brand),
+    brand: { name: brand.name, logoUrl: brand.logoUrl, intro: brand.intro },
   };
 }

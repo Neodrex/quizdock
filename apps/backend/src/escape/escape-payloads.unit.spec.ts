@@ -12,6 +12,7 @@ import {
   hostStateOf,
   hostTeamOf,
   hostOutlineOf,
+  lookOf,
   playerSessionOf,
   placesOf,
   playerStateOf,
@@ -35,6 +36,7 @@ import {
 import type { EscapeTemplate, Same, TeamState } from './escape.types';
 import { lostLibrary, vaultHeist } from './samples';
 import { RACE_BOARD_TEAMS, RACE_FINALE_TOP } from './escape-session';
+import { brandThemeOf } from './brand-theme';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -971,5 +973,47 @@ describe('race scale (M7 §1.7)', () => {
     expect(screen.ranking).toHaveLength(RACE_FINALE_TOP);
     expect(screen.totalTeams).toBe(500);
     expect(screenFinaleOf(finale, { ...v, session: null }).ranking).toHaveLength(500);
+  });
+});
+
+describe('lookOf (M7 §1.9)', () => {
+  const hosted = (licence: EscapeSession['licence']): EscapeSession => ({
+    type: 'hosted',
+    cap: 8,
+    race: null,
+    licence,
+    licenceUsed: false,
+    phoneHostUserId: null,
+  });
+  const acme = {
+    id: 'acme',
+    organisationId: 'acme-org',
+    participantCap: 8,
+    expiresAt: ACME_LICENCE.expiresAt,
+    package: 'bundle' as const,
+    brand: ACME_LICENCE.brand,
+  };
+
+  it('a branded licence: its theme and its name, logo and intro, nothing else', () => {
+    const look = lookOf(hosted(acme));
+    expect(look).toEqual({
+      theme: brandThemeOf(ACME_LICENCE.brand!),
+      brand: {
+        name: 'Acme',
+        logoUrl: ACME_LICENCE.brand!.logoUrl,
+        intro: ACME_LICENCE.brand!.intro,
+      },
+    });
+    expect(look.theme?.accent).toBe('#c2410c');
+    expect(JSON.stringify(look)).not.toMatch(/acme-org|"id"|eventsLeft|hosts|"acme"/);
+  });
+
+  it('no brand, no licence, group play, a race, no session: unbranded', () => {
+    const none = { theme: null, brand: null };
+    expect(lookOf(hosted({ ...acme, brand: null }))).toEqual(none);
+    expect(lookOf(hosted(null))).toEqual(none);
+    expect(lookOf({ ...hosted(acme), type: 'group' })).toEqual(none);
+    expect(lookOf({ ...hosted(acme), type: 'race' })).toEqual(none);
+    expect(lookOf(null)).toEqual(none);
   });
 });
