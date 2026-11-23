@@ -29,6 +29,19 @@ else
   export ESCAPE_STATIC_LICENCES="[$_dev_licence]"
 fi
 unset _dev_licence _acme _expired
+# `LICENCES=site source devenv.sh` (M8): licences and races from the Site's dev
+# server on 5173 (`pnpm dev` and `pnpm seed` in app/), with the token from
+# app/.env (LIVE_API_TOKEN, 32 characters or more). See site.mjs.
+if [ "${LICENCES:-dev}" = site ]; then
+  ESCAPE_SITE_TOKEN="$(sed -n 's/^LIVE_API_TOKEN=//p' ../app/.env 2>/dev/null)"
+  if [ -z "$ESCAPE_SITE_TOKEN" ]; then
+    echo "devenv: LIVE_API_TOKEN is missing from app/.env" >&2
+    return 1
+  fi
+  export ESCAPE_LICENCE_SOURCE=site ESCAPE_SITE_TOKEN
+  export ESCAPE_SITE_URL="${ESCAPE_SITE_URL:-http://localhost:5173}"
+  unset ESCAPE_STATIC_LICENCES
+fi
 # Sign-in (M8 §6): `AUTH=site source devenv.sh` signs Live in with the Site's
 # Supabase (OAuth 2.1 server, the `live_roles` claim from its access token hook).
 # Needs the Site's stack (`pnpm db:start` in app/) and `pnpm seed`, which writes
