@@ -16,6 +16,8 @@ export const RACE_BOARD_EVERY_MS = 1000;
 export const RACE_FINALE_TOP = 20;
 /** A scheduled race starts at most this far ahead (the room lives 4 h). */
 export const RACE_MAX_LEAD_MIN = 180;
+/** Slack on both bounds of a race's lead, for the trip from the dialog to the server. */
+export const RACE_LEAD_SLACK_MS = 5_000;
 
 type TeamworkMode = EscapeTemplate['mode'];
 

@@ -47,6 +47,7 @@ import type {
   TeamRecord,
 } from './escape-live.types';
 import {
+  RACE_LEAD_SLACK_MS,
   RACE_MAX_LEAD_MIN,
   SESSION_RULES,
   capOf,
@@ -1397,8 +1398,10 @@ export class EscapeEngine implements OnModuleDestroy {
       const { format } = dto.race;
       const startsAt = dto.race.startsAt ?? null;
       const lead = startsAt === null ? null : startsAt - Date.now();
-      const min = this.timings.raceMinLeadMs;
-      if (lead !== null && (lead < min || lead > RACE_MAX_LEAD_MIN * 60_000)) {
+      // 5 s of slack on both bounds: the dialog's "in 1 minute" reaches us a little late.
+      const min = this.timings.raceMinLeadMs - RACE_LEAD_SLACK_MS;
+      const max = RACE_MAX_LEAD_MIN * 60_000 + RACE_LEAD_SLACK_MS;
+      if (lead !== null && (lead < min || lead > max)) {
         throw new BadRequestException('escape.race_start_out_of_range');
       }
       return { ...base, type, cap: capOf(type), race: { format, startsAt, started: false } };

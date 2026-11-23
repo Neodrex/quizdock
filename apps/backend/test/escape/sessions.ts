@@ -12,6 +12,7 @@ import { escapeRooms } from '../../src/escape/escape.keys';
 import type { EscapeTemplate } from '../../src/escape/escape.types';
 import { GameService } from '../../src/game/game.service';
 import { EscapeStore } from '../../src/escape/escape.store';
+import { EscapeTimings } from '../../src/escape/escape-timings';
 import {
   ACME_LICENCE,
   DEV_LICENCE,
@@ -90,6 +91,15 @@ export function sessionTests(ctx: EscapeContext): void {
       expect(
         await createAs(host, library, 'race', { race: { format: 'teams', startsAt: at } }),
       ).toMatchObject(out);
+    }
+    // The dialog's "in 1 minute" (or "in 3 h") reaches the server a little late or early:
+    // 5 s of slack on both bounds.
+    const min = ctx.h.app.get(EscapeTimings).raceMinLeadMs;
+    for (const at of [Date.now() + min - 2000, Date.now() + 180 * MIN + 2000]) {
+      const { pin: ok } = await createAs(host, library, 'race', {
+        race: { format: 'solo', startsAt: at },
+      });
+      expect(ok).toMatch(/^\d{6}$/);
     }
     // No start time: the host starts it.
     const hosted = await createAs(host, library, 'race', { race: { format: 'teams' } });
