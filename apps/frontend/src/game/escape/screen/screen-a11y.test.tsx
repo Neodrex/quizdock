@@ -69,6 +69,9 @@ const screenFiles = () => [
     .filter((n) => /\.tsx?$/.test(n) && !/\.test\.tsx?$|-fixtures\.tsx?$/.test(n))
     .map((n) => resolve(src, 'game/escape/screen', n)),
   resolve(src, 'routes/escape-screen-page.tsx'),
+  // The public race board (M7) and the race countdown both draw on the screen.
+  resolve(src, 'routes/escape-race-board-page.tsx'),
+  resolve(src, 'game/escape/session/race-countdown.tsx'),
 ];
 
 /** An element's font size in the screen's em: the product of the `text-[Nem]` above it. */
@@ -249,6 +252,38 @@ describe('the layout fits 16:9, 16:10 and 4:3 without a scroll', () => {
 
   const board12 = boardOf({
     teams: Array.from({ length: 12 }, (_, i) => summaryOf({ id: `t${i}`, name: `Team ${i}` })),
+  });
+
+  it('a race board: its 30 leaders by place fit 4 columns of 8, the rest counted', () => {
+    const board = boardOf({
+      session: { type: 'race', startsAt: null, totals: { teams: 212, players: 300, escaped: 0 } },
+      teams: Array.from({ length: 30 }, (_, i) =>
+        summaryOf({ id: `t${i}`, name: `Team ${i}`, locksSolved: i % 3 }),
+      ),
+    });
+    drawEn(<RaceTrack board={board} now={NOW} mode="leaderboard" />);
+    const track = screen.getByRole('list', { name: 'Race' });
+    expect(track).toHaveAttribute('data-columns', '4');
+    expect(within(track).getAllByRole('listitem')).toHaveLength(30);
+    expect(screen.getByText('and 182 more teams')).toBeInTheDocument();
+    const places = [...document.querySelectorAll('[data-place]')].map((el) =>
+      Number(el.textContent?.replace(/\D+/g, ' ').trim().split(' ')[0]),
+    );
+    expect(places).toEqual([...places].sort((a, b) => a - b));
+  });
+
+  it('a race lobby: the countdown and the count, no team cards', () => {
+    const board = boardOf({
+      phase: 'forming',
+      session: {
+        type: 'race',
+        startsAt: NOW + 5 * MIN,
+        totals: { teams: 0, players: 44, escaped: 0 },
+      },
+    });
+    drawEn(<ScreenLobby board={board} pin="482913" view={{ joinBaseUrl: null }} />);
+    expect(screen.getByTestId('race-lobby')).toHaveTextContent('44 players in the room');
+    expect(screen.queryByRole('list', { name: 'Teams' })).toBeNull();
   });
 
   it('12 teams race in two one-line columns', () => {

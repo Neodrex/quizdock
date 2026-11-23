@@ -550,6 +550,11 @@
     "finale": {
       "you": "Siz: {{total}} takım içinde {{place}}.",
       "gap": "Aradaki takımlar gösterilmiyor"
+    },
+    "board": {
+      "notARace": "Bu tablo yalnızca yarışlar içindir",
+      "notFound": "Bu PIN ile bir yarış yok.",
+      "waitingStart": "Başlangıç bekleniyor"
     }
   }
 }

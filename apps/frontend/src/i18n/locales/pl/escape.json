@@ -578,6 +578,11 @@
     "finale": {
       "you": "Ty: miejsce {{place}} z {{total}}",
       "gap": "Drużyny pomiędzy nie są pokazane"
+    },
+    "board": {
+      "notARace": "Ta tablica jest dla wyścigów",
+      "notFound": "Brak wyścigu z tym PIN-em.",
+      "waitingStart": "Czekamy na start"
     }
   }
 }

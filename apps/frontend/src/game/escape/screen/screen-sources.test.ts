@@ -46,6 +46,8 @@ describe('the big screen never names the phone, host or answer payloads', () => 
     resolve(src, 'routes/escape-screen-page.tsx'),
     // The projection's seam: what it hands the screen.
     resolve(src, 'routes/escape-or-quiz.tsx'),
+    // The public race board (M7): a screen anyone with the PIN opens.
+    resolve(src, 'routes/escape-race-board-page.tsx'),
   ];
 
   it('scans the screen files', () => {
@@ -53,6 +55,7 @@ describe('the big screen never names the phone, host or answer payloads', () => 
     expect(scanned.some((p) => p.endsWith('screen-reducer.ts'))).toBe(true);
     expect(scanned.some((p) => p.endsWith('screen-palette.ts'))).toBe(true);
     expect(scanned.some((p) => p.endsWith('escape-or-quiz.tsx'))).toBe(true);
+    expect(scanned.some((p) => p.endsWith('escape-race-board-page.tsx'))).toBe(true);
   });
 
   it('catches what it is meant to, and lets the screen finale through', () => {
@@ -116,6 +119,7 @@ describe('the big screen texts exist in every shipped language', () => {
       .filter((n) => /\.tsx?$/.test(n) && !/\.test\.tsx?$|-fixtures\.tsx?$/.test(n))
       .map((n) => join(dir, n)),
     resolve(src, 'routes/escape-screen-page.tsx'),
+    resolve(src, 'routes/escape-race-board-page.tsx'),
   ];
   const BUILT = ['fastest', 'fewestHints', 'teamwork', 'photoFinish'].map(
     (k) => `screen.finale.award.${k}`,

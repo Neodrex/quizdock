@@ -550,6 +550,11 @@
     "finale": {
       "you": "Du: Platz {{place}} von {{total}}",
       "gap": "Teams dazwischen nicht gezeigt"
+    },
+    "board": {
+      "notARace": "Diese Tafel ist für Rennen",
+      "notFound": "Kein Rennen mit dieser PIN.",
+      "waitingStart": "Warten auf den Start"
     }
   }
 }

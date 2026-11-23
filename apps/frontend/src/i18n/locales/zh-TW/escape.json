@@ -536,6 +536,11 @@
     "finale": {
       "you": "你：第 {{place}} 名（共 {{total}} 隊）",
       "gap": "中間的隊伍未顯示"
+    },
+    "board": {
+      "notARace": "此排行榜僅用於競賽",
+      "notFound": "沒有使用此 PIN 的競賽。",
+      "waitingStart": "等待開始"
     }
   }
 }

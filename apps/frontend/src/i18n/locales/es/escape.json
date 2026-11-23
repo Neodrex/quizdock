@@ -562,6 +562,11 @@
     "finale": {
       "you": "Tú: puesto {{place}} de {{total}}",
       "gap": "Equipos intermedios no mostrados"
+    },
+    "board": {
+      "notARace": "Este marcador es solo para carreras",
+      "notFound": "No hay ninguna carrera con este PIN.",
+      "waitingStart": "Esperando la salida"
     }
   }
 }

@@ -562,6 +562,11 @@
     "finale": {
       "you": "Vous : {{place}}ᵉ sur {{total}}",
       "gap": "Équipes intermédiaires non affichées"
+    },
+    "board": {
+      "notARace": "Ce tableau est réservé aux courses",
+      "notFound": "Aucune course avec ce PIN.",
+      "waitingStart": "En attente du départ"
     }
   }
 }

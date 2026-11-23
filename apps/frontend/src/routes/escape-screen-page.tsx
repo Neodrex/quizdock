@@ -104,7 +104,13 @@ export function EscapeScreen({
     stage = <ScreenLobby board={board} pin={pin} view={view} />;
   } else {
     // Running, or the finale before its screen finale came: the race as it stood.
-    stage = <RaceTrack board={board} now={now} />;
+    stage = (
+      <RaceTrack
+        board={board}
+        now={now}
+        mode={board.session?.type === 'race' ? 'leaderboard' : 'race'}
+      />
+    );
   }
 
   return (

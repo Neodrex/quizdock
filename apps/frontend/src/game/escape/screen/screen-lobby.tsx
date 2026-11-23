@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useMotionLevel } from '../../motion/level';
 import { joinHostLabel, joinUrlFor } from '../../join-url';
 import type { GameView } from '../../use-game-session';
+import { RaceCountdown } from '../session/race-countdown';
 import { type LobbyTeam, lobbyOf } from './screen-reducer';
 
 /** Names shown per team card; the rest are counted ("+3"). */
@@ -64,49 +65,79 @@ export function ScreenLobby({
           above them, in a row, so the teams keep the screen's whole width. */}
       <div data-testid="lobby-body" className={cn('flex min-h-0 flex-1 gap-[2em]', NARROW_STACK)}>
         <JoinPanel pin={pin} view={view} />
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-[1em]">
-          {lobby.teams.length === 0 ? (
-            <p className="flex flex-1 flex-col items-center justify-center gap-[0.6em] text-center">
-              <Loader2
-                aria-hidden
-                className={cn('text-primary size-[2.5em]', spin && 'motion-safe:animate-spin')}
-              />
-              <span className="text-[1.6em] font-semibold">{t('lobby.waitingTeams')}</span>
-              <span className="text-[1.2em]">
-                {t('screen.lobby.joined', { count: board.roster.length })}
-              </span>
-            </p>
-          ) : (
-            <>
-              {lobby.selfFormation && (
-                <p className="flex items-center gap-[0.5em] text-[1.4em] font-semibold">
-                  <Smartphone aria-hidden className="size-[1.2em] shrink-0" />
-                  {t('screen.lobby.pickOnPhone')}
-                </p>
-              )}
-              <ul
-                aria-label={t('screen.lobby.teams')}
-                className={cn(
-                  'grid min-h-0 flex-1 auto-rows-fr gap-[0.8em]',
-                  lobbyColumns(lobby.teams.length),
+        {board.session?.type === 'race' ? (
+          <RaceLobby board={board} />
+        ) : (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-[1em]">
+            {lobby.teams.length === 0 ? (
+              <p className="flex flex-1 flex-col items-center justify-center gap-[0.6em] text-center">
+                <Loader2
+                  aria-hidden
+                  className={cn('text-primary size-[2.5em]', spin && 'motion-safe:animate-spin')}
+                />
+                <span className="text-[1.6em] font-semibold">{t('lobby.waitingTeams')}</span>
+                <span className="text-[1.2em]">
+                  {t('screen.lobby.joined', { count: board.roster.length })}
+                </span>
+              </p>
+            ) : (
+              <>
+                {lobby.selfFormation && (
+                  <p className="flex items-center gap-[0.5em] text-[1.4em] font-semibold">
+                    <Smartphone aria-hidden className="size-[1.2em] shrink-0" />
+                    {t('screen.lobby.pickOnPhone')}
+                  </p>
                 )}
-              >
-                {lobby.teams.map((team) => (
-                  <TeamCard
-                    key={team.id}
-                    team={team}
-                    capped={board.formation.maxSize !== null}
-                    compact={compact}
-                  />
-                ))}
-              </ul>
-            </>
-          )}
-          {/* Before teams exist too: the room sees each player arrive (owner answer 1). */}
-          {lobby.waiting.length > 0 && <Waiting names={lobby.waiting} />}
-        </div>
+                <ul
+                  aria-label={t('screen.lobby.teams')}
+                  className={cn(
+                    'grid min-h-0 flex-1 auto-rows-fr gap-[0.8em]',
+                    lobbyColumns(lobby.teams.length),
+                  )}
+                >
+                  {lobby.teams.map((team) => (
+                    <TeamCard
+                      key={team.id}
+                      team={team}
+                      capped={board.formation.maxSize !== null}
+                      compact={compact}
+                    />
+                  ))}
+                </ul>
+              </>
+            )}
+            {/* Before teams exist too: the room sees each player arrive (owner answer 1). */}
+            {lobby.waiting.length > 0 && <Waiting names={lobby.waiting} />}
+          </div>
+        )}
       </div>
     </section>
+  );
+}
+
+/**
+ * A race's lobby (M7 Task 7.18): up to 500 strangers, so no team cards nor names,
+ * the count of players in and the countdown to a scheduled start.
+ */
+function RaceLobby({ board }: { board: EscapeBoard }) {
+  const { t } = useTranslation('escape');
+  const startsAt = board.session?.startsAt ?? null;
+  const players = board.session?.totals.players ?? board.roster.length;
+  return (
+    <div
+      data-testid="race-lobby"
+      className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-[0.8em] text-center"
+    >
+      {startsAt !== null ? (
+        <RaceCountdown startsAt={startsAt} className="text-[3em] leading-tight font-bold" />
+      ) : (
+        <p className="text-[2em] font-bold">{t('race.board.waitingStart')}</p>
+      )}
+      <p className="flex items-center gap-[0.4em] text-[1.6em] font-semibold tabular-nums">
+        <Users aria-hidden className="size-[1em]" />
+        {t('screen.lobby.joined', { count: players })}
+      </p>
+    </div>
   );
 }
 

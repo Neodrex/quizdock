@@ -536,6 +536,11 @@
     "finale": {
       "you": "あなた：{{total}}チーム中{{place}}位",
       "gap": "間のチームは表示されていません"
+    },
+    "board": {
+      "notARace": "このボードはレース専用です",
+      "notFound": "このPINのレースはありません。",
+      "waitingStart": "開始を待っています"
     }
   }
 }

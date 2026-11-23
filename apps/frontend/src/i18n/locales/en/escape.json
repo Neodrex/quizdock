@@ -550,6 +550,11 @@
     "finale": {
       "you": "You: #{{place}} of {{total}}",
       "gap": "Teams in between not shown"
+    },
+    "board": {
+      "notARace": "This board is for races",
+      "notFound": "No race with this PIN.",
+      "waitingStart": "Waiting for the start"
     }
   }
 }

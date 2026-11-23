@@ -350,6 +350,17 @@ export const joinScreenRoute = createRoute({
   component: FollowScreenPage,
 });
 
+/** A race's public board (escape M7): anyone with the PIN watches; no account. */
+export const raceBoardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/race/$pin',
+  component: lazyRouteComponent(
+    () => import('./routes/escape-race-board-page'),
+    'EscapeRaceBoardPage',
+  ),
+  remountDeps: ({ params }) => params.pin,
+});
+
 /** The setup wizard of a fresh instance (SPECIFICATIONS-ADMIN §3.8): public, behind its token. */
 export const setupRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -477,6 +488,7 @@ export const routeTree = rootRoute.addChildren([
   joinRoute,
   joinWithPinRoute,
   joinScreenRoute,
+  raceBoardRoute,
   ...legacyRedirects,
 ]);
 

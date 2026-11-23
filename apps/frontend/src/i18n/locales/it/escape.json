@@ -562,6 +562,11 @@
     "finale": {
       "you": "Tu: {{place}}° su {{total}}",
       "gap": "Squadre intermedie non mostrate"
+    },
+    "board": {
+      "notARace": "Questa classifica è per le gare",
+      "notFound": "Nessuna gara con questo PIN.",
+      "waitingStart": "In attesa della partenza"
     }
   }
 }

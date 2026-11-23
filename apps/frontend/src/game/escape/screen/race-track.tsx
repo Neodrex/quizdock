@@ -19,10 +19,25 @@ import { type Lane, lanesOf, ownTimeOf, showClockOf } from './screen-reducer';
  * locks and title, hints used, and its own time only when it differs from the run
  * clock (extra time). Colour is never the only signal: states carry icons and words.
  */
-export function RaceTrack({ board, now }: { board: EscapeBoard; now: number }) {
+export function RaceTrack({
+  board,
+  now,
+  mode = 'race',
+}: {
+  board: EscapeBoard;
+  now: number;
+  /**
+   * `leaderboard` (a race session, M7): lanes by place, the board holding only the
+   * leaders, and "and N more teams" from the room's totals.
+   */
+  mode?: 'race' | 'leaderboard';
+}) {
   const { t } = useTranslation('escape');
   const motion = useMotionLevel();
-  const all = lanesOf(board);
+  const leaderboard = mode === 'leaderboard';
+  const placed = lanesOf(board);
+  // Stable: equal places keep the board's order.
+  const all = leaderboard ? [...placed].sort((a, b) => a.place - b.place) : placed;
   const show = showClockOf(board, now);
   // Never a scroll (screen-layout.ts): wide lanes up to 5 teams, then one-line lanes
   // in up to 4 columns; above 30 teams, the leaders and a count.
@@ -76,7 +91,13 @@ export function RaceTrack({ board, now }: { board: EscapeBoard; now: number }) {
           />
         ))}
       </ol>
-      {rest.length > 0 && <Rest rest={rest} />}
+      {leaderboard ? (
+        <Hidden
+          count={rest.length + Math.max(0, (board.session?.totals.teams ?? 0) - all.length)}
+        />
+      ) : (
+        rest.length > 0 && <Rest rest={rest} />
+      )}
     </div>
   );
 }
@@ -274,6 +295,17 @@ function Segments({
         );
       })}
     </div>
+  );
+}
+
+/** A race's board holds the leaders only: how many teams it leaves out. */
+function Hidden({ count }: { count: number }) {
+  const { t } = useTranslation('escape');
+  if (count <= 0) return null;
+  return (
+    <p className="text-[1.1em] font-semibold tabular-nums" data-more-teams>
+      {t('screen.track.more', { count })}
+    </p>
   );
 }
 
