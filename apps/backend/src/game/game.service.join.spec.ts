@@ -1,7 +1,7 @@
 import { ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { RedisService } from '../redis/redis.service';
-import { type GameId, gameKeys } from './game.keys';
+import { GAME_TTL_S, type GameId, gameKeys } from './game.keys';
 import { GameService, oneLine, sanitizeNickname } from './game.service';
 
 /**
@@ -232,6 +232,14 @@ describe('GameService.joinSession (room cap)', () => {
     for (const r of results) {
       if (r.status === 'rejected') expect((r.reason as Error).message).toBe('session.full');
     }
+  });
+
+  it('a join gives the cap key the TTL of the room again; no cap key stays none', async () => {
+    await join('Ann');
+    expect(await redis.exists(gameKeys.roomCap(PIN))).toBe(0);
+    await redis.set(gameKeys.roomCap(PIN), '6', 'EX', 10);
+    await join('Bob');
+    expect(await redis.ttl(gameKeys.roomCap(PIN))).toBe(GAME_TTL_S);
   });
 
   it('a ban frees a seat', async () => {

@@ -106,14 +106,14 @@ return raw
  * Join. KEYS: players, room, session, tokens, nicknames, the room's cap. ARGV: playerId, record,
  * session value, token, zero score, TTL, the two states of a game that is over.
  * Returns 1 when the player is in the current game, 0 when they wait for the next,
- * -1 when the room is full (nothing written).
+ * -1 when the room is full (nothing written). The cap, when set, lives as long as the room.
  */
 const JOIN_SCRIPT = `
 local cap = tonumber(redis.call('GET', KEYS[6]) or '0'); if cap > 0 and redis.call('HLEN', KEYS[1]) >= cap then return -1 end
 redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
 redis.call('SET', KEYS[3], ARGV[3], 'EX', ARGV[6])
 redis.call('HSET', KEYS[4], ARGV[1], ARGV[4])
-for _, key in ipairs({KEYS[1], KEYS[4], KEYS[5]}) do redis.call('EXPIRE', key, ARGV[6]) end
+for _, key in ipairs({KEYS[1], KEYS[4], KEYS[5], KEYS[6]}) do redis.call('EXPIRE', key, ARGV[6]) end
 local game = redis.call('HGET', KEYS[2], 'gameId')
 if not game then return 0 end
 local state = redis.call('HGET', 'game:' .. game, 'state')
