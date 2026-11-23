@@ -679,6 +679,43 @@ export function phoneHostTests(ctx: EscapeContext): void {
     expect(await inRoom(escapeRooms.team(id, teamId), back.id)).toBe(true);
   });
 
+  /**
+   * M8 Task 8.11: under OIDC the reloaded page opens a new socket that the
+   * session cookie signs in. The harness's user handshake stands in for the
+   * cookie: the new socket gets both roles back in the M7 order, and Start works.
+   */
+  it('a reloaded phone host, signed in again, gets both roles back and starts the run', async () => {
+    const { host, pin, playerId, sessionToken, other, teamId } = await groupRoom();
+    const left = nextEvent<{ playerId: string }>(other.socket, 'player:left', {
+      where: (l) => l.playerId === playerId,
+    });
+    host.disconnect();
+    await left;
+
+    const back = ctx.h.connectHost();
+    expect(await back.emitWithAck('host:attach', { pin })).toEqual({ ok: true });
+    expect(await back.emitWithAck('player:reconnect', { sessionToken })).toEqual({ ok: true });
+    const mine = stateWhere(back, (s) => s.team !== null);
+    expect(await back.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    expect(await mine).toMatchObject({ session: { isPhoneHost: true }, team: { id: teamId } });
+
+    const running = stateWhere(other.socket, (s) => s.phase === 'running');
+    const phone = stateWhere(back, (s) => s.phase === 'running');
+    expect(await back.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    expect((await running).team?.id).toBe(teamId);
+    expect((await phone).session?.isPhoneHost).toBe(true);
+  });
+
+  it('a reloaded guest socket still cannot attach as the host (the `none` limit, M7 §5 item 12)', async () => {
+    const { pin } = await groupRoom();
+    const guest = ctx.h.connect();
+    const answer = await Promise.race([
+      new Promise<{ code: string }>((resolve) => guest.on('error', resolve)),
+      guest.emitWithAck('host:attach', { pin }).then(() => ({ code: 'accepted' as const })),
+    ]);
+    expect(answer.code).not.toBe('accepted');
+  });
+
   it('while the phone host is away, the run still times out to a finale', async () => {
     const { host, pin, other } = await groupRoom();
     const running = stateWhere(other.socket, (s) => s.phase === 'running');

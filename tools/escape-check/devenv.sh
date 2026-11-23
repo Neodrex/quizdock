@@ -29,3 +29,24 @@ else
   export ESCAPE_STATIC_LICENCES="[$_dev_licence]"
 fi
 unset _dev_licence _acme _expired
+# Sign-in (M8 §6): `AUTH=site source devenv.sh` signs Live in with the Site's
+# Supabase (OAuth 2.1 server, the `live_roles` claim from its access token hook).
+# Needs the Site's stack (`pnpm db:start` in app/) and `pnpm seed`, which writes
+# the client id and secret to .tmp/live-oidc.env. The frontend runs on 5174, the
+# redirect the seed registers. The default stays AUTH_MODE=none (live/.env).
+# Never run `pnpm test` after sourcing this: it would inherit these variables.
+if [ "${AUTH:-none}" = site ]; then
+  if [ ! -f "$TMPDIR/live-oidc.env" ]; then
+    echo "devenv: $TMPDIR/live-oidc.env is missing: run pnpm seed in app/ first" >&2
+    return 1
+  fi
+  export AUTH_MODE=oidc
+  export OIDC_ISSUER=http://127.0.0.1:54321/auth/v1
+  unset OIDC_INTERNAL_URL
+  export OIDC_ROLES_CLAIM=live_roles OIDC_AUDIENCE=
+  # Guests join with the PIN and a nickname alone.
+  export ALLOW_ANONYMOUS_PARTICIPANTS=true
+  set -a; source "$TMPDIR/live-oidc.env"; set +a
+  # Port 3000 is often taken on this machine (§6 finding 9).
+  export PORT=3100 VITE_API_URL=http://localhost:3100
+fi
