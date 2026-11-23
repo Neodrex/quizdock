@@ -74,7 +74,11 @@ export function raceTests(ctx: EscapeContext): void {
     // declareHostDisconnected has read LOBBY; the run starts before it writes.
     jest.spyOn(engine, 'freezeClock').mockImplementationOnce(async (...args) => {
       await freeze(...args);
-      await ctx.h.app.get(EscapeEngine).start(pin, meta.hostUserId);
+      await ctx.h.app.get(EscapeEngine).start(pin, {
+        userId: meta.hostUserId,
+        email: null,
+        oidcSubject: '',
+      });
     });
     await declareAway(pin);
     const away = await metaOf(pin);

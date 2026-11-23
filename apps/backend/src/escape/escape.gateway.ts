@@ -123,8 +123,8 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     @ConnectedSocket() socket: EscapeSocket,
     @MessageBody() payload: unknown,
   ): Promise<Ok> {
-    const hostId = this.requireHostId(socket);
-    await this.engine.start(parse(escapePinSchema, payload).pin, hostId);
+    const host = this.licenceHost(socket);
+    await this.engine.start(parse(escapePinSchema, payload).pin, host);
     return OK;
   }
 

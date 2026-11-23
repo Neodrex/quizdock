@@ -21,6 +21,11 @@ import {
 import { gameKeys } from '../../src/game/game.keys';
 import { RedisService } from '../../src/redis/redis.service';
 import {
+  LICENCE_PORT,
+  type LicenceHost,
+  type LicencePort,
+} from '../../src/escape/licences/licence.port';
+import {
   type EscapeContext,
   createAs,
   createEscape,
@@ -363,6 +368,127 @@ export function sessionTests(ctx: EscapeContext): void {
     const json = JSON.stringify(h);
     for (const secret of ['eventsLeft', 'hosts', 'acme-org', 'organisationId', '"acme"']) {
       expect(json).not.toContain(secret);
+    }
+  });
+
+  // ── Licence use at the first start (Task 7.11) ──
+
+  const port = () => ctx.h.app.get<LicencePort>(LICENCE_PORT);
+  const asHost: LicenceHost = { userId: '', email: null, oidcSubject: '' };
+  /** What remains of a licence (0 once used up: the source refuses it then). */
+  const eventsLeft = async (id: string) => {
+    const res = await port().check({ ...asHost, userId: ctx.h.hostUserId }, id, Date.now());
+    if (res.ok) return res.licence.eventsLeft;
+    if (res.reason === 'no-events-left') return 0;
+    throw new Error(`licence ${id}: ${res.reason}`);
+  };
+  /** A room of `templateId` with one player in one team, synced, not started. */
+  const readyRoom = async (
+    type: 'group' | 'hosted',
+    opts: { licenceId?: string } = {},
+  ): Promise<{ host: Socket; pin: string }> => {
+    const host = ctx.h.connectHost();
+    const { pin, error } = await createAs(host, library, type, opts);
+    if (!pin) throw new Error(`create refused: ${error?.code}`);
+    expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    await joinAndSync(ctx.h, pin, 'P0');
+    expect(await host.emitWithAck('escape:teams', { pin, mode: 'auto', count: 1 })).toEqual({
+      ok: true,
+    });
+    return { host, pin };
+  };
+  const phaseOf = async (pin: string) => {
+    const meta = await ctx.h.app.get(GameService).getMeta(pin);
+    return (await store().run(meta!.id))?.phase;
+  };
+
+  it('a hosted event uses its licence at the room’s first start, once per room', async () => {
+    useLicences(ctx.h, DEV_LICENCES);
+    const a = await readyRoom('hosted', { licenceId: 'acme' });
+    expect(await eventsLeft('acme')).toBe(2);
+    expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toEqual({ ok: true });
+    expect(await eventsLeft('acme')).toBe(1);
+    expect((await store().session(a.pin))?.licenceUsed).toBe(true);
+
+    // A second run in room A is free.
+    expect(await a.host.emitWithAck('escape:end', { pin: a.pin })).toEqual({ ok: true });
+    expect(await a.host.emitWithAck('host:back-to-lobby', { pin: a.pin })).toMatchObject({
+      ok: true,
+    });
+    expect(await a.host.emitWithAck('escape:open', { pin: a.pin, templateId: library })).toEqual({
+      ok: true,
+    });
+    await joinAndSync(ctx.h, a.pin, 'P1');
+    expect(
+      await a.host.emitWithAck('escape:teams', { pin: a.pin, mode: 'auto', count: 1 }),
+    ).toEqual({ ok: true });
+    expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toEqual({ ok: true });
+    expect(await eventsLeft('acme')).toBe(1);
+
+    // Room B uses the last event; room C cannot open.
+    const b = await readyRoom('hosted', { licenceId: 'acme' });
+    expect(await b.host.emitWithAck('escape:start', { pin: b.pin })).toEqual({ ok: true });
+    expect(await eventsLeft('acme')).toBe(0);
+    const c = ctx.h.connectHost();
+    expect(await createAs(c, library, 'hosted', { licenceId: 'acme' })).toMatchObject(
+      refused('escape.licence_no_events_left'),
+    );
+  });
+
+  it('a licence expired since the create refuses the start; the room keeps forming', async () => {
+    useLicences(ctx.h, DEV_LICENCES);
+    const { host, pin } = await readyRoom('hosted', { licenceId: 'acme' });
+    useLicences(ctx.h, [{ ...ACME_LICENCE, expiresAt: Date.now() - 1 }]);
+    expect(await host.emitWithAck('escape:start', { pin })).toMatchObject(
+      refused('escape.licence_expired'),
+    );
+    expect(await phaseOf(pin)).toBe('forming');
+    expect((await store().session(pin))?.licenceUsed).toBe(false);
+  });
+
+  it('the licence source unavailable at the start: refused, nothing recorded (fail closed)', async () => {
+    useLicences(ctx.h, DEV_LICENCES);
+    const { host, pin } = await readyRoom('hosted', { licenceId: 'acme' });
+    const check = jest
+      .spyOn(port(), 'check')
+      .mockResolvedValueOnce({ ok: false, reason: 'unavailable' });
+    const recordUse = jest.spyOn(port(), 'recordUse');
+    try {
+      expect(await host.emitWithAck('escape:start', { pin })).toMatchObject(
+        refused('escape.licence_unavailable'),
+      );
+      expect(recordUse).not.toHaveBeenCalled();
+      expect(await phaseOf(pin)).toBe('forming');
+      // The use itself unavailable: refused too, and the room still unused.
+      recordUse.mockResolvedValueOnce({ ok: false, reason: 'unavailable' });
+      expect(await host.emitWithAck('escape:start', { pin })).toMatchObject(
+        refused('escape.licence_unavailable'),
+      );
+      expect(await phaseOf(pin)).toBe('forming');
+      expect((await store().session(pin))?.licenceUsed).toBe(false);
+      expect(await eventsLeft('acme')).toBe(2);
+    } finally {
+      check.mockRestore();
+      recordUse.mockRestore();
+    }
+  });
+
+  it('group play and races never call the licence port', async () => {
+    const check = jest.spyOn(port(), 'check');
+    const recordUse = jest.spyOn(port(), 'recordUse');
+    try {
+      const g = await readyRoom('group');
+      expect(await g.host.emitWithAck('escape:start', { pin: g.pin })).toEqual({ ok: true });
+      const host = ctx.h.connectHost();
+      const { pin } = await createAs(host, library, 'race', { race: { format: 'solo' } });
+      expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+      await joinAndSync(ctx.h, pin!, 'R0');
+      expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+      expect(check).not.toHaveBeenCalled();
+      expect(recordUse).not.toHaveBeenCalled();
+    } finally {
+      check.mockRestore();
+      recordUse.mockRestore();
     }
   });
 }

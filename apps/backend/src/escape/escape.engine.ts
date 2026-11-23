@@ -641,8 +641,8 @@ export class EscapeEngine implements OnModuleDestroy {
 
   // ── Start (S1–S3) ──
 
-  async start(pin: string, hostUserId: string): Promise<void> {
-    await this.startRun(pin, hostUserId);
+  async start(pin: string, host: LicenceHost): Promise<void> {
+    await this.startRun(pin, host);
   }
 
   /**
@@ -680,6 +680,33 @@ export class EscapeEngine implements OnModuleDestroy {
     });
   }
 
+  /**
+   * M7 Task 7.11: a hosted room not started yet checks its licence again, then
+   * records the use (idempotent by the room's id). Fails closed: a refusal, the
+   * source unavailable included, refuses the start. True when a use was recorded.
+   */
+  private async useLicence(
+    ref: RunRef,
+    v: RunView,
+    host: LicenceHost | undefined,
+    teams: readonly TeamState[],
+  ): Promise<boolean> {
+    const s = v.session;
+    if (s?.type !== 'hosted' || !s.licence || s.licenceUsed || !host) return false;
+    const now = Date.now();
+    const checked = await this.licences.check(host, s.licence.id, now);
+    if (!checked.ok) throw new ForbiddenException(licenceErrorCode(checked.reason));
+    const use = await this.licences.recordUse(s.licence.id, {
+      useKey: ref.meta.roomId,
+      pin: ref.pin,
+      gameId: ref.id,
+      startedAt: now,
+      players: teams.reduce((n, t) => n + t.members.length, 0),
+    });
+    if (!use.ok) throw new ForbiddenException(licenceErrorCode(use.reason));
+    return true;
+  }
+
   /** A race waiting for its start keeps its room alive. */
   private async touchWaiting(pin: string): Promise<void> {
     const meta = await this.game.getMeta(pin);
@@ -687,10 +714,11 @@ export class EscapeEngine implements OnModuleDestroy {
   }
 
   /**
-   * S1–S3, by the host or (`hostUserId` undefined) by the race's schedule.
+   * S1–S3, by the host or (`host` undefined) by the race's schedule.
    * True when a scheduled start was held back by the host's absence.
    */
-  private async startRun(pin: string, hostUserId: string | undefined): Promise<boolean> {
+  private async startRun(pin: string, host: LicenceHost | undefined): Promise<boolean> {
+    const hostUserId = host?.userId;
     return this.mutate(pin, hostUserId, async (ref) => {
       if (hostUserId === undefined && ref.run.phase !== 'forming') return false;
       if (hostUserId === undefined && ref.meta.state === GameState.HostDisconnected) return true;
@@ -727,6 +755,8 @@ export class EscapeEngine implements OnModuleDestroy {
         }
         throw new BadRequestException('escape.no_players');
       }
+      // Owner question 4: a hosted event uses its licence at the room's first start.
+      const used = await this.useLicence(ref, v, host, teams);
       const live = this.pruneAndGetHolders(ref.id, v);
       // The same deal as the lobby preview, so every phone keeps its lobby role card.
       const codes = new Map(v.teams.map((r) => [r.team.id, r.code]));
@@ -750,10 +780,11 @@ export class EscapeEngine implements OnModuleDestroy {
       // Atomic: a host gone meanwhile comes back to the run (prevState).
       const was = await this.store.setGameState(ref.id, GameState.Escape);
       this.scheduler.disarm(pin);
-      const session =
-        v.session?.race && !v.session.race.started
-          ? { ...v.session, race: { ...v.session.race, started: true } }
-          : v.session;
+      let session = v.session;
+      if (session?.race && !session.race.started) {
+        session = { ...session, race: { ...session.race, started: true } };
+      }
+      if (session && used) session = { ...session, licenceUsed: true };
       if (session !== v.session && session) await this.store.writeSession(pin, session);
       await this.keepAlive(pin, ref.id);
       // S3.
