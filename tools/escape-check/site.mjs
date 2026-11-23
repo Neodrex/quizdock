@@ -396,8 +396,13 @@ async function race() {
   )
     return;
   secrets.raceIds.add(link.id);
+  // The title and start (ms) travel along for the create dialog (site-race-search.ts).
+  const open = new globalThis.URL(link.open);
   check(
-    link.open === `${URL}/escape?siteRace=${link.id}`,
+    `${open.origin}${open.pathname}` === `${URL}/escape` &&
+      open.searchParams.get('siteRace') === link.id &&
+      open.searchParams.get('title') === RACE_TITLE &&
+      /^\d+$/.test(open.searchParams.get('startsAt') ?? ''),
     `race: the link goes to Live (${link.open})`,
   );
   await shot(page, 'race-site-before');
@@ -492,15 +497,13 @@ async function race() {
   await until(async () => startedAt, Math.max(0, startsAt - Date.now()) + 30_000, 200);
   check(startedAt > 0, `race: started on its own (${startedAt - startsAt} ms after startsAt)`);
   await Promise.all(
-    bots
-      .slice(0, 2)
-      .map((x) =>
-        emit(x.socket, 'escape:submit', {
-          pin,
-          lockId: reading.locks[0].id,
-          input: reading.locks[0].answer,
-        }),
-      ),
+    bots.slice(0, 2).map((x) =>
+      emit(x.socket, 'escape:submit', {
+        pin,
+        lockId: reading.locks[0].id,
+        input: reading.locks[0].answer,
+      }),
+    ),
   );
   await sleep(1000);
 
