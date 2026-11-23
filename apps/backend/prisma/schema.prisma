@@ -283,13 +283,19 @@ model EscapeTemplate {
   @@map("escape_templates")
 }
 
-/// The `host` grants the escape module made because the Site lists the account
+/// The `host` grants the escape module owns because the Site lists the account
 /// (a Site admin or licence facilitator, M8 §5 item 2). Its sync takes back only
-/// these, never a grant from an operator (`qd users.set-role`). By OIDC subject,
-/// without a relation: the row may come before the account's first sign-in.
+/// these, and an owned account's host goes with it even if an operator later ran
+/// `qd users.set-role host` on it: to keep `host` after the Site drops someone,
+/// grant it with `set-role` and delete their row here. A grant made by an operator
+/// before the sync saw the account is never owned. By OIDC subject, without a
+/// relation: the row may come before the account's first sign-in.
 model EscapeSiteHost {
   oidcSubject String   @id @map("oidc_subject")
   grantedAt   DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
+  /// The sync made the account (before any sign-in): when the Site drops it and it
+  /// has still never signed in, the account is deleted rather than kept empty.
+  created     Boolean  @default(false)
 
   @@map("escape_site_hosts")
 }

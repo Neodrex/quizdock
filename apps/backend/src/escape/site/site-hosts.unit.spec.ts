@@ -1,16 +1,25 @@
 import { UserRole } from '@prisma/client';
 import type { z } from 'zod';
 import type { SiteResult } from './site-client';
-import { type KnownUser, fetchSiteHosts, planHostSync, siteHostSyncEnabled } from './site-hosts';
+import {
+  type KnownUser,
+  SiteStateLog,
+  fetchSiteHosts,
+  planHostSync,
+  refuseHostSync,
+  siteHostSyncEnabled,
+} from './site-hosts';
 
 const user = (
   oidcSubject: string,
   assignedRoles: UserRole[] = [],
   deletedAt: Date | null = null,
+  email: string | null = null,
 ): KnownUser => ({
   oidcSubject,
   assignedRoles,
   deletedAt,
+  email,
 });
 
 describe('planHostSync', () => {
@@ -20,6 +29,7 @@ describe('planHostSync', () => {
       grant: [],
       revoke: [],
       release: [],
+      remove: [],
     });
   });
 
@@ -31,22 +41,22 @@ describe('planHostSync', () => {
 
   it("leaves an operator's host grant alone: not granted again, not owned", () => {
     const plan = planHostSync([{ subject: 'a', name: null }], [user('a', [UserRole.host])], []);
-    expect(plan).toEqual({ create: [], grant: [], revoke: [], release: [] });
+    expect(plan).toEqual({ create: [], grant: [], revoke: [], release: [], remove: [] });
   });
 
   it('keeps a grant it owns while the Site still lists the host', () => {
     const plan = planHostSync([{ subject: 'a', name: null }], [user('a', [UserRole.host])], ['a']);
-    expect(plan).toEqual({ create: [], grant: [], revoke: [], release: [] });
+    expect(plan).toEqual({ create: [], grant: [], revoke: [], release: [], remove: [] });
   });
 
   it('takes back host from an owned grant the Site no longer lists', () => {
     const plan = planHostSync([], [user('a', [UserRole.admin, UserRole.host])], ['a']);
-    expect(plan).toEqual({ create: [], grant: [], revoke: ['a'], release: [] });
+    expect(plan).toEqual({ create: [], grant: [], revoke: ['a'], release: [], remove: [] });
   });
 
   it('never revokes a host grant it does not own', () => {
     const plan = planHostSync([], [user('a', [UserRole.host])], []);
-    expect(plan).toEqual({ create: [], grant: [], revoke: [], release: [] });
+    expect(plan).toEqual({ create: [], grant: [], revoke: [], release: [], remove: [] });
   });
 
   it('releases an owned grant whose account is gone or no longer holds host', () => {
@@ -55,7 +65,7 @@ describe('planHostSync', () => {
 
   it('skips a deleted account', () => {
     const plan = planHostSync([{ subject: 'a', name: null }], [user('a', [], new Date())], []);
-    expect(plan).toEqual({ create: [], grant: [], revoke: [], release: [] });
+    expect(plan).toEqual({ create: [], grant: [], revoke: [], release: [], remove: [] });
   });
 
   it('lists each subject once, whatever the Site repeats', () => {
@@ -68,6 +78,88 @@ describe('planHostSync', () => {
       [],
     );
     expect(plan.create).toEqual([{ subject: 'a', name: 'Ann' }]);
+  });
+});
+
+describe('planHostSync: accounts the sync made', () => {
+  const created = new Set(['a']);
+
+  it('removes an account it made that never signed in (no email) once the Site drops it', () => {
+    const plan = planHostSync([], [user('a', [UserRole.host])], ['a'], created);
+    expect(plan).toEqual({ create: [], grant: [], revoke: [], release: [], remove: ['a'] });
+  });
+
+  it('only takes back host from an account it made that has signed in since (an email)', () => {
+    const signedIn = user('a', [UserRole.host], null, 'a@example.com');
+    const plan = planHostSync([], [signedIn], ['a'], created);
+    expect(plan).toEqual({ create: [], grant: [], revoke: ['a'], release: [], remove: [] });
+  });
+
+  it('only takes back host from an account it did not make', () => {
+    const plan = planHostSync([], [user('a', [UserRole.host])], ['a']);
+    expect(plan.revoke).toEqual(['a']);
+    expect(plan.remove).toEqual([]);
+  });
+
+  it('keeps an account it made while the Site lists it', () => {
+    const plan = planHostSync(
+      [{ subject: 'a', name: null }],
+      [user('a', [UserRole.host])],
+      ['a'],
+      created,
+    );
+    expect(plan.remove).toEqual([]);
+  });
+});
+
+describe('refuseHostSync', () => {
+  const plan = (revoke: string[], remove: string[] = []) => ({
+    create: [],
+    grant: [],
+    revoke,
+    release: [],
+    remove,
+  });
+
+  it('refuses an empty Site list while the sync owns grants', () => {
+    expect(refuseHostSync([], ['a'], plan(['a']))).toMatch(/no hosts/);
+  });
+
+  it('lets an empty list through when nothing is owned', () => {
+    expect(refuseHostSync([], [], plan([]))).toBeNull();
+  });
+
+  it('refuses taking back more than half of the owned grants when that is 3 or more', () => {
+    const owned = ['a', 'b', 'c', 'd', 'e'];
+    const hosts = [{ subject: 'e', name: null }];
+    expect(refuseHostSync(hosts, owned, plan(['a', 'b'], ['c']))).toMatch(/3 of 5/);
+  });
+
+  it('lets through taking back 3 when that is half or less, or fewer than 3 whatever the share', () => {
+    const six = ['a', 'b', 'c', 'd', 'e', 'f'];
+    const hosts = [{ subject: 'f', name: null }];
+    expect(refuseHostSync(hosts, six, plan(['a', 'b', 'c']))).toBeNull();
+    expect(refuseHostSync(hosts, ['a', 'b', 'f'], plan(['a', 'b']))).toBeNull();
+  });
+});
+
+describe('SiteStateLog', () => {
+  const logger = () => ({ warn: jest.fn(), log: jest.fn() });
+
+  it('logs the first failure and the recovery, not every failed pass', () => {
+    const l = logger();
+    const state = new SiteStateLog(l);
+    state.up(); // up at boot: nothing to say
+    state.warn('site api/live/hosts: unavailable (network: x)');
+    state.warn('site api/live/hosts: unavailable (network: x)');
+    state.warn('site api/live/hosts: unavailable (timeout: y)');
+    expect(l.warn).toHaveBeenCalledTimes(1);
+    expect(l.warn.mock.calls[0][0]).toMatch(/unavailable \(network: x\)/);
+    state.up();
+    state.up();
+    expect(l.log).toHaveBeenCalledTimes(1);
+    state.warn('again');
+    expect(l.warn).toHaveBeenCalledTimes(2);
   });
 });
 
