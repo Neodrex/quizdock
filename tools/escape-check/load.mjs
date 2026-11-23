@@ -405,11 +405,19 @@ async function reconnect(b) {
   const t0 = t();
   const why = await rejoin(b);
   if (why === null) m.reconnectMs.push(t() - t0);
-  else {
+  else if (!(await recover(b))) {
+    // Not back at once (the server away meanwhile), nor by retrying: a failure.
     m.reconnectFailed++;
     note(`bot${b.i} reconnect`, why);
   }
 }
+
+/**
+ * The wait before the k-th retry, as socket.io-client's own reconnection:
+ * 1 s doubling to at most 5 s, ± half at random, so a crowd does not come
+ * back in step (a storm of joins fanned out to every socket).
+ */
+const backoff = (k) => Math.min(5000, 1000 * 2 ** k) * (0.5 + Math.random());
 
 /** What of the team must survive a restart: its stage, the locks solved there, its finish. */
 const progressOf = (st) =>
@@ -419,7 +427,7 @@ const progressOf = (st) =>
     out: !!(st.team.escaped || st.team.timedOut),
   };
 
-/** An unplanned drop (the server went away): retry each second (and a jitter) for 90 s. */
+/** An unplanned drop (the server went away): retry with a backoff for 90 s; whether it is back. */
 async function recover(b) {
   b.recovering = true;
   const t0 = t();
@@ -427,8 +435,8 @@ async function recover(b) {
   const before = progressOf(b.state);
   sockets.delete(b.socket);
   let why = 'not tried';
-  while (!ending && t() - t0 < 90_000) {
-    await sleep(1000 + Math.random() * 500);
+  for (let k = 0; !ending && t() - t0 < 90_000; k++) {
+    await sleep(backoff(k));
     why = await rejoin(b);
     if (why === null) break;
   }
@@ -438,7 +446,7 @@ async function recover(b) {
       m.recoverFailed++;
       note(`bot${b.i} recover`, why);
     }
-    return;
+    return false;
   }
   m.recoverMs.push(t() - t0);
   m.recoveredAt.push(t());
@@ -452,6 +460,7 @@ async function recover(b) {
   ) {
     m.stateLost.push({ bot: b.i, before, after });
   }
+  return true;
 }
 
 /** The run is over for everyone (the finale, or the tool's stop). */
@@ -634,8 +643,8 @@ async function main() {
       if (reason === 'io client disconnect' || ending) return;
       const t0 = t();
       void (async () => {
-        while (!ending && t() - t0 < 90_000) {
-          await sleep(1000 + Math.random() * 500);
+        for (let k = 0; !ending && t() - t0 < 90_000; k++) {
+          await sleep(backoff(k));
           const again = make();
           try {
             await connected(again);

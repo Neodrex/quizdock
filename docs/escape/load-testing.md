@@ -41,8 +41,11 @@ of the combined lock (the lock's `myParts`).
   locks stay with the teams still playing, so the submit rate falls as teams
   escape; the reads, ticks and boards go on to the end.
 - **A dropped socket** (the server went away, as in a restart) comes back on its
-  own: each second (plus a jitter) for 90 s, a new socket, `player:reconnect`
-  with the session token, `escape:sync`. Phones, host, screen and board alike.
+  own, for 90 s, with socket.io-client's own backoff (1 s doubling to 5 s, ± half
+  at random, so a crowd does not come back in step): a new socket,
+  `player:reconnect` with the session token, `escape:sync`. Phones, host, screen
+  and board alike; a planned drop whose reconnect finds the server away does
+  the same before it counts as failed.
   The JSON's `restart` block gives the phones dropped and back, each one's
   time back, the full recovery (first drop to last phone back), the host's,
   screen's and board's times, teams whose progress went backwards (stage, locks
