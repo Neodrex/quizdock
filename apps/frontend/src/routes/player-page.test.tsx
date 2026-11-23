@@ -77,6 +77,7 @@ vi.mock('../game/escape/use-escape-session', async () => {
     askHint: vi.fn(),
     chooseTeam: vi.fn(),
     resultsFromRecord: vi.fn(),
+    look: { theme: null, brand: null },
   };
   return { useEscapeSession: () => ({ ...off, ...(escapeSession.value as object | null) }) };
 });

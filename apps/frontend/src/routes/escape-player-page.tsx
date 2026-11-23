@@ -1,4 +1,4 @@
-import type { EscapeLook, EscapePlayerState } from '@quiz-dock/contracts';
+import type { EscapePlayerState } from '@quiz-dock/contracts';
 import { Link } from '@tanstack/react-router';
 import { Hourglass, Loader2, PartyPopper, UserRoundX } from 'lucide-react';
 import { useState } from 'react';
@@ -14,7 +14,6 @@ import { loadEscapeRecord } from '../game/escape/escape-record';
 import { HintPanel } from '../game/escape/hint-panel';
 import { usePhoneHost } from '../game/escape/host/use-phone-host';
 import { BrandBand } from '../game/escape/session/brand-band';
-import { NO_LOOK } from '../game/escape/session/use-escape-look';
 import { blockOf, LockList } from '../game/escape/locks/lock-list';
 import { ProgressDots } from '../game/escape/progress-dots';
 import { RoleCard } from '../game/escape/role-card';
@@ -150,8 +149,7 @@ export function EscapePlayer({
   }
 
   // A hosted event's brand and colours (M7 §1.9), over the room's theme.
-  // An older session object (a test's fake) has none: unbranded.
-  const look = (escape.look as EscapeLook | undefined) ?? NO_LOOK;
+  const look = escape.look;
   return (
     <LiveTheme theme={look.theme}>
       <div className="mx-auto flex min-h-0 w-full max-w-[24em] flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain px-4 pb-4 text-left">
