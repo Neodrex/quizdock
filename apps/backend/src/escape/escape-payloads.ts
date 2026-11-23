@@ -556,6 +556,7 @@ export function raceResultsOf(finale: EscapeFinale, pin: string, endedAt: number
       place: r.place,
       name: r.name,
       escaped: r.escaped,
+      // The score (run time plus penalties), the time the ranking is by; not the raw run time.
       timeMs: r.escaped ? r.scoreMs : null,
       stages: r.stagesCleared,
     })),
