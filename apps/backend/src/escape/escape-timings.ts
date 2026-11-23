@@ -27,4 +27,6 @@ export class EscapeTimings {
   raceMinLeadMs = 60_000;
   /** While a scheduled race waits, its room's keys get their TTL again this often. */
   raceTouchEveryMs = 300_000;
+  /** A scheduled start the host's absence held back is tried again this much later. */
+  raceRetryMs = 5_000;
 }

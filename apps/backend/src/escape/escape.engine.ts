@@ -342,6 +342,7 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /** The socket joins its escape rooms and gets its view: host console, phone or screen. */
   async sync(socket: EscapeSocket, pin: string): Promise<void> {
+    let due = false;
     await this.mutate(pin, undefined, async (ref) => {
       const { data } = socket;
       const hostConsole = isHostConsole(data, pin, ref.meta.hostUserId);
@@ -351,6 +352,8 @@ export class EscapeEngine implements OnModuleDestroy {
         socket.emit('escape:outline', hostOutlineOf(ref.snap, ref.id));
         socket.emit('escape:host', hostStateOf(v));
         socket.emit('escape:board', boardOf(v));
+        // M7 §1.7: a race whose start was missed (the host away then) starts now.
+        due = this.startDue(v);
       }
       const me = playerOf(socket, pin);
       // Group play (M7 §1.8): a host console that also joined as a player gets its phone state too.
@@ -403,6 +406,7 @@ export class EscapeEngine implements OnModuleDestroy {
       const stored = ref.run.phase === 'finale' ? await this.store.results(ref.id) : null;
       if (stored) socket.emit('escape:screen-finale', screenFinaleOf(stored, v));
     });
+    if (due) await this.startRace(pin);
   }
 
   /**
@@ -638,9 +642,19 @@ export class EscapeEngine implements OnModuleDestroy {
    * nobody in, the race keeps forming and the host may start it later.
    */
   async startRace(pin: string): Promise<void> {
-    await this.startRun(pin, undefined).catch((err: Error) => {
+    const held = await this.startRun(pin, undefined).catch((err: Error) => {
       this.log.warn(`scheduled start ${pin}: ${err.message}`);
+      return false;
     });
+    // The host is away (its room waits in HOST_DISCONNECTED): try again a little
+    // later, until the race starts or the room ends (`closing` disarms it).
+    if (held) this.armRace(pin, Date.now() + this.timings.raceRetryMs);
+  }
+
+  /** A forming race whose scheduled start is due, not started yet. */
+  private startDue(v: RunView): boolean {
+    const race = v.session?.race;
+    return v.run.phase === 'forming' && !!race?.startsAt && !race.started && race.startsAt <= v.now;
   }
 
   private armRace(pin: string, at: number): void {
@@ -657,10 +671,14 @@ export class EscapeEngine implements OnModuleDestroy {
     if (meta?.kind === 'escape') await this.keepAlive(pin, meta.id);
   }
 
-  /** S1–S3, by the host or (`hostUserId` undefined) by the race's schedule. */
-  private async startRun(pin: string, hostUserId: string | undefined): Promise<void> {
-    await this.mutate(pin, hostUserId, async (ref) => {
-      if (hostUserId === undefined && ref.run.phase !== 'forming') return;
+  /**
+   * S1–S3, by the host or (`hostUserId` undefined) by the race's schedule.
+   * True when a scheduled start was held back by the host's absence.
+   */
+  private async startRun(pin: string, hostUserId: string | undefined): Promise<boolean> {
+    return this.mutate(pin, hostUserId, async (ref) => {
+      if (hostUserId === undefined && ref.run.phase !== 'forming') return false;
+      if (hostUserId === undefined && ref.meta.state === GameState.HostDisconnected) return true;
       if (ref.run.phase !== 'forming' || ref.meta.state !== GameState.Lobby) {
         throw new BadRequestException('escape.wrong_phase');
       }
@@ -721,6 +739,7 @@ export class EscapeEngine implements OnModuleDestroy {
       }
       await this.broadcast({ ...ref, run }, { ...v, run, teams: recs, now, session });
       this.startTicker(pin, ref.id);
+      return false;
     });
   }
 

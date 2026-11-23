@@ -9,6 +9,7 @@ import { EscapeTimings } from '../../src/escape/escape-timings';
 import { EscapeStore } from '../../src/escape/escape.store';
 import { GameService } from '../../src/game/game.service';
 import { gameKeys } from '../../src/game/game.keys';
+import { gameHash } from '../../src/game/game-hash';
 import { RedisService } from '../../src/redis/redis.service';
 import type { Socket } from 'socket.io-client';
 import { lostLibrary } from '../../src/escape/samples';
@@ -287,12 +288,16 @@ export function raceSessionTests(ctx: EscapeContext): void {
     const timings = () => ctx.h.app.get(EscapeTimings);
     const engine = () => ctx.h.app.get(EscapeEngine);
     const metaOf = async (pin: string) => (await ctx.h.app.get(GameService).getMeta(pin))!;
-    let saved: { raceMinLeadMs: number; raceTouchEveryMs: number };
+    let saved: { raceMinLeadMs: number; raceTouchEveryMs: number; raceRetryMs: number };
 
     beforeAll(() => {
       const t = timings();
-      saved = { raceMinLeadMs: t.raceMinLeadMs, raceTouchEveryMs: t.raceTouchEveryMs };
-      Object.assign(t, { raceMinLeadMs: 500, raceTouchEveryMs: 100 });
+      saved = {
+        raceMinLeadMs: t.raceMinLeadMs,
+        raceTouchEveryMs: t.raceTouchEveryMs,
+        raceRetryMs: t.raceRetryMs,
+      };
+      Object.assign(t, { raceMinLeadMs: 500, raceTouchEveryMs: 100, raceRetryMs: 300 });
     });
     afterAll(() => Object.assign(timings(), saved));
 
@@ -347,6 +352,39 @@ export function raceSessionTests(ctx: EscapeContext): void {
       const a = await joinAndSync(ctx.h, pin, 'Ann');
       const running = stateWhere(a.socket, (s) => s.phase === 'running');
       expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+      await running;
+    });
+
+    /** The room's game state, written by hand (the host's absence, or its return). */
+    const setState = async (pin: string, state: GameState) => {
+      const meta = await metaOf(pin);
+      await ctx.h.app.get(RedisService).hset(gameKeys.game(meta.id), gameHash({ state }));
+    };
+
+    it('the host away at startsAt: it is tried again until the host is back, then starts', async () => {
+      const { pin } = await scheduled(600);
+      const a = await joinAndSync(ctx.h, pin, 'Ann');
+      const meta = await metaOf(pin);
+      await setState(pin, GameState.HostDisconnected);
+      await settle(1_000);
+      expect(a.last().phase).toBe('forming');
+      expect(engine().inProcess(meta.id, pin).scheduled).toBe(true);
+      const running = stateWhere(a.socket, (s) => s.phase === 'running', 5_000);
+      await setState(pin, GameState.Lobby);
+      await running;
+      expect(engine().inProcess(meta.id, pin).scheduled).toBe(false);
+    });
+
+    it('a host console back after startsAt starts the race on its sync', async () => {
+      const { host, pin } = await scheduled(600);
+      const a = await joinAndSync(ctx.h, pin, 'Ann');
+      // The start was missed and nothing is armed any more.
+      const inner = engine() as unknown as { scheduler: { disarm(pin: string): void } };
+      inner.scheduler.disarm(pin);
+      await settle(800);
+      expect(a.last().phase).toBe('forming');
+      const running = stateWhere(a.socket, (s) => s.phase === 'running', 5_000);
+      expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
       await running;
     });
 
