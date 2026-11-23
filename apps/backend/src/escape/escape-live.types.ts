@@ -59,7 +59,13 @@ export interface EscapeSession {
   type: EscapeSessionType;
   /** Written to room:<pin>:cap too. */
   cap: number;
-  race: { format: 'solo' | 'teams'; startsAt: number | null; started: boolean } | null;
+  race: {
+    format: 'solo' | 'teams';
+    startsAt: number | null;
+    started: boolean;
+    /** The scheduled start found nobody in: only the host starts it now. */
+    noPlayers?: boolean;
+  } | null;
   /** Hosted only. */
   licence: FrozenLicence | null;
   /** Owner question 4: the licence is used at the room's first start. */

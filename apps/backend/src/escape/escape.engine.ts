@@ -654,10 +654,16 @@ export class EscapeEngine implements OnModuleDestroy {
     if (held) this.armRace(pin, Date.now() + this.timings.raceRetryMs);
   }
 
-  /** A forming race whose scheduled start is due, not started yet. */
+  /** A forming race whose scheduled start is due, not started yet nor found empty. */
   private startDue(v: RunView): boolean {
     const race = v.session?.race;
-    return v.run.phase === 'forming' && !!race?.startsAt && !race.started && race.startsAt <= v.now;
+    return (
+      v.run.phase === 'forming' &&
+      !!race?.startsAt &&
+      !race.started &&
+      !race.noPlayers &&
+      race.startsAt <= v.now
+    );
   }
 
   private armRace(pin: string, at: number): void {
@@ -704,7 +710,17 @@ export class EscapeEngine implements OnModuleDestroy {
         if (!to) break;
         teams = teams.map((t) => (t === to ? { ...t, members: [...t.members, p.playerId] } : t));
       }
-      if (!teams.length) throw new BadRequestException('escape.no_players');
+      if (!teams.length) {
+        // A scheduled start with nobody in is not tried again on a host sync.
+        const plan = v.session?.race;
+        if (hostUserId === undefined && v.session && plan) {
+          await this.store.writeSession(pin, {
+            ...v.session,
+            race: { ...plan, noPlayers: true },
+          });
+        }
+        throw new BadRequestException('escape.no_players');
+      }
       const live = this.pruneAndGetHolders(ref.id, v);
       // The same deal as the lobby preview, so every phone keeps its lobby role card.
       const codes = new Map(v.teams.map((r) => [r.team.id, r.code]));

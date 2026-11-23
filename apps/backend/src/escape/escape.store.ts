@@ -108,6 +108,7 @@ const sessionSchema = z.object({
       format: z.enum(['solo', 'teams']),
       startsAt: ms.nullable(),
       started: z.boolean(),
+      noPlayers: z.boolean().optional(),
     })
     .nullable(),
   licence: z

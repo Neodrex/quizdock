@@ -355,6 +355,21 @@ export function raceSessionTests(ctx: EscapeContext): void {
       await running;
     });
 
+    it('nobody in at startsAt: a later host sync does not start it; the host does', async () => {
+      const { host, pin } = await scheduled(600);
+      const meta = await metaOf(pin);
+      await eventually(async () => expect(engine().inProcess(meta.id, pin).scheduled).toBe(false));
+      await settle(100);
+      const a = await joinAndSync(ctx.h, pin, 'Ann');
+      expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+      await settle(300);
+      expect(a.last().phase).toBe('forming');
+      expect((await metaOf(pin)).state).toBe(GameState.Lobby);
+      const running = stateWhere(a.socket, (s) => s.phase === 'running');
+      expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+      await running;
+    });
+
     /** The room's game state, written by hand (the host's absence, or its return). */
     const setState = async (pin: string, state: GameState) => {
       const meta = await metaOf(pin);
