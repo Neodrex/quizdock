@@ -36,7 +36,11 @@ export const check = (ok, what) => {
 export async function api(method, path, body) {
   const res = await fetch(`${URL}/api/v1${path}`, {
     method,
-    headers: { 'content-type': 'application/json', 'x-local-user': HOST },
+    // HOST_COOKIE (load.mjs --host-cookie): a Live session cookie, under AUTH_MODE=oidc.
+    headers: {
+      'content-type': 'application/json',
+      ...(process.env.HOST_COOKIE ? { cookie: process.env.HOST_COOKIE } : { 'x-local-user': HOST }),
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await res.text();
