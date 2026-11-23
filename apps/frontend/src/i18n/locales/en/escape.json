@@ -459,7 +459,7 @@
       "pickLicence": "Pick a licence",
       "licenceLoading": "Loading your licences…",
       "noLicence": "No licence available",
-      "adminNoLicence": "As an admin you can run races without a licence. To host a licensed event, add yourself as a facilitator of a licence on the Site, at /admin/licences.",
+      "noLicenceHint": "No licence yet. Site admins can run races without one; to host a licensed event, a Site admin adds you as a facilitator at /admin/licences.",
       "siteRace": "Site race: {{title}}",
       "siteRaceNoTitle": "Site race",
       "siteRaceStarts": "Starts {{when}}",

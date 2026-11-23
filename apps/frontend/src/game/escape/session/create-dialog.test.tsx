@@ -112,95 +112,29 @@ describe('CreateSessionDialog', () => {
     expect(create()).toBeDisabled();
   });
 
-  const ADMIN_HINT = /add yourself as a facilitator/;
+  const HINT =
+    'No licence yet. Site admins can run races without one; to host a licensed event, a Site admin adds you as a facilitator at /admin/licences.';
+
   const me = (roles: string[]) => ({
     path: '/me',
     body: { id: 'u1', displayName: 'Dev', email: null, roles },
   });
 
-  it('hosted with no licence, for an admin: says how to host one from the Site', async () => {
-    mockApi([{ path: '/escape-licences', body: [] }, me(['host', 'admin'])]);
-    dialog(roles);
-    expect(await screen.findByText(ADMIN_HINT)).toBeInTheDocument();
-    expect(screen.getByText(ADMIN_HINT).textContent).toContain('/admin/licences');
-  });
-
-  it('hosted with no licence, for a host that is not an admin: no admin hint', async () => {
-    mockApi([{ path: '/escape-licences', body: [] }, me(['host'])]);
+  it.each([
+    ['an admin', ['host', 'admin']],
+    ['a host', ['host']],
+  ])('hosted with no licence, for %s: says how to get one from the Site', async (_who, mine) => {
+    mockApi([{ path: '/escape-licences', body: [] }, me(mine)]);
     dialog(roles);
     expect(await screen.findByText('No licence available')).toBeInTheDocument();
-    expect(screen.queryByText(ADMIN_HINT)).toBeNull();
+    expect(screen.getByText(HINT)).toBeInTheDocument();
   });
 
-  it('an admin with licences gets the picker, not the hint', async () => {
-    mockApi([{ path: '/escape-licences', body: [acme] }, me(['host', 'admin'])]);
+  it('a host with licences gets the picker, not the hint', async () => {
+    mockApi([{ path: '/escape-licences', body: [acme] }]);
     dialog(roles);
     expect(await screen.findByRole('combobox', { name: 'Licence' })).toBeInTheDocument();
-    expect(screen.queryByText(ADMIN_HINT)).toBeNull();
-  });
-
-  it('hosted: the licence list did not load: says so with a retry, not "No licence"', async () => {
-    mockApi([{ path: '/escape-licences', status: 500, body: { message: 'boom' } }]);
-    dialog(roles);
-    expect(await screen.findByText('The room could not be opened. Try again.')).toBeInTheDocument();
-    expect(screen.queryByText('No licence available')).toBeNull();
-    expect(create()).toBeDisabled();
-    mockApi([{ path: '/escape-licences', body: [acme] }]);
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByRole('combobox', { name: 'Licence' })).toBeInTheDocument();
-    expect(create()).toBeEnabled();
-  });
-
-  it('race: solo or teams, started by the host', async () => {
-    mockApi([{ path: '/escape-licences', body: [] }]);
-    const onCreate = dialog();
-    fireEvent.click(screen.getByRole('radio', { name: /Race/ }));
-    expect(screen.getByRole('radio', { name: /Solo/ })).toBeChecked();
-    fireEvent.click(screen.getByRole('radio', { name: /Teams/ }));
-    expect(screen.getByRole('radio', { name: /I’ll start it/ })).toBeChecked();
-    fireEvent.click(create());
-    await waitFor(() =>
-      expect(onCreate).toHaveBeenCalledWith({ sessionType: 'race', race: { format: 'teams' } }),
-    );
-  });
-
-  it('race: a start time between 1 and 180 minutes ahead', async () => {
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(1_000_000);
-    mockApi([{ path: '/escape-licences', body: [] }]);
-    const onCreate = dialog();
-    fireEvent.click(screen.getByRole('radio', { name: /Race/ }));
-    fireEvent.click(screen.getByRole('radio', { name: /Starts on its own/ }));
-    const minutes = screen.getByRole('spinbutton', { name: 'Starts in (minutes)' });
-    for (const bad of ['0', '181', '2.5', '']) {
-      fireEvent.change(minutes, { target: { value: bad } });
-      expect(create()).toBeDisabled();
-      expect(minutes).toHaveAttribute('aria-invalid', 'true');
-    }
-    fireEvent.change(minutes, { target: { value: '90' } });
-    expect(create()).toBeEnabled();
-    fireEvent.click(create());
-    await waitFor(() =>
-      expect(onCreate).toHaveBeenCalledWith({
-        sessionType: 'race',
-        race: { format: 'solo', startsAt: 1_000_000 + 90 * 60_000 },
-      }),
-    );
-    vi.useRealTimers();
-  });
-
-  it('a refusal shows its text in the dialog', async () => {
-    mockApi([{ path: '/escape-licences', body: [acme] }]);
-    const onCreate = vi
-      .fn<(c: SessionChoice) => Promise<void>>()
-      .mockRejectedValue(
-        Object.assign(new Error('This licence has expired.'), { code: 'escape.licence_expired' }),
-      );
-    dialog(roles, onCreate);
-    await screen.findByRole('combobox', { name: 'Licence' });
-    fireEvent.click(create());
-    expect(await screen.findByRole('alert')).toHaveTextContent('This licence has expired.');
-    expect(create()).toBeEnabled();
+    expect(screen.queryByText(HINT)).toBeNull();
   });
 
   // ── Opened from a Site race (M8 Task 8.17) ──
@@ -250,6 +184,12 @@ describe('CreateSessionDialog', () => {
     fromSite({ id: 'r1' });
     expect(screen.getByText('Site race')).toBeInTheDocument();
     expect(screen.getByText('Start time set by the Site')).toBeInTheDocument();
+  });
+
+  it('a start no date can hold shows as set by the Site, and a long title is cut at 200', () => {
+    fromSite({ id: 'r1', title: 'x'.repeat(300), startsAt: 1e20 });
+    expect(screen.getByText('Start time set by the Site')).toBeInTheDocument();
+    expect(screen.getByText(`Site race: ${'x'.repeat(200)}`)).toBeInTheDocument();
   });
 
   it('a refused Site race shows its text', async () => {

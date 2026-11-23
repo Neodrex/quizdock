@@ -447,7 +447,7 @@
       "pickLicence": "ライセンスを選択",
       "licenceLoading": "ライセンスを読み込み中…",
       "noLicence": "利用できるライセンスがありません",
-      "adminNoLicence": "管理者はライセンスなしでレースを開催できます。ライセンス付きイベントを開催するには、サイトの /admin/licences でライセンスのファシリテーターに自分を追加してください。",
+      "noLicenceHint": "ライセンスはまだありません。サイト管理者はライセンスなしでレースを開催できます。ライセンス付きイベントを開催するには、サイト管理者が /admin/licences であなたをファシリテーターに追加します。",
       "siteRace": "サイトのレース：{{title}}",
       "siteRaceNoTitle": "サイトのレース",
       "siteRaceStarts": "開始 {{when}}",

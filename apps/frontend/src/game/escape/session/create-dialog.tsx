@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { useRole } from '../../../auth/use-role';
 import { useEscapeLicencesControllerList } from '../../../api/generated/escape-licences/escape-licences';
 import type { EscapeLicenceSummaryDto } from '../../../api/generated/model';
 import { serverNow } from '../../clock';
+import { SITE_RACE_TITLE_MAX, siteRaceWhen } from './site-race-search';
 
 /** What the host picked: the session fields of `escape:create`. */
 export interface SessionChoice {
@@ -99,8 +99,6 @@ export function CreateSessionDialog({
   }, [open, initialType]);
 
   const list = useEscapeLicencesControllerList({ query: { enabled: open } });
-  // An admin hosts races without a licence (M8 §1.2); a licensed event needs a seat.
-  const { isManager } = useRole();
   const licences = list.data?.data ?? [];
   // One licence: preselected.
   const chosen = licenceId || (licences.length === 1 ? licences[0].id : '');
@@ -108,6 +106,9 @@ export function CreateSessionDialog({
   const lead = Number(minutes);
   const leadOk = Number.isInteger(lead) && lead >= RACE_LEAD_MIN && lead <= RACE_LEAD_MAX;
   const fromSite = type === 'race' && siteRace !== undefined;
+  // A start the link got wrong shows as "set by the Site": formatting never throws.
+  const when =
+    siteRace?.startsAt === undefined ? null : siteRaceWhen(siteRace.startsAt, i18n.language);
   const ready =
     type === 'hosted' ? chosen !== '' : type === 'race' ? fromSite || !scheduled || leadOk : true;
 
@@ -209,9 +210,7 @@ export function CreateSessionDialog({
         ) : licences.length === 0 ? (
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium">{t('session.create.noLicence')}</p>
-            {isManager && (
-              <p className="text-muted-foreground text-sm">{t('session.create.adminNoLicence')}</p>
-            )}
+            <p className="text-muted-foreground text-sm">{t('session.create.noLicenceHint')}</p>
           </div>
         ) : (
           <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -235,17 +234,14 @@ export function CreateSessionDialog({
         <div className="bg-primary/5 flex flex-col gap-1 rounded-lg border p-3 text-sm">
           <span className="font-medium">
             {siteRace.title
-              ? t('session.create.siteRace', { title: siteRace.title })
+              ? t('session.create.siteRace', {
+                  title: siteRace.title.slice(0, SITE_RACE_TITLE_MAX),
+                })
               : t('session.create.siteRaceNoTitle')}
           </span>
           <span className="text-muted-foreground">
-            {siteRace.startsAt !== undefined
-              ? t('session.create.siteRaceStarts', {
-                  when: new Intl.DateTimeFormat(i18n.language, {
-                    dateStyle: 'medium',
-                    timeStyle: 'short',
-                  }).format(new Date(siteRace.startsAt)),
-                })
+            {when !== null
+              ? t('session.create.siteRaceStarts', { when })
               : t('session.create.siteRaceStartBySite')}
           </span>
           <span className="text-muted-foreground">{t('session.create.siteRaceHint')}</span>

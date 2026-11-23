@@ -471,7 +471,7 @@
       "pickLicence": "Choisissez une licence",
       "licenceLoading": "Chargement de vos licences…",
       "noLicence": "Aucune licence disponible",
-      "adminNoLicence": "En tant qu’admin, vous pouvez lancer des courses sans licence. Pour animer un événement sous licence, ajoutez-vous comme animateur d’une licence sur le Site, dans /admin/licences.",
+      "noLicenceHint": "Pas encore de licence. Les admins du Site peuvent lancer des courses sans licence ; pour animer un événement sous licence, un admin du Site vous ajoute comme animateur dans /admin/licences.",
       "siteRace": "Course du Site : {{title}}",
       "siteRaceNoTitle": "Course du Site",
       "siteRaceStarts": "Début {{when}}",

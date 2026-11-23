@@ -459,7 +459,7 @@
       "pickLicence": "Lizenz wählen",
       "licenceLoading": "Deine Lizenzen werden geladen…",
       "noLicence": "Keine Lizenz verfügbar",
-      "adminNoLicence": "Als Admin kannst du Rennen ohne Lizenz veranstalten. Für ein lizenziertes Event trag dich auf der Site unter /admin/licences als Moderator einer Lizenz ein.",
+      "noLicenceHint": "Noch keine Lizenz. Site-Admins können Rennen ohne Lizenz veranstalten; für ein lizenziertes Event trägt dich ein Site-Admin unter /admin/licences als Moderator ein.",
       "siteRace": "Site-Rennen: {{title}}",
       "siteRaceNoTitle": "Site-Rennen",
       "siteRaceStarts": "Beginnt {{when}}",

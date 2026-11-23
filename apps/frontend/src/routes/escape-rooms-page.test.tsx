@@ -343,6 +343,23 @@ describe('/escape', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/session/482913/console'));
   });
 
+  it.each(['1e20', 'null'])(
+    'a Site race link with startsAt=%s: the start is set by the Site; a long title is cut at 200',
+    async (startsAt) => {
+      signedIn();
+      mockApi([
+        { path: '/escape-templates', body: [library] },
+        { path: '/escape-licences', body: [] },
+      ]);
+      renderApp(`/escape?siteRace=r1&startsAt=${startsAt}&title=${'y'.repeat(300)}`);
+      await screen.findByRole('article', { name: 'Lost Library' });
+      fireEvent.click(within(card('Lost Library')).getByRole('button', { name: 'Créer la salle' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText('Heure de départ fixée par le Site')).toBeInTheDocument();
+      expect(within(dialog).getByText(`Course du Site : ${'y'.repeat(200)}`)).toBeInTheDocument();
+    },
+  );
+
   it('a refused Site race (escape.race_not_open) shows its text in the dialog', async () => {
     signedIn();
     createEscapeRoom.mockRejectedValue(refusalError({ code: 'escape.race_not_open' }));

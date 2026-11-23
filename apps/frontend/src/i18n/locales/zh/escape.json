@@ -447,7 +447,7 @@
       "pickLicence": "选择许可证",
       "licenceLoading": "正在加载你的许可证…",
       "noLicence": "没有可用的许可证",
-      "adminNoLicence": "作为管理员，你可以在没有许可证的情况下举办竞赛。要主持许可活动，请在网站的 /admin/licences 中将自己添加为某个许可证的主持人。",
+      "noLicenceHint": "还没有许可证。网站管理员可以在没有许可证的情况下举办竞赛；要主持许可活动，需由网站管理员在 /admin/licences 中将你添加为主持人。",
       "siteRace": "网站竞赛：{{title}}",
       "siteRaceNoTitle": "网站竞赛",
       "siteRaceStarts": "开始于 {{when}}",

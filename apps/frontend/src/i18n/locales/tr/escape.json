@@ -459,7 +459,7 @@
       "pickLicence": "Bir lisans seçin",
       "licenceLoading": "Lisanslarınız yükleniyor…",
       "noLicence": "Kullanılabilir lisans yok",
-      "adminNoLicence": "Yönetici olarak lisanssız yarış düzenleyebilirsiniz. Lisanslı bir etkinlik için Site'de /admin/licences sayfasında kendinizi bir lisansın kolaylaştırıcısı olarak ekleyin.",
+      "noLicenceHint": "Henüz lisans yok. Site yöneticileri lisanssız yarış düzenleyebilir; lisanslı bir etkinlik için bir Site yöneticisi sizi /admin/licences sayfasında kolaylaştırıcı olarak ekler.",
       "siteRace": "Site yarışı: {{title}}",
       "siteRaceNoTitle": "Site yarışı",
       "siteRaceStarts": "Başlangıç {{when}}",

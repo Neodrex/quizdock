@@ -483,7 +483,7 @@
       "pickLicence": "Wybierz licencję",
       "licenceLoading": "Wczytywanie licencji…",
       "noLicence": "Brak dostępnej licencji",
-      "adminNoLicence": "Jako administrator możesz prowadzić wyścigi bez licencji. Aby poprowadzić wydarzenie na licencji, dodaj siebie jako prowadzącego licencji w Serwisie, na stronie /admin/licences.",
+      "noLicenceHint": "Brak licencji. Administratorzy Serwisu mogą prowadzić wyścigi bez licencji; aby poprowadzić wydarzenie na licencji, administrator Serwisu dodaje cię jako prowadzącego na stronie /admin/licences.",
       "siteRace": "Wyścig z Serwisu: {{title}}",
       "siteRaceNoTitle": "Wyścig z Serwisu",
       "siteRaceStarts": "Start {{when}}",

@@ -471,7 +471,7 @@
       "pickLicence": "Elige una licencia",
       "licenceLoading": "Cargando tus licencias…",
       "noLicence": "No hay ninguna licencia disponible",
-      "adminNoLicence": "Como administrador puedes organizar carreras sin licencia. Para un evento con licencia, añádete como facilitador de una licencia en el Sitio, en /admin/licences.",
+      "noLicenceHint": "Aún no hay licencia. Los administradores del Sitio pueden organizar carreras sin licencia; para un evento con licencia, un administrador del Sitio te añade como facilitador en /admin/licences.",
       "siteRace": "Carrera del Sitio: {{title}}",
       "siteRaceNoTitle": "Carrera del Sitio",
       "siteRaceStarts": "Empieza {{when}}",
