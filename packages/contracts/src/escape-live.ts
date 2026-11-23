@@ -85,6 +85,8 @@ export const escapeOpenSchema = z.object({
   pin,
   templateId: id,
   durationMin: durationMin.optional(),
+  /** Used only when the room has no session yet (a quiz room): it becomes hosted. */
+  licenceId: id.optional(),
 });
 /** escape:sync, escape:start, escape:end, escape:finale. */
 export const escapePinSchema = z.object({ pin });

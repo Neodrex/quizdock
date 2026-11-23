@@ -280,10 +280,13 @@ export class EscapeEngine implements OnModuleDestroy {
       if (meta.state !== GameState.Lobby) {
         throw new BadRequestException('session.next_quiz_from_lobby');
       }
-      // The room keeps its session; a quiz room gets a hosted one, as on create.
+      // The room keeps its session (a licence id is then ignored); a quiz room gets
+      // a hosted one, under the licence named or the host's only usable one.
       const kept = await this.store.session(pin);
       const snap = await this.freeze(hostUserId, dto.templateId, kept?.type ?? 'hosted');
-      const session = kept ? undefined : await this.newSession(host, 'hosted', {});
+      const session = kept
+        ? undefined
+        : await this.newSession(host, 'hosted', { licenceId: dto.licenceId });
       const id = await this.game.openGameWith(pin, null);
       await this.openOn(pin, id, hostUserId, snap, dto.durationMin, session);
       this.server

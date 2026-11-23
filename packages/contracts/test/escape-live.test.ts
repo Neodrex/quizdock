@@ -111,6 +111,15 @@ describe('session types (M7 §1.1)', () => {
     expect(create({ sessionType: 'race', race: { format: 'pairs' } }).success).toBe(false);
   });
 
+  it('escape:open takes an optional licence id', () => {
+    expect(escapeOpenSchema.safeParse({ pin, templateId: 't1', licenceId: 'acme' }).success).toBe(
+      true,
+    );
+    expect(escapeOpenSchema.safeParse({ pin, templateId: 't1', licenceId: '' }).success).toBe(
+      false,
+    );
+  });
+
   it('takes a licence id and refuses an unknown type', () => {
     expect(create({ sessionType: 'hosted', licenceId: 'lic-1' }).success).toBe(true);
     expect(create({ sessionType: 'party' }).success).toBe(false);

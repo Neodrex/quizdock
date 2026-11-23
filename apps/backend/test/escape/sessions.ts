@@ -169,4 +169,48 @@ export function sessionTests(ctx: EscapeContext): void {
     expect((await store().session(pin!))?.type).toBe('group');
     expect(await capKey(pin!)).toBe('6');
   });
+
+  it('escape:open from a quiz room makes it hosted, under the licence it names', async () => {
+    useLicences(ctx.h, DEV_LICENCES);
+    const host = ctx.h.connectHost();
+    const quiz = await ctx.h.seedQuiz();
+    const open = async (licenceId?: string) => {
+      const pin = await ctx.h.createGame(host, quiz.id);
+      const ack = await host.emitWithAck('escape:open', {
+        pin,
+        templateId: library,
+        ...(licenceId ? { licenceId } : {}),
+      });
+      return { pin, ack };
+    };
+    // Two usable: none named is refused, one named is taken.
+    expect((await open()).ack).toMatchObject(refused('escape.licence_required'));
+    expect((await open(EXPIRED_LICENCE.id)).ack).toMatchObject(refused('escape.licence_expired'));
+    const { pin, ack } = await open('acme');
+    expect(ack).toEqual({ ok: true });
+    expect(await capKey(pin)).toBe('8');
+    expect(await store().session(pin)).toMatchObject({
+      type: 'hosted',
+      cap: 8,
+      licence: { id: 'acme' },
+    });
+  });
+
+  it('escape:open in a room with a session ignores a licence id', async () => {
+    useLicences(ctx.h, DEV_LICENCES);
+    const host = ctx.h.connectHost();
+    const { pin } = await createAs(host, library, 'group');
+    await joinAndSync(ctx.h, pin!, 'P0');
+    expect(await host.emitWithAck('escape:teams', { pin, mode: 'auto', count: 1 })).toEqual({
+      ok: true,
+    });
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
+    expect(
+      await host.emitWithAck('escape:open', { pin, templateId: library, licenceId: 'acme' }),
+    ).toEqual({ ok: true });
+    expect(await store().session(pin!)).toMatchObject({ type: 'group', cap: 6, licence: null });
+    expect(await capKey(pin!)).toBe('6');
+  });
 }
