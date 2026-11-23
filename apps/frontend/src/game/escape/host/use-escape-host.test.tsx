@@ -43,6 +43,7 @@ import { boardOf, hostStateOf, hostTeamOf, outlineOf } from './host-fixtures';
 import { loadHostRecord, saveHostRecord } from './host-record';
 import { type EscapeHostSeam, LOBBY_WAIT_MS, useEscapeHost } from './use-escape-host';
 import { useNow } from '../use-now';
+import { ACME_LOOK } from '../session/look-fixtures';
 
 const PIN = '482913';
 
@@ -79,6 +80,8 @@ const HOST_EVENTS = [
   'escape:team-update',
   'escape:announce',
   'escape:finale',
+  // The room's look (M7 §1.9): the console's colours and brand.
+  'escape:look',
 ];
 
 describe('useEscapeHost', () => {
@@ -103,6 +106,16 @@ describe('useEscapeHost', () => {
     rerender(seam({ attachSeq: 2 }));
     await flush();
     expect(sent('escape:sync')).toHaveLength(2);
+  });
+
+  it('keeps the look of its first sync (M7 §1.9): the console mounts only after it', async () => {
+    const { result, rerender } = mount();
+    await flush();
+    rerender(seam({ attachSeq: 1 }));
+    await flush();
+    // The sync's look comes first, before the console that shows it is on the page.
+    fire('escape:look', ACME_LOOK);
+    expect(result.current.look).toEqual(ACME_LOOK);
   });
 
   it('a later attach (a reconnect, no reload) adds a "Reconnected" line; the first does not', async () => {

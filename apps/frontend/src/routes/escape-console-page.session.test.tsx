@@ -23,10 +23,14 @@ vi.mock('../game/use-game-session', () => ({
   }),
 }));
 
+// The room's look (M7 Task 7.19), from useEscapeHost: unbranded unless a test says otherwise.
+const { looks } = vi.hoisted(() => ({ looks: { current: null as unknown } }));
+
 vi.mock('../game/escape/host/use-escape-host', () => ({
   useEscapeHost: () => ({
     active: true,
     ui: fake.ui,
+    look: looks.current ?? { theme: null, brand: null },
     teams: vi.fn(async () => ({ ok: true })),
     move: vi.fn(async () => ({ ok: true })),
     start: vi.fn(async () => ({ ok: true })),
@@ -40,13 +44,6 @@ vi.mock('../game/escape/host/use-escape-host', () => ({
     resultsFromRecord: vi.fn(async () => null),
   }),
 }));
-
-// The room's look (M7 Task 7.19): unbranded unless a test says otherwise.
-const { looks } = vi.hoisted(() => ({ looks: { current: null as unknown } }));
-vi.mock('../game/escape/session/use-escape-look', async (orig) => {
-  const real = await orig<typeof import('../game/escape/session/use-escape-look')>();
-  return { ...real, useEscapeLook: () => looks.current ?? real.NO_LOOK };
-});
 
 const PIN = '482913';
 

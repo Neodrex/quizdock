@@ -23,6 +23,7 @@ import {
   escapeHostReducer,
   initialEscapeHostUi,
 } from './host-reducer';
+import { useEscapeLook } from '../session/use-escape-look';
 
 /** How long "run it again" waits for the room's lobby before giving up. */
 export const LOBBY_WAIT_MS = 5000;
@@ -64,6 +65,9 @@ function lobbyOn(sock: GameSocket, ms: number): Promise<void> {
 export function useEscapeHost(pin: string, session: EscapeHostSeam) {
   const [ui, dispatch] = useReducer(escapeHostReducer, initialEscapeHostUi);
   const { active, setActive, quizOnRef } = useEscapeMode(session.view);
+  // The room's brand and colours (M7 §1.9): here, not in the console, which mounts
+  // only once the sync's answer is in (its look comes first).
+  const look = useEscapeLook(pin, 'host', session.view.state);
   const socketRef = useRef<GameSocket | null>(null);
   // Bumped on each escape:host: one that came makes a sync with no answer moot.
   const heardRef = useRef(0);
@@ -284,6 +288,7 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
   return {
     active,
     ui,
+    look,
     teams,
     move,
     start,

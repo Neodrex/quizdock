@@ -32,6 +32,7 @@ vi.mock('../game/escape/host/use-escape-host', () => ({
   useEscapeHost: () => ({
     active: true,
     ui: fake.ui,
+    look: { theme: null, brand: null },
     teams: vi.fn(async () => ({ ok: true })),
     move: vi.fn(async () => ({ ok: true })),
     start: vi.fn(async () => ({ ok: true })),

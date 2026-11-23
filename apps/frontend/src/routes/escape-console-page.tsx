@@ -25,7 +25,6 @@ import { TeamBoard } from '../game/escape/host/team-board';
 import { TeamDetailPanel } from '../game/escape/host/team-detail';
 import { RaceBoardLink, RaceHostPanel } from '../game/escape/host/race-host-panel';
 import { BrandBand } from '../game/escape/session/brand-band';
-import { useEscapeLook } from '../game/escape/session/use-escape-look';
 import { LiveTheme } from '../game/theme';
 import { can, maxTeamsFor, seatsOf, toolsFor } from '../game/escape/session/session-tools';
 import type { EscapeHost } from '../game/escape/host/use-escape-host';
@@ -174,7 +173,7 @@ export function EscapeConsole({
   const room = host?.session ?? null;
   const tools = toolsFor(room);
   // A hosted event's brand and colours (M7 §1.9); the console's own look otherwise.
-  const look = useEscapeLook(pin, 'host', session.view.state);
+  const { look } = escape;
 
   const commands: HostCommands = {
     pending: ui.pending,
