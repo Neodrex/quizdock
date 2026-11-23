@@ -473,8 +473,10 @@
       "unnamed": "Licenza senza nome",
       "players_one": "{{count}} giocatore",
       "players_other": "{{count}} giocatori",
+      "players_many": "{{count}} giocatori",
       "eventsLeft_one": "{{count}} evento rimasto",
       "eventsLeft_other": "{{count}} eventi rimasti",
+      "eventsLeft_many": "{{count}} eventi rimasti",
       "annual": "annuale",
       "format": "Formato della gara",
       "solo": {

@@ -473,8 +473,10 @@
       "unnamed": "Licencia sin nombre",
       "players_one": "{{count}} jugador",
       "players_other": "{{count}} jugadores",
+      "players_many": "{{count}} jugadores",
       "eventsLeft_one": "queda {{count}} evento",
       "eventsLeft_other": "quedan {{count}} eventos",
+      "eventsLeft_many": "quedan {{count}} eventos",
       "annual": "anual",
       "format": "Formato de la carrera",
       "solo": {
