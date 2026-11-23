@@ -343,9 +343,31 @@ export interface EscapeHostTeam extends EscapeTeamSummary {
   timeOnStageMs: number;
 }
 
+/**
+ * The room's session as the host console sees it (M7 §1.4): the type, its cap,
+ * seats taken and tools. Of the licence, only what the host may read: never its
+ * id, its uses left or who may use it.
+ */
+export interface EscapeHostSession {
+  type: EscapeSessionType;
+  cap: number;
+  /** Seats taken: every player record of the room (owner question 3). */
+  joined: number;
+  race: { format: 'solo' | 'teams'; startsAt: number | null; started: boolean } | null;
+  licence: {
+    /** The brand's name; null for a licence without a brand. */
+    organisationName: string | null;
+    expiresAt: number;
+    package: 'single' | 'bundle' | 'annual';
+  } | null;
+  tools: EscapeTool[];
+}
+
 export interface EscapeHostState {
   /** The run's id: the key for escape:results, and how the console sees a new run. */
   gameId: string;
+  /** null: a room opened before session types (treated as hosted). */
+  session: EscapeHostSession | null;
   board: EscapeBoard;
   formation: EscapeFormation;
   teams: EscapeHostTeam[];

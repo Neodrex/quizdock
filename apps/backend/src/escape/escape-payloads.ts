@@ -14,6 +14,7 @@ import type {
   EscapeFormation,
   EscapeHostLock,
   EscapeHostOutline,
+  EscapeHostSession,
   EscapeHostState,
   EscapeHostTeam,
   EscapeMember,
@@ -24,8 +25,9 @@ import type {
   EscapeTeamSummary,
   EscapeTeamUpdate,
 } from '@quiz-dock/contracts';
+import { toolsOf } from '@quiz-dock/contracts';
 import { deadlineAt, remainingMs, runElapsed, stageOpenedAt } from './escape-clock';
-import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
+import type { EscapeRun, EscapeSession, EscapeSnapshot, TeamRecord } from './escape-live.types';
 import { awards, hashOrder, nextHint, playerView, rankTeams } from './escape-rules';
 import type { EscapeTemplate, Lock, Stage, SubmitResult, TeamState } from './escape.types';
 
@@ -47,6 +49,8 @@ export interface RunView {
   teams: TeamRecord[];
   /** The room's players in join order. */
   players: RoomPlayer[];
+  /** The room's session (M7); null for a room opened before session types. */
+  session: EscapeSession | null;
   now: number;
 }
 
@@ -278,9 +282,35 @@ export function hostTeamOf(v: RunView, rec: TeamRecord): EscapeHostTeam {
   };
 }
 
+/**
+ * The session for the host (M7 §1.4), field by field: of the licence, its
+ * organisation's name, expiry and package only.
+ */
+export function hostSessionOf(v: RunView): EscapeHostSession | null {
+  const s = v.session;
+  if (!s) return null;
+  return {
+    type: s.type,
+    cap: s.cap,
+    joined: v.players.length,
+    race: s.race && {
+      format: s.race.format,
+      startsAt: s.race.startsAt,
+      started: s.race.started,
+    },
+    licence: s.licence && {
+      organisationName: s.licence.brand?.name ?? null,
+      expiresAt: s.licence.expiresAt,
+      package: s.licence.package,
+    },
+    tools: [...toolsOf(s.type)],
+  };
+}
+
 export function hostStateOf(v: RunView): EscapeHostState {
   return {
     gameId: v.id,
+    session: hostSessionOf(v),
     board: boardOf(v),
     formation: formationOf(v),
     teams: v.teams.map((r) => hostTeamOf(v, r)),

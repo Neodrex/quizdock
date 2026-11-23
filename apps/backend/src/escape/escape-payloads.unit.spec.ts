@@ -1,11 +1,13 @@
 import { leaksIn, stringsIn } from '../../test/escape/leaks';
-import type { EscapeFinale } from '@quiz-dock/contracts';
-import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
+import { type EscapeFinale, toolsOf } from '@quiz-dock/contracts';
+import type { EscapeRun, EscapeSession, EscapeSnapshot, TeamRecord } from './escape-live.types';
+import { ACME_LICENCE } from './licences/dev-licences';
 import {
   announceOf,
   boardOf,
   finaleOf,
   hintUpdateOf,
+  hostSessionOf,
   hostStateOf,
   hostTeamOf,
   hostOutlineOf,
@@ -74,6 +76,7 @@ const view = (a: TeamState = teamA, run: EscapeRun = running): RunView => ({
   run,
   teams: [rec(a), rec(teamB)],
   players,
+  session: null,
   now: NOW,
 });
 
@@ -336,6 +339,54 @@ describe('host payloads', () => {
     // The run's id: the host record's key for escape:results after the room closed.
     expect(state.gameId).toBe(view().id);
     expect(state.teams.map((t) => t.id)).toEqual(['a', 'b']);
+  });
+
+  it('has no session for a room opened before session types', () => {
+    expect(hostStateOf(view()).session).toBeNull();
+  });
+
+  it('gives the session: type, cap, seats taken, tools, and the licence without its id or uses', () => {
+    const session: EscapeSession = {
+      type: 'hosted',
+      cap: 8,
+      race: null,
+      licence: {
+        id: 'acme',
+        organisationId: 'acme-org',
+        participantCap: 8,
+        expiresAt: ACME_LICENCE.expiresAt,
+        package: 'bundle',
+        brand: ACME_LICENCE.brand,
+      },
+      licenceUsed: false,
+      phoneHostUserId: null,
+    };
+    const out = hostSessionOf({ ...view(), session });
+    expect(out).toEqual({
+      type: 'hosted',
+      cap: 8,
+      joined: players.length,
+      race: null,
+      licence: { organisationName: 'Acme', expiresAt: ACME_LICENCE.expiresAt, package: 'bundle' },
+      tools: [...toolsOf('hosted')],
+    });
+    expect(JSON.stringify(out)).not.toMatch(/acme-org|"id"|eventsLeft|hosts|logoUrl/);
+    const race = hostSessionOf({
+      ...view(),
+      session: {
+        ...session,
+        type: 'race',
+        cap: 500,
+        licence: null,
+        race: { format: 'teams', startsAt: 5, started: false },
+      },
+    });
+    expect(race).toMatchObject({
+      type: 'race',
+      licence: null,
+      race: { format: 'teams', startsAt: 5, started: false },
+      tools: [...toolsOf('race')],
+    });
   });
 
   it('the template itself trips the checker (positive control)', () => {

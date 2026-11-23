@@ -24,6 +24,7 @@ import {
   type EscapeSubmitAck,
   type EscapeTeams,
   type EscapeTeamUpdate,
+  type EscapeTool,
   type EscapeUnlock,
   GameState,
   type ServerToClientEvents,
@@ -45,7 +46,7 @@ import type {
   FrozenLicence,
   TeamRecord,
 } from './escape-live.types';
-import { RACE_MAX_LEAD_MIN, capOf, modeAllowed } from './escape-session';
+import { RACE_MAX_LEAD_MIN, capOf, modeAllowed, toolAllowed } from './escape-session';
 import {
   announceOf,
   boardOf,
@@ -383,6 +384,7 @@ export class EscapeEngine implements OnModuleDestroy {
   /** F1/F2: new teams t1…tN, dealt (auto) or empty (self). Forming only. */
   async teams(pin: string, hostUserId: string, dto: EscapeTeams): Promise<void> {
     await this.mutate(pin, hostUserId, async (ref) => {
+      await this.requireTool(ref, 'teams');
       if (ref.run.phase !== 'forming') throw new BadRequestException('escape.wrong_phase');
       const v = await this.viewOf(ref);
       const tpl = ref.snap.template;
@@ -414,6 +416,7 @@ export class EscapeEngine implements OnModuleDestroy {
   /** F3: the host moves a player (forming or running); null unassigns, forming only. */
   async move(pin: string, hostUserId: string, dto: EscapeMove): Promise<void> {
     await this.mutate(pin, hostUserId, async (ref) => {
+      await this.requireTool(ref, 'move');
       const { phase } = ref.run;
       if (phase !== 'forming' && phase !== 'running') {
         throw new BadRequestException('escape.wrong_phase');
@@ -575,6 +578,7 @@ export class EscapeEngine implements OnModuleDestroy {
     hintId?: string,
   ): Promise<number> {
     return this.mutate(pin, hostUserId, async (ref) => {
+      await this.requireTool(ref, teamId === undefined ? 'hint-all' : 'hint-team');
       if (ref.run.phase !== 'running') throw new BadRequestException('escape.wrong_phase');
       if (teamId !== undefined && !ref.run.teamIds.includes(teamId)) {
         throw new NotFoundException('escape.team_not_found');
@@ -640,6 +644,7 @@ export class EscapeEngine implements OnModuleDestroy {
    */
   async adjustTime(pin: string, hostUserId: string, dto: EscapeAdjustTime): Promise<void> {
     await this.mutate(pin, hostUserId, async (ref) => {
+      await this.requireTool(ref, dto.teamId === undefined ? 'adjust-all' : 'adjust-team');
       if (ref.run.phase !== 'running') throw new BadRequestException('escape.wrong_phase');
       const stored = await this.store.teams(ref.id);
       if (dto.teamId !== undefined) {
@@ -677,6 +682,7 @@ export class EscapeEngine implements OnModuleDestroy {
    */
   async unlock(pin: string, hostUserId: string, dto: EscapeUnlock): Promise<void> {
     await this.mutate(pin, hostUserId, async (ref) => {
+      await this.requireTool(ref, 'unlock');
       if (ref.run.phase !== 'running') throw new BadRequestException('escape.wrong_phase');
       const rec = ref.run.teamIds.includes(dto.teamId)
         ? await this.store.team(ref.id, dto.teamId)
@@ -980,6 +986,18 @@ export class EscapeEngine implements OnModuleDestroy {
     return { pin, id: meta.id, meta, snap, run };
   }
 
+  /**
+   * M7 §1.1: the room's session type allows this host tool, or
+   * `escape.not_in_session`. A room without a session (opened before session
+   * types) is hosted: every tool.
+   */
+  private async requireTool(ref: RunRef, tool: EscapeTool): Promise<void> {
+    const session = await this.store.session(ref.pin);
+    if (session && !toolAllowed(session.type, tool)) {
+      throw new BadRequestException('escape.not_in_session');
+    }
+  }
+
   private async requireHostMeta(pin: string, hostUserId: string): Promise<GameMeta> {
     const meta = await this.game.getMeta(pin);
     if (!meta) throw new NotFoundException('session.not_found');
@@ -1089,10 +1107,11 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /** Everything a payload is built from, read once. R1: connected = a live socket in the room. */
   private async viewOf(ref: RunRef): Promise<RunView> {
-    const [recs, records, sockets] = await Promise.all([
+    const [recs, records, sockets, session] = await Promise.all([
       this.store.teams(ref.id),
       this.game.players(ref.pin),
       this.server.in(ref.pin).fetchSockets(),
+      this.store.session(ref.pin),
     ]);
     const live = new Set(
       sockets.filter((s) => s.data.pin === ref.pin && s.data.playerId).map((s) => s.data.playerId),
@@ -1110,6 +1129,7 @@ export class EscapeEngine implements OnModuleDestroy {
           avatar: r.avatar,
           connected: live.has(playerId),
         })),
+      session,
       now: Date.now(),
     };
   }

@@ -157,6 +157,7 @@ export const hostStateOf = (over: Partial<EscapeHostState> = {}): EscapeHostStat
   ];
   return {
     gameId: GAME,
+    session: null,
     board: boardOf({ teams }),
     formation: { mode: 'auto', maxSize: null, teams: [] },
     teams,
