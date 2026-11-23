@@ -394,6 +394,27 @@ export class EscapeEngine implements OnModuleDestroy {
           await this.broadcast(next, moved, this.formationPhones(v, moved, me.playerId));
           return;
         }
+        // M7 §1.8: group play forms one team of everyone by default, so the phone host
+        // can start without the console: in the lobby (auto formation), a phone's sync
+        // deals it into the smallest team, the first one making "Team 1".
+        const grouped =
+          v.session?.type === 'group' &&
+          ref.run.phase === 'forming' &&
+          ref.run.formation === 'auto' &&
+          !teamOf(this.teamsOf(v), me.playerId);
+        if (grouped) {
+          const made = ref.run.teamIds.length
+            ? { ref, v }
+            : await this.addTeam(ref, v, makeTeams(1)[0].name);
+          const to = smallestTeam(this.teamsOf(made.v), made.ref.run.maxSize);
+          if (to) {
+            await this.broadcast(
+              made.ref,
+              await this.applyMove(made.ref, made.v, me.playerId, to.id),
+            );
+            return;
+          }
+        }
         // F5: a late joiner in auto formation goes to the smallest team (never in a race).
         const late =
           !race &&

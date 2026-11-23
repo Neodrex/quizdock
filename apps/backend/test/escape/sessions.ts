@@ -588,6 +588,27 @@ export function phoneHostTests(ctx: EscapeContext): void {
     };
   };
 
+  it('a group room forms one team of everyone by default: the phone host can start it', async () => {
+    const host = ctx.h.connectHost();
+    const { pin } = await createAs(host, library, 'group');
+    expect(await host.emitWithAck('player:join', { pin, nickname: 'Hostess' })).toMatchObject({
+      playerId: expect.any(String),
+    });
+    const mine = stateWhere(host, (s) => s.team !== null);
+    expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    const team = (await mine).team!;
+    expect(team).toMatchObject({ name: 'Team 1', members: [expect.anything()] });
+    const other = await joinAndSync(ctx.h, pin!, 'Friend');
+    expect(other.last().team).toMatchObject({
+      id: team.id,
+      members: [expect.anything(), expect.anything()],
+    });
+    const running = stateWhere(other.socket, (s) => s.phase === 'running');
+    // No escape:teams: Start works as the phone's host bar sends it.
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    expect((await running).team?.id).toBe(team.id);
+  });
+
   it('a host that joins its group room as a player gets the host payloads and its phone state', async () => {
     const { host, pin, seen, other, teamId } = await groupRoom();
     const events = seen.map(([e]) => e);
