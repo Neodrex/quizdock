@@ -1,6 +1,6 @@
 import type { EscapeHostState } from '@quiz-dock/contracts';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ensureGameSocket, type GameSocket } from '../../game-client';
+import { emitWithAckOrError, ensureGameSocket, type GameSocket } from '../../game-client';
 import { type HostAck, type HostEvent, type HostPayload, hostCommand } from './host-client';
 
 /** What the phone host bar reads of the host state: counts, never a team's details. */
@@ -25,6 +25,8 @@ export function phoneHostRoomOf(host: EscapeHostState): PhoneHostRoom {
  * Group play's phone host (M7 Task 7.16): the phone is also the room's host console,
  * so the server sends it the host state on sync. The bar keeps only the seat count
  * and whether Start can go, and sends the M3 host commands on the phone's socket.
+ * On only once the server says this phone is the phone host (`isPhoneHost`), so a
+ * reload goes sync, state, attach, then a second sync.
  * Off (`enabled` false): no listener, nothing sent.
  */
 export function usePhoneHost(pin: string, enabled: boolean) {
@@ -36,15 +38,28 @@ export function usePhoneHost(pin: string, enabled: boolean) {
     let live = true;
     let s: GameSocket | null = null;
     const onHost = (host: EscapeHostState) => setRoom(phoneHostRoomOf(host));
+    // The quiz session only sends `player:reconnect`: the host role (host commands,
+    // host payloads on sync, the host grace cancelled) comes back with `host:attach`,
+    // then a sync brings the host state. On mount (a reload) and on each reconnect.
+    const attach = () => {
+      const sock = s;
+      if (!live || !sock?.connected) return;
+      emitWithAckOrError(sock, 'host:attach', { pin })
+        .then(() => live && emitWithAckOrError(sock, 'escape:sync', { pin }))
+        .catch(() => undefined);
+    };
     void ensureGameSocket('guest', pin).then((sock) => {
       if (!live) return;
       s = sock;
       socketRef.current = sock;
       sock.on('escape:host', onHost);
+      sock.on('connect', attach);
+      attach();
     });
     return () => {
       live = false;
       s?.off('escape:host', onHost);
+      s?.off('connect', attach);
     };
   }, [pin, enabled]);
 
