@@ -41,7 +41,7 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
   const { active, setActive, quizOnRef } = useEscapeMode(session.view);
   const socketRef = useRef<GameSocket | null>(null);
   // The room's brand and colours (M7 §1.9).
-  const look = useEscapeLook(pin, 'guest', session.view.state);
+  const look = useEscapeLook(pin, 'guest', session.attachSeq, session.view.state);
   const stateRef = useRef<EscapePlayerState | null>(null);
   // Bumped on each escape:state: a state that came makes a sync with no answer moot.
   const statesRef = useRef(0);

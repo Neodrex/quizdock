@@ -53,7 +53,7 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
 
   const { socket } = session;
   // The room's brand and colours (M7 §1.9).
-  const look = useEscapeLook(pin, 'guest', session.view.state);
+  const look = useEscapeLook(pin, 'guest', session.attachSeq, session.view.state);
   useEffect(() => {
     if (!socket) return;
     const onBoard = (board: EscapeBoard) => {

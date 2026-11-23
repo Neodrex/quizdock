@@ -505,7 +505,8 @@ describe('useEscapeHost', () => {
   });
 
   it('listens for the host events only, and removes every listener on unmount', async () => {
-    const { unmount } = mount();
+    // Attached: the look's listener waits for the session's socket.
+    const { unmount } = mount(seam({ attachSeq: 1 }));
     await flush();
     expect([...listeners.keys()].sort()).toEqual([...HOST_EVENTS].sort());
     unmount();

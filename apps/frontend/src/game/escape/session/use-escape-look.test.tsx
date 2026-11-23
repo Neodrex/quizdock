@@ -46,16 +46,35 @@ describe('useEscapeLook', () => {
   it('takes the page’s socket itself: a look sent on the first sync is not missed', async () => {
     const { listeners } = fakeSocket();
     taken.length = 0;
-    await mounted(() => useEscapeLook('123456', 'host', GameState.Lobby));
+    await mounted(() => useEscapeLook('123456', 'host', 1, GameState.Lobby));
     // Listening as soon as the socket is there, not once the page re-renders with it.
     expect(taken).toEqual(['host 123456']);
+    expect(listeners.get('escape:look')?.size).toBe(1);
+  });
+
+  it('waits for the session’s attach: it never creates the socket itself', async () => {
+    const { listeners } = fakeSocket();
+    taken.length = 0;
+    const { rerender } = await mounted(
+      ({ seq }: { seq: number }) => useEscapeLook('123456', 'guest', seq, GameState.Lobby),
+      { seq: 0 },
+    );
+    expect(taken).toEqual([]);
+    expect(listeners.size).toBe(0);
+    rerender({ seq: 1 });
+    await act(async () => {});
+    expect(taken).toEqual(['guest 123456']);
+    expect(listeners.get('escape:look')?.size).toBe(1);
+    // A re-attach keeps the one listener.
+    rerender({ seq: 2 });
+    await act(async () => {});
     expect(listeners.get('escape:look')?.size).toBe(1);
   });
 
   it('keeps the last look, and lets its listener go on unmount', async () => {
     const { listeners, fire } = fakeSocket();
     const { result, unmount } = await mounted(() =>
-      useEscapeLook('123456', 'guest', GameState.Escape),
+      useEscapeLook('123456', 'guest', 1, GameState.Escape),
     );
     expect(result.current).toEqual(NO_LOOK);
     fire('escape:look', ACME_LOOK);
@@ -69,7 +88,7 @@ describe('useEscapeLook', () => {
   it('a room switch (back to the lobby after a finale) drops it until a new look', async () => {
     const { fire } = fakeSocket();
     const { result, rerender } = await mounted(
-      ({ s }: { s: string }) => useEscapeLook('123456', 'guest', s),
+      ({ s }: { s: string }) => useEscapeLook('123456', 'guest', 1, s),
       { s: GameState.Lobby as string },
     );
     fire('escape:look', ACME_LOOK);
@@ -89,7 +108,7 @@ describe('useEscapeLook', () => {
   it('the host coming back (HOST_DISCONNECTED, then the lobby again) keeps it', async () => {
     const { fire } = fakeSocket();
     const { result, rerender } = await mounted(
-      ({ s }: { s: string }) => useEscapeLook('123456', 'guest', s),
+      ({ s }: { s: string }) => useEscapeLook('123456', 'guest', 1, s),
       { s: GameState.Lobby as string },
     );
     fire('escape:look', ACME_LOOK);
@@ -100,7 +119,7 @@ describe('useEscapeLook', () => {
 
   it('no look yet: unbranded', () => {
     fakeSocket();
-    const { result } = renderHook(() => useEscapeLook('123456', 'guest', null));
+    const { result } = renderHook(() => useEscapeLook('123456', 'guest', 1, null));
     expect(result.current).toEqual(NO_LOOK);
   });
 });

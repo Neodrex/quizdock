@@ -12,16 +12,23 @@ export const NO_LOOK: EscapeLook = { theme: null, brand: null };
  * escape sync sends the new room's look, if any. Shared by the console, the phone and
  * the screens; the listener goes with the page. It takes the socket itself, as the
  * page's sync does (`role` as there): the look of the first sync comes right after
- * the socket is there, before the page renders again with it.
+ * the socket is there, before the page renders again with it. It waits for the
+ * session's first attach (`attachSeq > 0`), so the socket is the session's own and
+ * this hook never creates one: a child's effect runs before the session's, and a
+ * socket taken here first (as a guest) would be the host projection's too.
  */
 export function useEscapeLook(
   pin: string,
   role: 'host' | 'guest',
+  attachSeq: number,
   roomState: string | null | undefined,
 ): EscapeLook {
   const [look, setLook] = useState<EscapeLook>(NO_LOOK);
+  // The escape sync, which brings the look, goes only after an attach too.
+  const attached = attachSeq > 0;
 
   useEffect(() => {
+    if (!attached) return;
     let live = true;
     let s: GameSocket | null = null;
     const onLook = (l: EscapeLook) => setLook(l);
@@ -34,7 +41,7 @@ export function useEscapeLook(
       live = false;
       s?.off('escape:look', onLook);
     };
-  }, [pin, role]);
+  }, [pin, role, attached]);
 
   const prevRef = useRef(roomState);
   useEffect(() => {

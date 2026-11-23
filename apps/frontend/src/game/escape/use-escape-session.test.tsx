@@ -458,7 +458,8 @@ describe('useEscapeSession', () => {
   });
 
   it('follows only the phone’s events, and lets every one go on unmount', async () => {
-    const { unmount } = mount();
+    // Attached: the look's listener waits for the session's socket.
+    const { unmount } = mount(seam({ attachSeq: 1 }));
     await flush();
     expect([...listeners.keys()].sort()).toEqual([
       'escape:finale',
