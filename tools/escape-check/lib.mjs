@@ -203,3 +203,96 @@ export async function openChoice(page, label, optionLabels) {
   for (const o of optionLabels) await card.getByRole('button', { name: o }).click();
   await card.getByRole('button', { name: 'Open', exact: true }).click();
 }
+
+/** The host's sample template `title`, with its content, published unless told not to. */
+export async function sampleTemplate(title, { publish = true } = {}) {
+  await api('POST', '/escape-templates/samples');
+  const row = (await api('GET', '/escape-templates')).find((t) => t.title === title);
+  if (!row) throw new Error(`${title} not found among the host's templates`);
+  let tpl = await api('GET', `/escape-templates/${row.id}`);
+  if (publish && tpl.status !== 'published') {
+    tpl = await api('POST', `/escape-templates/${tpl.id}/publish`);
+  }
+  return tpl;
+}
+
+/**
+ * The console's create (M7): `/escape`, the room's "Create room", then the session
+ * dialog. `type`: 'group' | 'race' | 'hosted' (absent: the dialog's default, which is
+ * hosted with the only licence for a roles room). `licence`: a licence id to pick.
+ * `race`: { format: 'solo' | 'teams', startsInMin?: number }. Leaves the dialog open
+ * on a refusal; the caller waits for the page it expects.
+ */
+export async function createRoom(page, title, { type, licence, race } = {}) {
+  if (!/\/escape$/.test(new globalThis.URL(page.url(), 'http://x').pathname)) {
+    await page.goto(`${URL}/escape`);
+  }
+  const card = page
+    .locator('article')
+    .filter({ has: page.getByRole('heading', { name: title, exact: true }) })
+    .first();
+  await card.waitFor();
+  await card.getByRole('button', { name: 'Create room' }).click();
+  const dialog = page.getByRole('dialog', { name: `How will you run ${title}?` });
+  await dialog.waitFor();
+  const label = { group: /^Group play/, race: /^Race/, hosted: /^Hosted event/ };
+  if (type) await dialog.getByRole('radio', { name: label[type] }).check();
+  if (licence) await dialog.getByRole('combobox', { name: 'Licence' }).selectOption(licence);
+  if (race) {
+    await dialog.getByRole('radio', { name: race.format === 'teams' ? /^Teams/ : /^Solo/ }).check();
+    if (race.startsInMin) {
+      await dialog.getByRole('radio', { name: /^Starts on its own/ }).check();
+      await dialog.getByLabel('Starts in (minutes)').fill(String(race.startsInMin));
+    }
+  }
+  await dialog.getByRole('button', { name: 'Create', exact: true }).click();
+  return dialog;
+}
+
+/** A socket.io client to the dev stack's game namespace (`localUser` makes it a host's). */
+export function gameSocket(ioFn, localUser) {
+  return ioFn(`${URL}/game`, {
+    transports: ['websocket'],
+    forceNew: true,
+    ...(localUser ? { auth: { localUser } } : {}),
+  });
+}
+
+/**
+ * `names.length` socket bots join `pin` and sync, in turn. Each keeps its last
+ * `escape:state` and its join ack (`ack.ok === false` when refused).
+ */
+export async function joinBots(ioFn, pin, names) {
+  const out = [];
+  for (const nickname of names) {
+    const socket = gameSocket(ioFn);
+    const b = { nickname, socket, state: null, finale: null, ack: null };
+    socket.on('escape:state', (s) => (b.state = s));
+    socket.on('escape:finale', (f) => (b.finale = f));
+    b.ack = await socket.timeout(10_000).emitWithAck('player:join', { pin, nickname });
+    if (b.ack?.ok !== false) await socket.timeout(10_000).emitWithAck('escape:sync', { pin });
+    out.push(b);
+  }
+  return out;
+}
+
+/**
+ * The payloads of recorded socket.io frames (`42/game,["event",payload]`), as
+ * [event, payload]; an ack (`43/game,7[…]`) as ['ack', its first argument].
+ */
+export function framesOf(raw) {
+  return raw.flatMap((f) => {
+    const m = /^4[23](?:\/[^,[]*,)?\d*(\[.*)$/s.exec(f);
+    if (!m) return [];
+    try {
+      const [event, payload] = JSON.parse(m[1]);
+      return typeof event === 'string' ? [[event, payload]] : [['ack', event]];
+    } catch {
+      return [];
+    }
+  });
+}
+
+/** The page scrolls sideways (a layout wider than the window). */
+export const scrollsSideways = (page) =>
+  page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);

@@ -28,6 +28,7 @@ import {
   answersOf,
   check,
   claimSeat,
+  createRoom,
   clockS,
   HOST,
   joinPhone,
@@ -212,7 +213,9 @@ async function main() {
   await card.getByRole('button', { name: 'Publish' }).click();
   check(await visible(card.getByText('Published')), 'picker: Vault Heist published');
   await shot(cpage, 'picker');
-  await card.getByRole('button', { name: 'Create room' }).click();
+  // M7: the session dialog. A roles room is a hosted event, under the Dev licence
+  // (devenv.sh's only one, preselected).
+  await createRoom(cpage, TEMPLATE);
   await cpage.waitForURL(/\/session\/\d{6}\/console/, { timeout: 15_000 });
   pin = cpage.url().match(/\/session\/(\d{6})\/console/)[1];
   check(true, `room opened on /session/${pin}/console`);

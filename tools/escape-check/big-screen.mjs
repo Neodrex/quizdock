@@ -40,6 +40,7 @@ import {
   answersOf,
   check,
   claimSeat,
+  createRoom,
   clockS,
   HOST,
   joinPhone,
@@ -397,7 +398,9 @@ async function main() {
     .filter({ has: cpage.getByRole('heading', { name: TEMPLATE, exact: true }) })
     .first();
   await card.waitFor();
-  await card.getByRole('button', { name: 'Create room' }).click();
+  // M7: the session dialog. A roles room is a hosted event, under the Dev licence
+  // (devenv.sh's only one, preselected).
+  await createRoom(cpage, TEMPLATE);
   await cpage.waitForURL(/\/session\/\d{6}\/console/, { timeout: 15_000 });
   pin = cpage.url().match(/\/session\/(\d{6})\/console/)[1];
   check(true, `console: room opened on /session/${pin}/console`);
