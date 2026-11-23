@@ -481,6 +481,7 @@
       "pickLicence": "Wybierz licencję",
       "licenceLoading": "Wczytywanie licencji…",
       "noLicence": "Brak dostępnej licencji",
+      "adminNoLicence": "Jako administrator możesz prowadzić wyścigi bez licencji. Aby poprowadzić wydarzenie na licencji, dodaj siebie jako prowadzącego licencji w Serwisie, na stronie /admin/licences.",
       "licenceLine": "{{name}} · {{players}} · {{events}} · do {{date}}",
       "unnamed": "Licencja bez nazwy",
       "players_one": "{{count}} gracz",

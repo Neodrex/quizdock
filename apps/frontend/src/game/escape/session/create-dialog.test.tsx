@@ -112,6 +112,33 @@ describe('CreateSessionDialog', () => {
     expect(create()).toBeDisabled();
   });
 
+  const ADMIN_HINT = /add yourself as a facilitator/;
+  const me = (roles: string[]) => ({
+    path: '/me',
+    body: { id: 'u1', displayName: 'Dev', email: null, roles },
+  });
+
+  it('hosted with no licence, for an admin: says how to host one from the Site', async () => {
+    mockApi([{ path: '/escape-licences', body: [] }, me(['host', 'admin'])]);
+    dialog(roles);
+    expect(await screen.findByText(ADMIN_HINT)).toBeInTheDocument();
+    expect(screen.getByText(ADMIN_HINT).textContent).toContain('/admin/licences');
+  });
+
+  it('hosted with no licence, for a host that is not an admin: no admin hint', async () => {
+    mockApi([{ path: '/escape-licences', body: [] }, me(['host'])]);
+    dialog(roles);
+    expect(await screen.findByText('No licence available')).toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_HINT)).toBeNull();
+  });
+
+  it('an admin with licences gets the picker, not the hint', async () => {
+    mockApi([{ path: '/escape-licences', body: [acme] }, me(['host', 'admin'])]);
+    dialog(roles);
+    expect(await screen.findByRole('combobox', { name: 'Licence' })).toBeInTheDocument();
+    expect(screen.queryByText(ADMIN_HINT)).toBeNull();
+  });
+
   it('hosted: the licence list did not load: says so with a retry, not "No licence"', async () => {
     mockApi([{ path: '/escape-licences', status: 500, body: { message: 'boom' } }]);
     dialog(roles);

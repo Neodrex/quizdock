@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useRole } from '../../../auth/use-role';
 import { useEscapeLicencesControllerList } from '../../../api/generated/escape-licences/escape-licences';
 import type { EscapeLicenceSummaryDto } from '../../../api/generated/model';
 import { serverNow } from '../../clock';
@@ -84,6 +85,8 @@ export function CreateSessionDialog({
   }, [open, rolesOnly]);
 
   const list = useEscapeLicencesControllerList({ query: { enabled: open } });
+  // An admin hosts races without a licence (M8 §1.2); a licensed event needs a seat.
+  const { isManager } = useRole();
   const licences = list.data?.data ?? [];
   // One licence: preselected.
   const chosen = licenceId || (licences.length === 1 ? licences[0].id : '');
@@ -185,7 +188,12 @@ export function CreateSessionDialog({
             </Button>
           </div>
         ) : licences.length === 0 ? (
-          <p className="text-sm font-medium">{t('session.create.noLicence')}</p>
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium">{t('session.create.noLicence')}</p>
+            {isManager && (
+              <p className="text-muted-foreground text-sm">{t('session.create.adminNoLicence')}</p>
+            )}
+          </div>
         ) : (
           <label className="flex flex-col gap-1.5 text-sm font-medium">
             {t('session.create.licence')}

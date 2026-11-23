@@ -2,14 +2,10 @@ import { Logger, Module } from '@nestjs/common';
 import { SETTINGS } from '@quiz-dock/contracts';
 import { settings } from '../../admin/settings/settings.service';
 import { LICENCE_PORT, type LicencePort } from './licence.port';
+import { SiteClient, type SiteAccess, siteAccessOf } from '../site/site-client';
 import { NoLicences } from './no-licences';
+import { SiteLicences } from './site-licences';
 import { StaticLicences, parseStaticLicences } from './static-licences';
-
-/** Where the Site source reaches the Site (ESCAPE_SITE_URL, ESCAPE_SITE_TOKEN). */
-export interface SiteAccess {
-  url: string;
-  token: string;
-}
 
 /** The port for a source (ESCAPE_LICENCE_SOURCE). */
 export function licencePortFor(
@@ -25,7 +21,8 @@ export function licencePortFor(
         'ESCAPE_LICENCE_SOURCE=site needs ESCAPE_SITE_URL and ESCAPE_SITE_TOKEN (32 characters or more).',
       );
     }
-    throw new Error('SiteLicences: Task 8.13 (the Site source is not built yet).');
+    const log = new Logger(SiteLicences.name);
+    return new SiteLicences(new SiteClient(siteAccessOf(site.url, site.token), { log }), log);
   }
   return new NoLicences();
 }

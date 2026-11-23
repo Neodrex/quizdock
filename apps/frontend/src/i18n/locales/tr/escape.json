@@ -457,6 +457,7 @@
       "pickLicence": "Bir lisans seçin",
       "licenceLoading": "Lisanslarınız yükleniyor…",
       "noLicence": "Kullanılabilir lisans yok",
+      "adminNoLicence": "Yönetici olarak lisanssız yarış düzenleyebilirsiniz. Lisanslı bir etkinlik için Site'de /admin/licences sayfasında kendinizi bir lisansın kolaylaştırıcısı olarak ekleyin.",
       "licenceLine": "{{name}} · {{players}} · {{events}} · {{date}} tarihine kadar",
       "unnamed": "Adsız lisans",
       "players_one": "{{count}} oyuncu",

@@ -457,6 +457,7 @@
       "pickLicence": "Lizenz wählen",
       "licenceLoading": "Deine Lizenzen werden geladen…",
       "noLicence": "Keine Lizenz verfügbar",
+      "adminNoLicence": "Als Admin kannst du Rennen ohne Lizenz veranstalten. Für ein lizenziertes Event trag dich auf der Site unter /admin/licences als Moderator einer Lizenz ein.",
       "licenceLine": "{{name}} · {{players}} · {{events}} · bis {{date}}",
       "unnamed": "Lizenz ohne Namen",
       "players_one": "{{count}} Spieler",

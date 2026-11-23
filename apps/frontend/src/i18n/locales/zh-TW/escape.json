@@ -445,6 +445,7 @@
       "pickLicence": "選擇授權",
       "licenceLoading": "正在載入你的授權…",
       "noLicence": "沒有可用的授權",
+      "adminNoLicence": "身為管理員，你可以在沒有授權的情況下舉辦競賽。要主持授權活動，請在網站的 /admin/licences 將自己加入為某個授權的主持人。",
       "licenceLine": "{{name}} · {{players}} · {{events}} · 至 {{date}}",
       "unnamed": "未命名授權",
       "players_other": "{{count}} 名玩家",

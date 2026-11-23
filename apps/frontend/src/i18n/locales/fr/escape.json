@@ -469,6 +469,7 @@
       "pickLicence": "Choisissez une licence",
       "licenceLoading": "Chargement de vos licences…",
       "noLicence": "Aucune licence disponible",
+      "adminNoLicence": "En tant qu’admin, vous pouvez lancer des courses sans licence. Pour animer un événement sous licence, ajoutez-vous comme animateur d’une licence sur le Site, dans /admin/licences.",
       "licenceLine": "{{name}} · {{players}} · {{events}} · jusqu’au {{date}}",
       "unnamed": "Licence sans nom",
       "players_one": "{{count}} joueur",

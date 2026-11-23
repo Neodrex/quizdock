@@ -469,6 +469,7 @@
       "pickLicence": "Elige una licencia",
       "licenceLoading": "Cargando tus licencias…",
       "noLicence": "No hay ninguna licencia disponible",
+      "adminNoLicence": "Como administrador puedes organizar carreras sin licencia. Para un evento con licencia, añádete como facilitador de una licencia en el Sitio, en /admin/licences.",
       "licenceLine": "{{name}} · {{players}} · {{events}} · hasta el {{date}}",
       "unnamed": "Licencia sin nombre",
       "players_one": "{{count}} jugador",

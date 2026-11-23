@@ -4,6 +4,7 @@ import { SETTINGS } from '@quiz-dock/contracts';
 import { DEV_LICENCES } from './dev-licences';
 import { licencePortFor } from './licences.module';
 import { NoLicences } from './no-licences';
+import { SiteLicences } from './site-licences';
 import { StaticLicences } from './static-licences';
 
 describe('the licence source (ESCAPE_LICENCE_SOURCE)', () => {
@@ -29,8 +30,20 @@ describe('the licence source (ESCAPE_LICENCE_SOURCE)', () => {
     );
   });
 
-  it('site with both set is not built yet (Task 8.13)', () => {
-    expect(() => licencePortFor('site', '', site)).toThrow(/SiteLicences: Task 8\.13/);
+  it('site with both set gives SiteLicences', () => {
+    expect(licencePortFor('site', '', site)).toBeInstanceOf(SiteLicences);
+  });
+
+  it('site with an invalid URL fails the boot', () => {
+    expect(() => licencePortFor('site', '', { ...site, url: 'site.example' })).toThrow(
+      /ESCAPE_SITE_URL is not an http\(s\) URL/,
+    );
+  });
+
+  it('site with a blank token fails the boot', () => {
+    expect(() => licencePortFor('site', '', { ...site, token: ' '.repeat(40) })).toThrow(
+      /ESCAPE_SITE_TOKEN/,
+    );
   });
 });
 

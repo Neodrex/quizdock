@@ -19,6 +19,7 @@ import { raceSessionTests } from '../../test/escape/race';
 import { raceTests } from '../../test/escape/races';
 import { screenTests } from '../../test/escape/screen';
 import { sessionLeakTests } from '../../test/escape/session-leaks';
+import { siteLicenceTests } from '../../test/escape/site-licences';
 import { phoneHostTests, sessionTests } from '../../test/escape/sessions';
 import { vaultHeistRunTests } from '../../test/escape/vault-heist-run';
 import { vaultHeist } from './samples';
@@ -62,4 +63,5 @@ describe('EscapeGateway (socket integration)', () => {
   describe('race', () => raceSessionTests(ctx));
   describe('brand', () => brandTests(ctx));
   describe('session leaks', () => sessionLeakTests(ctx));
+  describe('site licences', () => siteLicenceTests(ctx));
 });
