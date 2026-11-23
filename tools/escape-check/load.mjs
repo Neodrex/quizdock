@@ -25,6 +25,7 @@ import { execFile, execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseArgs, promisify } from 'node:util';
 import { Redis } from 'ioredis';
 import { io } from 'socket.io-client';
@@ -398,7 +399,7 @@ function machine() {
   let commit = null;
   try {
     commit = execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
-      cwd: dirname(new URL(import.meta.url).pathname),
+      cwd: dirname(fileURLToPath(import.meta.url)),
       encoding: 'utf8',
     }).trim();
   } catch {
