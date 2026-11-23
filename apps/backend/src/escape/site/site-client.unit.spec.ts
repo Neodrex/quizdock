@@ -96,6 +96,14 @@ describe('SiteClient', () => {
     expect(logged(log)).not.toContain(TOKEN);
   });
 
+  it('a non-2xx answer has its body cancelled, not left open', async () => {
+    const res = answer(502, { error: 'bad gateway' });
+    const cancel = jest.spyOn(res.body!, 'cancel');
+    const { c } = client(() => Promise.resolve(res));
+    expect(await c.post('/x', {}, schema)).toMatchObject({ ok: false, cause: 'status' });
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
   it('a timeout is unavailable, logged once without the token', async () => {
     const { c, log } = client(
       (_url, init) =>

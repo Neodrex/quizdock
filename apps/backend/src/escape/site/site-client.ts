@@ -93,7 +93,11 @@ export class SiteClient {
       }
       return fail('network', e?.message ?? String(err));
     }
-    if (!res.ok) return fail('status', `HTTP ${res.status}`);
+    if (!res.ok) {
+      // The body is not read: release it, so the connection is not held open.
+      await res.body?.cancel().catch(() => undefined);
+      return fail('status', `HTTP ${res.status}`);
+    }
     let json: unknown;
     try {
       json = await res.json();
