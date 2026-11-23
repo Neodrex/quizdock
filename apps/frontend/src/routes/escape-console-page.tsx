@@ -174,7 +174,7 @@ export function EscapeConsole({
   const room = host?.session ?? null;
   const tools = toolsFor(room);
   // A hosted event's brand and colours (M7 §1.9); the console's own look otherwise.
-  const look = useEscapeLook(socket, session.view.state);
+  const look = useEscapeLook(pin, 'host', session.view.state);
 
   const commands: HostCommands = {
     pending: ui.pending,
