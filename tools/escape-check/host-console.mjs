@@ -33,6 +33,7 @@ import {
   HOST,
   joinPhone,
   keepText,
+  leaksIn,
   lockCard,
   log,
   newPhone,
@@ -58,14 +59,6 @@ const VIEWPORT = TABLET ? 'tablet' : 'laptop';
 const SIZE = TABLET ? { width: 820, height: 1180 } : { width: 1280, height: 800 };
 const HOST_GONE_MS = Number(process.env.HOST_GONE_MS ?? 8000);
 const shot = (page, name) => shotIn(page, name, `host-${VIEWPORT}-`);
-
-/** Whole-word, case-sensitive hits of `answers` in `text`. */
-const leaksIn = (text, answers) =>
-  answers.filter((a) =>
-    new RegExp(`(?<![0-9A-Za-z])${a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![0-9A-Za-z])`).test(
-      text,
-    ),
-  );
 
 const consoleFrames = [];
 const consoleTexts = [];

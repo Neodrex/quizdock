@@ -39,6 +39,7 @@ import {
   HOST,
   joinPhone,
   keepText,
+  leaksIn,
   lockCard,
   log,
   newPhone,
@@ -397,7 +398,7 @@ async function main() {
     check(p.frames.length > 20, `${p.name}: ${p.frames.length} frames recorded`);
     const events = hostOnly.filter((e) => frames.includes(`"${e}"`));
     check(!events.length, `${p.name}: no host events in frames (${events.join(', ') || 'none'})`);
-    const leaked = answers.filter((ans) => frames.includes(ans));
+    const leaked = leaksIn(frames, answers);
     check(!leaked.length, `${p.name}: no answer in frames (${leaked.join(', ') || 'none'})`);
     const keyHits = keys.filter((k) => frames.includes(k));
     check(

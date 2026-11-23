@@ -25,6 +25,17 @@ export const HOST = 'Mei';
 export const PHONE = { width: 390, height: 780 };
 export const TEMPLATE = 'Vault Heist';
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Whole-word, case-sensitive hits of `answers` in `text`: an answer such as 314
+ * inside a longer number (a timestamp) is not a leak.
+ */
+export const leaksIn = (text, answers) =>
+  answers.filter((a) =>
+    new RegExp(`(?<![0-9A-Za-z])${a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![0-9A-Za-z])`).test(
+      text,
+    ),
+  );
 export const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 export const problems = [];
 export const check = (ok, what) => {
