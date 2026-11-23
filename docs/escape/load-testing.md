@@ -32,26 +32,53 @@ of the combined lock (the lock's `myParts`).
   template detail, never from a phone frame. A bot stops when its team is out.
 - **End:** when every team is out the run ends by itself (T4); otherwise the host
   sends `escape:end` after `--duration-min` (12). The room's time limit is set
-  5 minutes past that, so time-up never ends a run first.
+  5 minutes past that, so time-up never ends a run first. The play loops stop
+  once the run is being ended.
+- **`--sustain`** (a steady load, for the restart test): the room's time limit is
+  `--duration-min` and the run ends at time-up, with its finale, not by the host.
+  A bot whose team is out keeps its think-time rhythm with what a finished phone
+  still does: a resync (`escape:sync`, as a reload) or a drop and reconnect. The
+  locks stay with the teams still playing, so the submit rate falls as teams
+  escape; the reads, ticks and boards go on to the end.
+- **A dropped socket** (the server went away, as in a restart) comes back on its
+  own: each second (plus a jitter) for 90 s, a new socket, `player:reconnect`
+  with the session token, `escape:sync`. Phones, host, screen and board alike.
+  The JSON's `restart` block gives the phones dropped and back, each one's
+  time back, the full recovery (first drop to last phone back), the host's,
+  screen's and board's times, teams whose progress went backwards (stage, locks
+  solved, out) and the timer hints after the drop. `.tmp/escape-load/restart.sh`
+  (outer repo) kills the backend with `SIGKILL` and starts it again.
 
 **Measures** (summary on stdout, everything in the `--out` JSON):
 
 - join, sync, submit (also per outcome), hint and reconnect acks (ms);
 - lost acks (none within 10 s) and refusals, split into expected (the game's
-  rules: a teammate was quicker, the team waits, time is up) and unexpected;
+  rules: a teammate was quicker, the team waits, time is up; "not running" and
+  "paused" only once the run is being ended) and unexpected (a refused or lost
+  sync, team create or team join counts too);
 - team-update fan-out: a submit to its teammates' `escape:team-update`;
 - start and finale spread across phones;
 - board interval (race: the public board; hosted: the screen), while at least
   half the bots still play (a board with nothing new is not sent);
-- host frames and KB per second, per event, between the start and the end;
+- host frames and KB per second, per event, between the start and the end (KB:
+  the payloads' JSON length, an approximation of the frames);
 - `/health/ready` latency every second (an event-loop proxy);
-- backend CPU and RSS every second: `--server-pid` (`ps`, macOS and Linux) or
-  `--container` (`docker stats`);
-- Redis commands per submit: the `INFO commandstats` delta from the first join
-  to the finale, over the submits (joins, syncs, ticks and boards included).
+- backend CPU and RSS every second: `--server-pid` (`ps` on macOS; on Linux the
+  `/proc/<pid>/stat` CPU ticks' delta, since `ps %cpu` there is a lifetime
+  average) or `--container` (`docker stats`);
+- Redis commands per submit: the `INFO commandstats` delta from the run's start
+  to the finale, over the run's submits (syncs, ticks and boards included); and,
+  as the first baseline counted it, from the first join (`…WithJoins`).
 
 `--criteria local|uk` checks the plan's pass criteria and exits non-zero on a
-failure; `node --test tools/escape-check/load-lib.test.mjs` tests the helpers.
+failure. A broken run fails whatever its timings: a player not joined, a phone
+without its start or its finale, a failed reconnect or `/health/ready`, no
+submit; in a restart run, a phone not back, a team's progress lost, or a full
+recovery over 30 s (its health checks fail meanwhile, so they are not counted).
+The host-frames limit (≤ 3/s in a race) applies from Task 9.3 on.
+`node --test tools/escape-check/load-lib.test.mjs` tests the helpers. The JSON
+names the backend measured (`--backend-commit`, else this checkout, `+changes`
+when the backend has uncommitted changes) and hides any password in a URL.
 
 ## 2. Running it
 
@@ -68,8 +95,13 @@ cd apps/backend && NODE_ENV=production node dist/main.js &   # add --cpu-prof fo
 # The bots (from live/tools/escape-check).
 node load.mjs --url http://localhost:3000 --scenario race-teams --players 500 \
   --server-pid <backend pid> --redis redis://localhost:16379 --criteria local \
-  --out "$TMPDIR/escape-load/race-teams.json"
+  --out "/Volumes/Crucial X9/Projects/claude-escape-room/.tmp/escape-load/race-teams.json"
 ```
+
+Output goes to the outer repo's `.tmp/escape-load/` (on the SSD), never to the
+system temp directory; the runs kept for this page are copied to
+`docs/escape/load-results/`. `.tmp/escape-load/measure.sh <name> <scenario>`
+(outer repo) does one run on a freshly started backend and stops it.
 
 Under OIDC, `--host-cookie '<Live session cookie>'` signs the host's REST calls
 and sockets in. `--container <name>` samples a Docker container instead of a pid.
@@ -124,9 +156,11 @@ Xeon core there, an unpinned M1 here).
 
 **Reading**
 
-- The engine holds 500 players with room to spare on this machine: no lost ack,
-  no unexpected refusal, every phone started and got the finale within 160 ms
-  of the first, `/health/ready` p95 at most 16 ms, CPU p95 at most 39 % of one core.
+- On this machine, with the backend native and uncapped (an M1 core, which the
+  §1.2 local criteria, written for 1 vCPU, do not assume), the engine holds 500
+  players: no lost ack, no unexpected refusal, start spread p95 at most 82 ms
+  and finale spread p95 at most 48 ms, `/health/ready` p95 at most 16 ms, CPU
+  p95 at most 39 % of one core. Capped runs come with the rehearsal (Task 9.10).
 - **The host console is the hot spot of a race.** `escape:host-team` is not
   throttled in races (one frame per team change), and `escape:team-update` and
   `escape:announce` reach the host room as well: about 24 frames/s in total
@@ -143,6 +177,8 @@ Xeon core there, an unpinned M1 here).
 - Bots stop when their team escapes, so a run lasts as long as the room takes:
   2.5 to 7 minutes at 10–40 s think time, about 9 submits/s at its busiest.
   The 12 minutes are a cap; a fifth of the think time is the stress pass.
+- Only the default pace ran here: the burst join and the stress pass come with
+  the after-fix runs (Task 9.5).
 - The first board interval after the start is up to 10 s long (the max): no bot
   moves before its first think time, so nothing changes on the board.
 

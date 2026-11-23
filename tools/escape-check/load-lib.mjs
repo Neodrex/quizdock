@@ -114,7 +114,8 @@ export function wrongFor(lock, content) {
       return { lockId: lock.id, input: [...tpl.order].reverse() };
     case 'combined': {
       const role = partRole(lock, null);
-      return role ? { lockId: lock.id, roleId: role, input: otherDigits('') } : null;
+      const part = role && tpl.parts.find((p) => p.roleId === role);
+      return part ? { lockId: lock.id, roleId: role, input: otherDigits(part.answer) } : null;
     }
     default:
       return null;
@@ -126,6 +127,34 @@ export function parsePs(text) {
   const m = /^\s*([\d.,]+)\s+(\d+)/.exec(text);
   if (!m) return null;
   return { cpu: Number(m[1].replace(',', '.')), rssMb: Math.round(Number(m[2]) / 1024) };
+}
+
+/**
+ * Linux `/proc/<pid>/stat`: the CPU time used so far (utime + stime, in clock
+ * ticks) and the RSS (pages). `ps %cpu` there is a lifetime average, so the
+ * sampler takes the ticks' delta per second. Null when unreadable.
+ */
+export function parseProcStat(text) {
+  // The command name (field 2) may hold spaces and parentheses: fields start after the last ')'.
+  const rest = text
+    .slice(text.lastIndexOf(')') + 2)
+    .trim()
+    .split(/\s+/);
+  // rest[0] is field 3 (state): utime is field 14, stime 15, rss 24.
+  const [utime, stime, rss] = [rest[11], rest[12], rest[21]].map(Number);
+  if (![utime, stime, rss].every(Number.isFinite)) return null;
+  return { ticks: utime + stime, rssPages: rss };
+}
+
+/** CPU (% of one core) between two parseProcStat readings `ms` apart. */
+export function cpuBetween(before, after, ms, ticksPerS = 100) {
+  return +((100 * (after.ticks - before.ticks)) / ticksPerS / (ms / 1000)).toFixed(1);
+}
+
+/** A URL or connection string with its user and password hidden (for the output JSON). */
+export function maskUrl(value) {
+  if (typeof value !== 'string') return value;
+  return value.replace(/(\/\/)[^/@\s]+@/g, '$1***@');
 }
 
 const UNIT_MB = {
@@ -148,20 +177,16 @@ export function parseDockerStats(line) {
 }
 
 /** Refusals the game gives a fair bot: a teammate was quicker, the team waits, or time is up. */
-const EXPECTED_REFUSALS = new Set([
-  'rate-limited',
-  'already-solved',
-  'escaped',
-  'time-up',
-  'not-running',
-  'paused',
-]);
+const EXPECTED_REFUSALS = new Set(['rate-limited', 'already-solved', 'escaped', 'time-up']);
+/** The run is over or held: expected only once the run is ending (nobody pauses a load run). */
+const ENDING_REFUSALS = new Set(['not-running', 'paused']);
 
 /**
  * An ack against what the bot meant (`right`, `wrong` or `hint`): 'ok', an
  * 'expected' refusal (the game's rules), or 'unexpected' (a fault to report).
+ * `ending`: the run is being ended (time is up or the host ends it).
  */
-export function classifyAck(intended, ack) {
+export function classifyAck(intended, ack, { ending = false } = {}) {
   if (!ack || typeof ack !== 'object') return 'unexpected';
   if (ack.ok) {
     if (intended === 'hint') return 'ok';
@@ -169,6 +194,7 @@ export function classifyAck(intended, ack) {
     return ack.outcome === 'wrong' ? 'unexpected' : 'ok';
   }
   if (intended === 'hint' && ack.reason === 'no-hint') return 'expected';
+  if (ending && ENDING_REFUSALS.has(ack.reason)) return 'expected';
   return EXPECTED_REFUSALS.has(ack.reason) ? 'expected' : 'unexpected';
 }
 
@@ -181,7 +207,9 @@ const CRITERIA = {
 /**
  * The criteria a run's summary fails, as readable labels ([] when it passes).
  * A measure the run did not take (null) is skipped; the board and host frame
- * limits apply to races only (`summary.race`).
+ * limits apply to races only (`summary.race`), the host frame limit from Task
+ * 9.3 on. A broken run fails whatever its timings: a player not joined, a phone
+ * without its start or its finale, a failed reconnect or health check, no submit.
  */
 export function criteriaFailed(summary, where) {
   const c = CRITERIA[where];
@@ -190,6 +218,21 @@ export function criteriaFailed(summary, where) {
   const over = (value, limit, label) => {
     if (value !== null && value !== undefined && limit !== null && value > limit) out.push(label);
   };
+  const s = summary;
+  if (s.players !== undefined && s.joined !== s.players) out.push('every player joined');
+  if (s.phonesStarted !== undefined && s.phonesStarted !== s.joined)
+    out.push('every phone started');
+  if (s.phonesFinale !== undefined && s.phonesFinale !== s.joined)
+    out.push('every phone got the finale');
+  if (s.reconnectFailed > 0) out.push('reconnects failed = 0');
+  // A restart run: every phone back within 30 s, nothing lost (its health checks fail meanwhile).
+  if (s.restart) {
+    const r = s.restart;
+    if (r.recovered !== r.dropped || r.recoverFailed > 0) out.push('every dropped phone back');
+    if (r.stateLost?.length) out.push('no team state lost');
+    over(r.fullRecoveryMs, 30_000, 'full recovery ≤ 30 s');
+  } else if (s.readyFailed > 0) out.push('/health/ready failed = 0');
+  if (s.submits !== undefined && !(s.submits > 0)) out.push('submits > 0');
   over(summary.submitAckMs?.p95, c.submitP95, `submit ack p95 ≤ ${c.submitP95} ms`);
   over(summary.submitAckMs?.p99, c.submitP99, `submit ack p99 ≤ ${c.submitP99} ms`);
   if (summary.lostAcks > 0) out.push('lost acks = 0');

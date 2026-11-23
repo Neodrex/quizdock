@@ -6,13 +6,20 @@
  * combined lock, in a hosted event), through
  * the same events as the phones. Modelled on upstream's
  * apps/backend/scripts/load-test.mjs (same percentiles, CPU/RSS/Redis measures),
- * with a `ps` / `docker stats` sampler (macOS has no /proc).
+ * with a CPU/RSS sampler: `/proc/<pid>/stat` deltas on Linux, `ps` on macOS (no
+ * /proc), or `docker stats` for a container.
  *
  *   node load.mjs --url http://localhost:3000 --scenario race-teams --players 500 \
  *     [--join-rate 10] [--burst] [--think 10-40] [--duration-min 12] [--teams 100] \
- *     [--server-pid <pid> | --container <name>] [--redis redis://localhost:16379] \
+ *     [--sustain] [--server-pid <pid> | --container <name>] [--redis redis://localhost:16379] \
  *     [--host-cookie '<Live session cookie>'] [--cpu-cap '1 vCPU'] [--seed 1] \
- *     [--criteria local|uk] [--out result.json]
+ *     [--backend-commit <sha>] [--criteria local|uk] [--out result.json]
+ *
+ * `--sustain`: the room's time limit is `--duration-min` and the run ends at
+ * time-up (no host end); a bot whose team is out keeps its rhythm with what a
+ * finished phone still does (a resync, as a reload, or a drop and reconnect), so
+ * the room keeps a load until the end. Phones whose socket the server drops
+ * (a backend restart) come back with their session token and are timed.
  *
  * Scenarios: `race-teams` (teams of up to 3 by team code, a scheduled start),
  * `race-solo` (one-player teams, a scheduled start), `hosted` (a hosted event,
@@ -22,7 +29,7 @@
  * detail, never from a phone frame. Exits non-zero when a `--criteria` fails.
  */
 import { execFile, execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,8 +40,11 @@ import {
   answerFor,
   botPlan,
   classifyAck,
+  cpuBetween,
   criteriaFailed,
+  maskUrl,
   parseDockerStats,
+  parseProcStat,
   parsePs,
   stats,
   wrongFor,
@@ -50,6 +60,8 @@ const { values: args } = parseArgs({
     think: { type: 'string', default: '10-40' },
     'duration-min': { type: 'string', default: '12' },
     teams: { type: 'string', default: '100' },
+    sustain: { type: 'boolean', default: false },
+    'backend-commit': { type: 'string' },
     'server-pid': { type: 'string' },
     container: { type: 'string' },
     redis: { type: 'string' },
@@ -74,6 +86,7 @@ const JOIN_RATE = Number(args['join-rate']);
 const [THINK_MIN, THINK_MAX] = args.think.split('-').map((s) => Number(s) * 1000);
 const DURATION_MS = Number(args['duration-min']) * 60_000;
 const TEAMS = Number(args.teams);
+const SUSTAIN = args.sustain;
 const SEED = Number(args.seed);
 const RACE = args.scenario !== 'hosted';
 // Races take parallel templates only (M7 SESSION_RULES); a hosted event plays the roles sample.
@@ -110,6 +123,13 @@ const connected = (s) =>
         s.once('connect_error', (e) => (clearTimeout(timer), ko(e)));
       });
 
+/** An ack that says ok, or a throw. */
+const must = async (s, event, payload) => {
+  const ack = await ask(s, event, payload);
+  if (!ack?.ok) throw new Error(`${event}: ${JSON.stringify(ack ?? 'lost')}`);
+  return ack;
+};
+
 /** An ack, or `undefined` when none came within ACK_TIMEOUT_MS (a lost ack). */
 const ask = (s, event, payload) =>
   s
@@ -142,7 +162,18 @@ const m = {
   readyFailed: 0,
   samples: [],
   teamsJoined: 0,
+  // Sockets the server dropped (a restart): when, and each phone's way back.
+  dropped: [],
+  recoverMs: [],
+  recoveredAt: [],
+  recoverFailed: 0,
+  stateLost: [],
+  sustainSyncMs: [],
+  timerHintsAt: [],
 };
+/** Set once the run is being ended (time-up, the host's end, or the tool's stop). */
+let ending = false;
+let tookSeat = false;
 const note = (where, e) => {
   if (m.errors.length < 50)
     m.errors.push(`${where}: ${typeof e === 'string' ? e : JSON.stringify(e)}`);
@@ -153,27 +184,56 @@ const count = (bucket, key) => (bucket[key] = (bucket[key] ?? 0) + 1);
 
 const run = promisify(execFile);
 
-/** CPU (% of one core) and RSS (MB) every second, from `ps` or `docker stats`, until stopped. */
+/** Linux: `/proc/<pid>/stat` read every second; CPU from the ticks' delta (ps %cpu is a lifetime average). */
+function procSampler(pid) {
+  const conf = (name, dflt) => {
+    try {
+      return Number(execFileSync('getconf', [name], { encoding: 'utf8' }).trim()) || dflt;
+    } catch {
+      return dflt;
+    }
+  };
+  const ticksPerS = conf('CLK_TCK', 100);
+  const pageMb = conf('PAGESIZE', 4096) / 1024 / 1024;
+  let last = null;
+  return () => {
+    const now = { at: Date.now(), ...parseProcStat(readFileSync(`/proc/${pid}/stat`, 'utf8')) };
+    if (now.ticks === undefined) return null;
+    const prev = last;
+    last = now;
+    if (!prev) return null;
+    return {
+      cpu: cpuBetween(prev, now, now.at - prev.at, ticksPerS),
+      rssMb: Math.round(now.rssPages * pageMb),
+    };
+  };
+}
+
+/** CPU (% of one core) and RSS (MB) every second, from /proc, `ps` or `docker stats`, until stopped. */
 function sampler() {
   if (!args['server-pid'] && !args.container) return () => null;
+  const proc =
+    args['server-pid'] && os.platform() === 'linux' ? procSampler(args['server-pid']) : null;
   let on = true;
   (async () => {
     while (on) {
       const at = Date.now();
       try {
-        const s = args['server-pid']
-          ? parsePs((await run('ps', ['-o', '%cpu=,rss=', '-p', args['server-pid']])).stdout)
-          : parseDockerStats(
-              (
-                await run('docker', [
-                  'stats',
-                  '--no-stream',
-                  '--format',
-                  '{{.CPUPerc}};{{.MemUsage}}',
-                  args.container,
-                ])
-              ).stdout,
-            );
+        const s = proc
+          ? proc()
+          : args['server-pid']
+            ? parsePs((await run('ps', ['-o', '%cpu=,rss=', '-p', args['server-pid']])).stdout)
+            : parseDockerStats(
+                (
+                  await run('docker', [
+                    'stats',
+                    '--no-stream',
+                    '--format',
+                    '{{.CPUPerc}};{{.MemUsage}}',
+                    args.container,
+                  ])
+                ).stdout,
+              );
         if (s) m.samples.push({ at, ...s });
       } catch {
         // the process is gone: nothing to sample this time
@@ -259,9 +319,15 @@ function newBot(i, pin, content) {
     s.on('escape:team-update', (u) => {
       const sent = pending.get(u.by);
       if (sent && u.by !== b.playerId && sent.teamId === u.teamId) m.fanoutMs.push(t() - sent.t0);
+      if (u.kind === 'hint' && u.source === 'timer') m.timerHintsAt.push(t());
     });
     s.on('exception', (e) => note(`bot${i} exception`, e));
     s.on('error', (e) => note(`bot${i} error`, e));
+    // The server dropped it (a restart): back with the session token, timed.
+    s.on('disconnect', (reason) => {
+      if (reason === 'io client disconnect' || ending || s !== b.socket) return;
+      void recover(b);
+    });
   };
   b.content = content;
   b.pin = pin;
@@ -288,56 +354,110 @@ async function join(b) {
   const t1 = t();
   const synced = await ask(s, 'escape:sync', { pin: b.pin });
   if (synced?.ok) m.syncMs.push(t() - t1);
-  else note(`bot${b.i} sync`, synced ?? 'lost');
+  else setupFailed(b, 'sync', synced);
   return true;
+}
+
+/** A sync, team create or team join refused or lost: unexpected (the game should take it). */
+function setupFailed(b, what, ack) {
+  note(`bot${b.i} ${what}`, ack ?? 'lost');
+  count(m.acks.unexpected, `${what}:${ack ? (ack.error?.code ?? JSON.stringify(ack)) : 'lost'}`);
 }
 
 /** race-teams: every third bot starts a team; the next two join it by its code. */
 async function formTeam(b, leader) {
   if (b === leader) {
     const ack = await ask(b.socket, 'escape:new-team', { pin: b.pin, name: `Team ${b.i}` });
-    if (!ack?.ok) note(`bot${b.i} new-team`, ack ?? 'lost');
+    if (!ack?.ok) setupFailed(b, 'new-team', ack);
     else m.teamsJoined++;
     return ack?.ok ? ack.code : null;
   }
   const code = await leader.code;
   if (!code) return null;
   const ack = await ask(b.socket, 'escape:join-team', { pin: b.pin, code });
-  if (!ack?.ok) note(`bot${b.i} join-team`, ack ?? 'lost');
+  if (!ack?.ok) setupFailed(b, 'join-team', ack);
   else m.teamsJoined++;
   return null;
 }
 
-async function reconnect(b) {
-  b.socket.disconnect();
-  sockets.delete(b.socket);
-  await sleep(500);
-  const t0 = t();
+/** A new socket for the bot, back in its seat with its session token and synced; why not, or null. */
+async function rejoin(b) {
   const s = connect();
   b.socket = s;
   b.listen(s);
   try {
     await connected(s);
   } catch (e) {
-    m.reconnectFailed++;
-    note(`bot${b.i} reconnect`, e.message);
-    return;
+    sockets.delete(s);
+    return e.message;
   }
   const re = await ask(s, 'player:reconnect', { sessionToken: b.token });
   const synced = re?.ok ? await ask(s, 'escape:sync', { pin: b.pin }) : undefined;
-  if (synced?.ok) m.reconnectMs.push(t() - t0);
+  return synced?.ok ? null : JSON.stringify(re ?? 'lost');
+}
+
+/** A planned drop: the bot's socket closed, then back after half a second. */
+async function reconnect(b) {
+  if (b.recovering) return;
+  b.socket.disconnect();
+  sockets.delete(b.socket);
+  await sleep(500);
+  const t0 = t();
+  const why = await rejoin(b);
+  if (why === null) m.reconnectMs.push(t() - t0);
   else {
     m.reconnectFailed++;
-    note(`bot${b.i} reconnect`, re ?? 'lost');
+    note(`bot${b.i} reconnect`, why);
   }
 }
 
-const done = (b) =>
-  b.finale ||
-  b.state?.phase === 'finale' ||
-  b.state?.team?.escaped ||
-  b.state?.team?.timedOut ||
-  stopAt < Date.now();
+/** What of the team must survive a restart: its stage, the locks solved there, its finish. */
+const progressOf = (st) =>
+  st?.team && {
+    stage: st.team.stageIndex,
+    solved: st.view?.locks.filter((l) => l.solved).length ?? 0,
+    out: !!(st.team.escaped || st.team.timedOut),
+  };
+
+/** An unplanned drop (the server went away): retry each second (and a jitter) for 90 s. */
+async function recover(b) {
+  b.recovering = true;
+  const t0 = t();
+  m.dropped.push(t0);
+  const before = progressOf(b.state);
+  sockets.delete(b.socket);
+  let why = 'not tried';
+  while (!ending && t() - t0 < 90_000) {
+    await sleep(1000 + Math.random() * 500);
+    why = await rejoin(b);
+    if (why === null) break;
+  }
+  b.recovering = false;
+  if (why !== null) {
+    if (!ending) {
+      m.recoverFailed++;
+      note(`bot${b.i} recover`, why);
+    }
+    return;
+  }
+  m.recoverMs.push(t() - t0);
+  m.recoveredAt.push(t());
+  const after = progressOf(b.state);
+  if (
+    before &&
+    (!after ||
+      after.stage < before.stage ||
+      (after.stage === before.stage && after.solved < before.solved) ||
+      (before.out && !after.out))
+  ) {
+    m.stateLost.push({ bot: b.i, before, after });
+  }
+}
+
+/** The run is over for everyone (the finale, or the tool's stop). */
+const over = (b) => ending || b.finale || b.state?.phase === 'finale' || stopAt < Date.now();
+/** The bot's team is out (escaped or timed out). */
+const out = (b) => !!(b.state?.team?.escaped || b.state?.team?.timedOut);
 let stopAt = Infinity;
 
 /** The bot's plan, one action per think time, until its team is out or the run ends. */
@@ -345,13 +465,23 @@ async function play(b) {
   for (const a of b.plan) {
     // A random first wait spreads the bots' first moves over a think time.
     await sleep(a.thinkMs);
-    if (done(b)) {
-      m.doneAt.push(t());
+    if (over(b) || (!SUSTAIN && out(b))) {
+      if (!b.doneAt) m.doneAt.push((b.doneAt = t()));
       return;
     }
-    if (!b.socket.connected) continue;
+    if (!b.socket.connected || b.recovering) continue;
     if (a.kind === 'drop') {
       await reconnect(b);
+      continue;
+    }
+    if (out(b)) {
+      // --sustain: a finished phone still reloads (a resync) now and then.
+      if (!b.doneAt) m.doneAt.push((b.doneAt = t()));
+      const t0 = t();
+      const ack = await ask(b.socket, 'escape:sync', { pin: b.pin });
+      if (ack?.ok) m.sustainSyncMs.push(t() - t0);
+      else if (!ack) m.lost++;
+      else tally('sync', ack);
       continue;
     }
     const st = b.state;
@@ -387,7 +517,11 @@ async function play(b) {
 
 function tally(intended, ack, stale = false) {
   if (!ack) return;
-  const c = stale ? 'expected' : classifyAck(intended, ack);
+  const c = stale
+    ? 'expected'
+    : intended === 'sync'
+      ? 'unexpected'
+      : classifyAck(intended, ack, { ending: ending || stopAt < Date.now() });
   if (c === 'ok') m.acks.ok++;
   else count(m.acks[c], `${intended}:${ack.ok ? ack.outcome : ack.reason}`);
 }
@@ -412,7 +546,22 @@ function machine() {
     memGb: Math.round(os.totalmem() / 1024 ** 3),
     node: process.version,
     commit,
+    // The backend measured: --backend-commit, else this checkout (marked when it has changes).
+    backendCommit: args['backend-commit'] ?? (commit && dirty() ? `${commit}+changes` : commit),
   };
+}
+
+function dirty() {
+  try {
+    return (
+      execFileSync('git', ['status', '--porcelain', '--', '../../apps/backend', '../../packages'], {
+        cwd: dirname(fileURLToPath(import.meta.url)),
+        encoding: 'utf8',
+      }).trim() !== ''
+    );
+  } catch {
+    return false;
+  }
 }
 
 /** Intervals between consecutive arrivals at or after `from`, ms. */
@@ -431,7 +580,7 @@ const spread = (map) => {
 async function main() {
   const startedAt = new Date().toISOString();
   log(`${args.scenario}: ${PLAYERS} players on ${URL_BASE}`);
-  const tookSeat = await claimSeat();
+  tookSeat = await claimSeat();
   const tpl = await sampleTemplate(TEMPLATE);
   const content = tpl.content;
   const redis = args.redis ? new Redis(args.redis, { lazyConnect: true }) : null;
@@ -439,19 +588,27 @@ async function main() {
   const stopSampler = sampler();
   const stopReady = readyPoller();
 
-  // Host: creates the room, syncs (host room), counts its frames.
-  const host = connect({ host: true });
-  host.onAny((event, ...payload) =>
-    m.hostFrames.push({ at: t(), event, bytes: JSON.stringify(payload).length }),
-  );
-  host.on('exception', (e) => note('host exception', e));
+  // Host: creates the room, syncs (host room), counts its frames (bytes: the
+  // payload's JSON length, an approximation of the frame).
   let hostFinale = false;
-  host.on('escape:finale', () => (hostFinale = true));
+  const hostSocket = () => {
+    const s = connect({ host: true });
+    s.onAny((event, ...payload) =>
+      m.hostFrames.push({ at: t(), event, bytes: JSON.stringify(payload).length }),
+    );
+    s.on('exception', (e) => note('host exception', e));
+    s.on('escape:finale', () => (hostFinale = true));
+    return s;
+  };
+  const host = hostSocket();
   await connected(host);
   const createdAt = Date.now();
   const joinEstimateMs = (PLAYERS / JOIN_RATE) * 1000 * 1.2;
   const startsAt = createdAt + Math.max(RACE_LEAD_MS + 5_000, joinEstimateMs + 15_000);
-  const durationMin = Math.max(5, Math.ceil(DURATION_MS / 60_000) + 5);
+  // --sustain: the run ends at time-up; otherwise by escapes or the host's end, never by time.
+  const durationMin = SUSTAIN
+    ? Math.max(5, Math.round(DURATION_MS / 60_000))
+    : Math.max(5, Math.ceil(DURATION_MS / 60_000) + 5);
   const created = await ask(host, 'escape:create', {
     templateId: tpl.id,
     durationMin,
@@ -466,22 +623,79 @@ async function main() {
   const { pin } = created;
   log(`room ${pin}${RACE ? `, starts at ${new Date(startsAt).toISOString()}` : ''}`);
   await ask(host, 'escape:sync', { pin });
+  const boardAt = [];
+  m.side = {};
+  /** A host, screen or board socket that comes back on its own when the server drops it. */
+  const keep = async (name, make, enter) => {
+    const s = make();
+    await connected(s);
+    await enter(s);
+    s.on('disconnect', (reason) => {
+      if (reason === 'io client disconnect' || ending) return;
+      const t0 = t();
+      void (async () => {
+        while (!ending && t() - t0 < 90_000) {
+          await sleep(1000 + Math.random() * 500);
+          const again = make();
+          try {
+            await connected(again);
+            await enter(again);
+            m.side[name] = Math.round(t() - t0);
+            again.on(
+              'disconnect',
+              (r) => r !== 'io client disconnect' && !ending && note(name, 'dropped again'),
+            );
+            return;
+          } catch {
+            sockets.delete(again);
+          }
+        }
+        note(name, 'not back within 90 s');
+      })();
+    });
+    return s;
+  };
+  // The host's socket now: after a restart, the one that came back.
+  let hostNow = host;
+  await keep(
+    'host',
+    () => (hostNow === host && host.connected ? host : (hostNow = hostSocket())),
+    async (s) => {
+      if (s === host) return;
+      // Back as the room's host (host:attach), then its escape state.
+      await must(s, 'host:attach', { pin });
+      await must(s, 'escape:sync', { pin });
+    },
+  );
 
   // The big screen (the host's own projection) and, in a race, the public board.
-  const screen = connect({ host: true });
-  await connected(screen);
-  await ask(screen, 'spectator:join', { pin });
-  await ask(screen, 'escape:sync', { pin });
-  const boardAt = [];
+  const screen = await keep(
+    'screen',
+    () => {
+      const s = connect({ host: true });
+      if (!RACE) s.on('escape:board', () => boardAt.push(t()));
+      return s;
+    },
+    async (s) => {
+      await must(s, 'spectator:join', { pin });
+      await must(s, 'escape:sync', { pin });
+    },
+  );
   if (RACE) {
-    const board = connect();
-    await connected(board);
-    await ask(board, 'spectator:join', { pin, follow: true });
-    await ask(board, 'escape:sync', { pin });
-    board.on('escape:board', () => boardAt.push(t()));
-  } else {
-    screen.on('escape:board', () => boardAt.push(t()));
+    await keep(
+      'board',
+      () => {
+        const s = connect();
+        s.on('escape:board', () => boardAt.push(t()));
+        return s;
+      },
+      async (s) => {
+        await must(s, 'spectator:join', { pin, follow: true });
+        await must(s, 'escape:sync', { pin });
+      },
+    );
   }
+  void screen;
 
   // Joins: paced at --join-rate, or (--burst) 50 at once.
   const bots = Array.from({ length: PLAYERS }, (_, i) => newBot(i, pin, content));
@@ -490,7 +704,14 @@ async function main() {
   const formed = [];
   const joinOne = async (b) => {
     const leader = bots[b.i - (b.i % 3)];
-    if (!(await join(b))) {
+    try {
+      if (!(await join(b))) {
+        if (b === leader) b.setCode(null);
+        return;
+      }
+    } catch (e) {
+      // No connection: a refused join, never a crash of the run.
+      m.joinRefused.push(`connect: ${e.message}`);
       if (b === leader) b.setCode(null);
       return;
     }
@@ -530,25 +751,30 @@ async function main() {
   for (let k = 0; k < 60 && m.startAt.size < joined.length; k++) await sleep(500);
   const runT0 = m.startAt.size ? Math.min(...m.startAt.values()) : t();
   log(`${m.startAt.size}/${joined.length} phones running`);
+  const commandsAtRun = redis ? await redisCommands(redis) : null;
+  const submitsAtRun = m.submits;
 
-  // Play until every team is out or --duration-min, then the finale.
-  stopAt = Date.now() + DURATION_MS;
+  // Play until every team is out or --duration-min (with --sustain: time-up), then the finale.
+  stopAt = Date.now() + DURATION_MS + (SUSTAIN ? 30_000 : 0);
   const playing = Promise.all(joined.map(play));
   await Promise.race([playing, sleep(DURATION_MS + 60_000)]);
   const runT1 = t();
+  ending = true;
   if (!hostFinale) {
-    const ended = await ask(host, 'escape:end', { pin });
+    if (SUSTAIN) note('run', 'no finale at time-up: the host ends it');
+    const ended = await ask(hostNow, 'escape:end', { pin });
     if (!ended?.ok) note('host end', ended ?? 'lost');
   }
   for (let k = 0; k < 40 && m.finaleAt.size < joined.length; k++) await sleep(250);
   const commandsAfter = redis ? await redisCommands(redis) : null;
   stopReady();
   const server = stopSampler();
-  host.emit('host:end', { pin });
+  hostNow.emit('host:end', { pin });
   await sleep(300);
   for (const s of sockets) s.disconnect();
   if (redis) redis.disconnect();
   if (tookSeat) await releaseSeat();
+  tookSeat = false;
 
   // ── Summary ──
   const runS = (runT1 - runT0) / 1000;
@@ -565,20 +791,32 @@ async function main() {
     e.perS = +(e.frames / runS).toFixed(2);
     e.kbPerS = +(e.bytes / 1024 / runS).toFixed(1);
   }
-  let redisPerSubmit = null;
-  let redisTop = null;
-  if (commandsBefore) {
+  // Redis commands per submit: from the run's start (play only), and, as in the
+  // first baseline, from the first join (joins and syncs included).
+  const redisDelta = (before) => {
     const delta = Object.entries(commandsAfter)
-      .map(([k, v]) => [k, v - (commandsBefore[k] ?? 0)])
+      .map(([k, v]) => [k, v - (before[k] ?? 0)])
       .filter(([, v]) => v > 0)
       .sort((a, b) => b[1] - a[1]);
-    const total = delta.reduce((s, [, v]) => s + v, 0);
-    redisPerSubmit = m.submits ? Math.round(total / m.submits) : null;
-    redisTop = Object.fromEntries(delta.slice(0, 10));
+    return { delta, total: delta.reduce((s, [, v]) => s + v, 0) };
+  };
+  let redisPerSubmit = null;
+  let redisPerSubmitWithJoins = null;
+  let redisTop = null;
+  if (commandsBefore) {
+    const run = redisDelta(commandsAtRun);
+    const runSubmits = m.submits - submitsAtRun;
+    redisPerSubmit = runSubmits ? Math.round(run.total / runSubmits) : null;
+    redisTop = Object.fromEntries(run.delta.slice(0, 10));
+    const all = redisDelta(commandsBefore);
+    redisPerSubmitWithJoins = m.submits ? Math.round(all.total / m.submits) : null;
   }
+  const firstDrop = m.dropped.length ? Math.min(...m.dropped) : null;
   const unexpected = Object.values(m.acks.unexpected).reduce((s, n) => s + n, 0);
   const summary = {
     race: RACE,
+    sustain: SUSTAIN,
+    players: PLAYERS,
     joined: joined.length,
     joinRefused: m.joinRefused.length,
     joinS: +joinS.toFixed(1),
@@ -611,7 +849,30 @@ async function main() {
     cpuPct: server?.cpuPct ?? null,
     rssMb: server?.rssMb ?? null,
     redisCommandsPerSubmit: redisPerSubmit,
+    redisCommandsPerSubmitWithJoins: redisPerSubmitWithJoins,
     redisTopCommands: redisTop,
+    sustainSyncAckMs: stats(m.sustainSyncMs),
+    // A backend restart: phones the server dropped, and their way back.
+    restart:
+      firstDrop === null
+        ? null
+        : {
+            dropped: m.dropped.length,
+            recovered: m.recoverMs.length,
+            recoverFailed: m.recoverFailed,
+            recoverMs: stats(m.recoverMs),
+            // From the first drop to the last phone back.
+            fullRecoveryMs: m.recoveredAt.length
+              ? Math.round(Math.max(...m.recoveredAt) - firstDrop)
+              : null,
+            host: m.side,
+            stateLost: m.stateLost,
+            timerHintsAfter: m.timerHintsAt.filter((a) => a > firstDrop).length,
+            atRunS: Math.round((firstDrop - runT0) / 1000),
+          },
+    finaleAtRunS: m.finaleAt.size
+      ? Math.round((Math.min(...m.finaleAt.values()) - runT0) / 1000)
+      : null,
     errors: m.errors,
   };
   const failed = args.criteria ? criteriaFailed(summary, args.criteria) : [];
@@ -621,7 +882,11 @@ async function main() {
       machine: machine(),
       cpuCap: args['cpu-cap'],
       scenario: args.scenario,
-      options: { ...args, 'host-cookie': args['host-cookie'] ? '(set)' : undefined },
+      options: Object.fromEntries(
+        Object.entries({ ...args, 'host-cookie': args['host-cookie'] ? '(set)' : undefined }).map(
+          ([k, v]) => [k, maskUrl(v)],
+        ),
+      ),
       template: TEMPLATE,
     },
     summary,
@@ -651,12 +916,30 @@ function report(s, failed) {
     ['start spread ms', `${p(s.startSpreadMs)} (${s.phonesStarted} phones)`],
     ['finale spread ms', `${p(s.finaleSpreadMs)} (${s.phonesFinale} phones)`],
     ['board interval ms', p(s.boardIntervalMs)],
-    ['host frames/s, KB/s', `${s.hostFramesPerS}, ${s.hostKbPerS}`],
+    ['host frames/s, KB/s (approx.)', `${s.hostFramesPerS}, ${s.hostKbPerS}`],
     ...Object.entries(s.hostPerEvent).map(([e, v]) => [`  ${e}`, `${v.perS}/s, ${v.kbPerS} KB/s`]),
     ['/health/ready ms', `${p(s.readyMs)} (failed ${s.readyFailed})`],
     ['backend CPU %', p(s.cpuPct)],
     ['backend RSS MB', s.rssMb ? `${s.rssMb.start} → max ${s.rssMb.max}` : '—'],
-    ['Redis commands/submit', String(s.redisCommandsPerSubmit ?? '—')],
+    [
+      'Redis commands/submit',
+      `${s.redisCommandsPerSubmit ?? '—'} in play (${s.redisCommandsPerSubmitWithJoins ?? '—'} with joins)`,
+    ],
+    ...(s.restart
+      ? [
+          [
+            'restart: phones back',
+            `${s.restart.recovered}/${s.restart.dropped} (failed ${s.restart.recoverFailed}), full in ${s.restart.fullRecoveryMs} ms`,
+          ],
+          ['restart: recover ms', p(s.restart.recoverMs)],
+          ['restart: host, screen, board ms', JSON.stringify(s.restart.host)],
+          [
+            'restart: state lost, timer hints after',
+            `${s.restart.stateLost.length}, ${s.restart.timerHintsAfter}`,
+          ],
+        ]
+      : []),
+    ['finale at run s', String(s.finaleAtRunS ?? '—')],
   ];
   const w = Math.max(...rows.map(([k]) => k.length));
   for (const [k, v] of rows) console.log(`${k.padEnd(w)}  ${v}`);
@@ -670,9 +953,11 @@ function report(s, failed) {
 
 main().then(
   (code) => process.exit(code),
-  (err) => {
+  async (err) => {
     console.error(err);
+    ending = true;
     for (const s of sockets) s.disconnect();
+    if (tookSeat) await releaseSeat().catch(() => undefined);
     process.exit(2);
   },
 );

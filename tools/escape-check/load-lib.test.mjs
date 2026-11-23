@@ -5,8 +5,11 @@ import {
   answerFor,
   botPlan,
   classifyAck,
+  cpuBetween,
   criteriaFailed,
+  maskUrl,
   parseDockerStats,
+  parseProcStat,
   parsePs,
   pct,
   stats,
@@ -145,6 +148,7 @@ test('wrongFor: an input of the right shape that does not open the lock', () => 
   );
   assert.equal(part.roleId, 'lookout');
   assert.notEqual(part.input, 'midnight');
+  assert.match(part.input, /^\d+$/);
   assert.equal(wrongFor({ id: 'door', kind: 'code', solved: true }, content), null);
 });
 
@@ -152,6 +156,26 @@ test('parsePs: ps -o %cpu=,rss= (macOS and Linux)', () => {
   assert.deepEqual(parsePs('  12.5 524288\n'), { cpu: 12.5, rssMb: 512 });
   assert.deepEqual(parsePs('103,4  1048576'), { cpu: 103.4, rssMb: 1024 });
   assert.equal(parsePs(''), null);
+});
+
+test('parseProcStat and cpuBetween: Linux /proc/<pid>/stat ticks, a delta per second', () => {
+  // Fields 14/15 (utime, stime) and 24 (rss); a command name with spaces and a ')'.
+  const line = (u, s) =>
+    `4242 (node (main) x) S 1 4242 4242 0 -1 4194304 100 0 0 0 ${u} ${s} 0 0 20 0 11 0 500 1000000 131072 18446744073709551615`;
+  assert.deepEqual(parseProcStat(line(300, 50)), { ticks: 350, rssPages: 131072 });
+  assert.equal(parseProcStat('garbage'), null);
+  const a = parseProcStat(line(300, 50));
+  const b = parseProcStat(line(340, 60));
+  // 50 ticks in 1 s at 100 ticks/s: half a core.
+  assert.equal(cpuBetween(a, b, 1000), 50);
+  assert.equal(cpuBetween(a, b, 2000, 100), 25);
+});
+
+test('maskUrl: no user or password in the output', () => {
+  assert.equal(maskUrl('redis://:secret@redis.example:6379'), 'redis://***@redis.example:6379');
+  assert.equal(maskUrl('postgres://u:p@db/x'), 'postgres://***@db/x');
+  assert.equal(maskUrl('redis://localhost:16379'), 'redis://localhost:16379');
+  assert.equal(maskUrl(undefined), undefined);
 });
 
 test('parseDockerStats: docker stats --format "{{.CPUPerc}};{{.MemUsage}}"', () => {
@@ -171,8 +195,13 @@ test('classifyAck: expected refusals apart from unexpected ones', () => {
   assert.equal(classifyAck('right', { ok: true, outcome: 'wrong' }), 'unexpected');
   assert.equal(classifyAck('wrong', { ok: true, outcome: 'lock-solved' }), 'unexpected');
   // A teammate was quicker, the team waits, or its time is up: the game, not a fault.
-  for (const reason of ['rate-limited', 'already-solved', 'escaped', 'time-up', 'not-running']) {
+  for (const reason of ['rate-limited', 'already-solved', 'escaped', 'time-up']) {
     assert.equal(classifyAck('right', { ok: false, reason }), 'expected', reason);
+  }
+  // Not running or paused: expected only while the run is being ended.
+  for (const reason of ['not-running', 'paused']) {
+    assert.equal(classifyAck('right', { ok: false, reason }), 'unexpected', reason);
+    assert.equal(classifyAck('right', { ok: false, reason }, { ending: true }), 'expected', reason);
   }
   assert.equal(classifyAck('hint', { ok: true }), 'ok');
   assert.equal(classifyAck('hint', { ok: false, reason: 'no-hint' }), 'expected');
@@ -202,6 +231,51 @@ test('criteriaFailed: the §1.2 thresholds, local and UK', () => {
     'submit ack p95 ≤ 100 ms',
     'submit ack p99 ≤ 250 ms',
   ]);
+  // A broken run fails, whatever its timings.
+  const run = { players: 10, joined: 10, phonesStarted: 10, phonesFinale: 10, submits: 5 };
+  assert.deepEqual(
+    criteriaFailed({ ...good, ...run, reconnectFailed: 0, readyFailed: 0 }, 'local'),
+    [],
+  );
+  assert.deepEqual(
+    criteriaFailed(
+      {
+        ...good,
+        players: 10,
+        joined: 9,
+        phonesStarted: 8,
+        phonesFinale: 7,
+        reconnectFailed: 1,
+        readyFailed: 2,
+        submits: 0,
+      },
+      'local',
+    ).sort(),
+    [
+      '/health/ready failed = 0',
+      'every phone got the finale',
+      'every phone started',
+      'every player joined',
+      'reconnects failed = 0',
+      'submits > 0',
+    ],
+  );
+  // A restart run: health checks may fail meanwhile; every phone back within 30 s, nothing lost.
+  const restart = {
+    dropped: 10,
+    recovered: 10,
+    recoverFailed: 0,
+    stateLost: [],
+    fullRecoveryMs: 9000,
+  };
+  assert.deepEqual(criteriaFailed({ ...good, readyFailed: 3, restart }, 'local'), []);
+  assert.deepEqual(
+    criteriaFailed(
+      { ...good, restart: { ...restart, recovered: 9, stateLost: [{}], fullRecoveryMs: 31_000 } },
+      'local',
+    ).sort(),
+    ['every dropped phone back', 'full recovery ≤ 30 s', 'no team state lost'],
+  );
   // UK: p95 ≤ 300 ms, no p99 limit.
   assert.deepEqual(criteriaFailed({ ...good, submitAckMs: { p95: 150, p99: 900 } }, 'uk'), []);
   // A hosted event has no board interval or host frame limit, and missing measures are skipped.
