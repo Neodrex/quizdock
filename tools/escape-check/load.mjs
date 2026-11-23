@@ -169,6 +169,8 @@ const m = {
   recoverFailed: 0,
   stateLost: [],
   sustainSyncMs: [],
+  // Each submit's send time and ack (ms): the restart block splits them around the drop.
+  submitAt: [],
   timerHintsAt: [],
 };
 /** Set once the run is being ended (time-up, the host's end, or the tool's stop). */
@@ -516,6 +518,7 @@ async function play(b) {
     if (!ack) m.lost++;
     else {
       m.submitMs.push(t() - t0);
+      m.submitAt.push([t0, t() - t0]);
       (m.submitBy[ack.ok ? ack.outcome : ack.reason] ??= []).push(t() - t0);
     }
     // A teammate cleared the stage while this answer was on its way: the lock is gone.
@@ -877,6 +880,16 @@ async function main() {
             host: m.side,
             stateLost: m.stateLost,
             timerHintsAfter: m.timerHintsAt.filter((a) => a > firstDrop).length,
+            // Submit acks before the drop, in the minute after it, and after that.
+            submitAckMs: {
+              before: stats(m.submitAt.filter(([a]) => a < firstDrop).map(([, ms]) => ms)),
+              firstMinute: stats(
+                m.submitAt
+                  .filter(([a]) => a >= firstDrop && a < firstDrop + 60_000)
+                  .map(([, ms]) => ms),
+              ),
+              later: stats(m.submitAt.filter(([a]) => a >= firstDrop + 60_000).map(([, ms]) => ms)),
+            },
             atRunS: Math.round((firstDrop - runT0) / 1000),
           },
     finaleAtRunS: m.finaleAt.size
