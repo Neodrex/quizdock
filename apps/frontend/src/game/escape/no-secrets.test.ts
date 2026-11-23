@@ -30,6 +30,8 @@ describe('the phone never names the host or board payloads', () => {
   const bigScreen = resolve(src, 'game/escape/screen');
   const scanned = [
     // The host console's files (host/) are the host's: they get these payloads.
+    // The player page reaches host/ only through `usePhoneHost` (group play's phone
+    // host), which keeps counts only (`phoneHostRoomOf`): no team's details.
     // The big screen's (screen/) get the board: their own guard is in screen/screen-sources.test.ts.
     ...files(resolve(src, 'game/escape')).filter(
       (p) => !p.startsWith(host) && !p.startsWith(bigScreen),
