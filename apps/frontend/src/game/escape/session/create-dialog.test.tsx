@@ -112,6 +112,18 @@ describe('CreateSessionDialog', () => {
     expect(create()).toBeDisabled();
   });
 
+  it('hosted: the licence list did not load: says so with a retry, not "No licence"', async () => {
+    mockApi([{ path: '/escape-licences', status: 500, body: { message: 'boom' } }]);
+    dialog(roles);
+    expect(await screen.findByText('The room could not be opened. Try again.')).toBeInTheDocument();
+    expect(screen.queryByText('No licence available')).toBeNull();
+    expect(create()).toBeDisabled();
+    mockApi([{ path: '/escape-licences', body: [acme] }]);
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('combobox', { name: 'Licence' })).toBeInTheDocument();
+    expect(create()).toBeEnabled();
+  });
+
   it('race: solo or teams, started by the host', async () => {
     mockApi([{ path: '/escape-licences', body: [] }]);
     const onCreate = dialog();

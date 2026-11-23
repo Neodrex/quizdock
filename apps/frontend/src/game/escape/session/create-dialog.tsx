@@ -1,6 +1,7 @@
 import type { EscapeSessionType } from '@quiz-dock/contracts';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -175,6 +176,14 @@ export function CreateSessionDialog({
       {type === 'hosted' &&
         (list.isLoading ? (
           <p className="text-muted-foreground text-sm">{t('session.create.licenceLoading')}</p>
+        ) : list.isError && !list.data ? (
+          // The list did not load: that is no proof the host has no licence.
+          <div role="alert" className="flex flex-wrap items-center gap-2 text-sm font-medium">
+            <span>{t('session.create.failed')}</span>
+            <Button type="button" variant="outline" size="sm" onClick={() => void list.refetch()}>
+              {t('common:retry')}
+            </Button>
+          </div>
         ) : licences.length === 0 ? (
           <p className="text-sm font-medium">{t('session.create.noLicence')}</p>
         ) : (
