@@ -563,11 +563,17 @@ export function raceResultsOf(finale: EscapeFinale, pin: string, endedAt: number
 }
 
 /**
- * escape:look (M7 §1.9): a hosted event's brand as a theme, plus its name, logo
- * and intro. Never the licence's id, organisation or uses. Unbranded otherwise.
+ * escape:look (M7 §1.9): a hosted event's licence brand, or (M8) a Site race's
+ * channel brand, as a theme, plus its name, logo and intro. Never the licence's
+ * id, organisation or uses, nor the Site race id. Unbranded otherwise.
  */
 export function lookOf(session: EscapeSession | null): EscapeLook {
-  const brand = session?.type === 'hosted' ? session.licence?.brand : null;
+  const brand =
+    session?.type === 'hosted'
+      ? session.licence?.brand
+      : session?.type === 'race'
+        ? session.race?.brand
+        : null;
   if (!brand) return { theme: null, brand: null };
   return {
     theme: brandThemeOf(brand),

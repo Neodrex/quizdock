@@ -11,6 +11,11 @@ import {
   useLicences,
 } from './escape-harness';
 import { nextEvent } from '../game-harness';
+import { Logger } from '@nestjs/common';
+import { EscapeEngine } from '../../src/escape/escape.engine';
+import { SiteRaces } from '../../src/escape/races/site-races';
+import { brandThemeOf } from '../../src/escape/brand-theme';
+import { startSiteStub, swapPort } from './site-stub';
 
 const MIN = 60_000;
 const UNBRANDED: EscapeLook = { theme: null, brand: null };
@@ -86,6 +91,52 @@ export function brandTests(ctx: EscapeContext): void {
     expect(await looksOfSync(phone, r)).toEqual([UNBRANDED]);
     const { follow } = await extraScreens(ctx.h, r, race);
     expect(await looksOfSync(follow, r)).toEqual([UNBRANDED]);
+  });
+
+  it('a Site race wears its channel’s brand: console, phone, screens and the public board (M8)', async () => {
+    const site = await startSiteStub();
+    const undo = swapPort(
+      ctx.h.app.get(EscapeEngine),
+      'races',
+      new SiteRaces(site.client(), new Logger('SiteRaces')),
+    );
+    const channel = {
+      name: 'Channel 4',
+      logoUrl: 'https://cdn.example.com/c4.png',
+      accent: '#1d4ed8',
+      background: null,
+      baseTheme: 'classic' as const,
+      intro: 'Tonight’s race',
+    };
+    const RACE = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+    site.answers.set(`/api/live/races/${RACE}/claim`, {
+      ok: true,
+      race: { title: 'Friday', startsAt: Date.now() + 30 * MIN, format: 'solo', brand: channel },
+    });
+    site.answers.set(`/api/live/races/${RACE}/opened`, { ok: true });
+    try {
+      const host = ctx.h.connectHost();
+      const { pin } = await createAs(host, library, 'race', {
+        race: { format: 'solo', siteRaceId: RACE },
+      });
+      if (!pin) throw new Error('site race refused');
+      const { socket: phone } = await ctx.h.join(pin, 'Ann');
+      // `follow` is what the public /race/<PIN> board opens.
+      const { own, paired, follow } = await extraScreens(ctx.h, pin, host);
+      for (const socket of [host, phone, own, paired, follow]) {
+        const looks = await looksOfSync(socket, pin);
+        expect(looks).toEqual([
+          {
+            theme: brandThemeOf(channel),
+            brand: { name: 'Channel 4', logoUrl: channel.logoUrl, intro: channel.intro },
+          },
+        ]);
+        expect(JSON.stringify(looks)).not.toContain(RACE);
+      }
+    } finally {
+      undo();
+      await site.close();
+    }
   });
 
   it('a quiz room opened as a hosted event sends its look to everyone in it, no sync needed', async () => {

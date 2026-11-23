@@ -2,6 +2,7 @@ import { leaksIn, stringsIn } from '../../test/escape/leaks';
 import { type EscapeFinale, toolsOf } from '@quiz-dock/contracts';
 import type { EscapeRun, EscapeSession, EscapeSnapshot, TeamRecord } from './escape-live.types';
 import { ACME_LICENCE } from './licences/dev-licences';
+import type { LicenceBrand } from './licences/licence.port';
 import {
   announceOf,
   boardOf,
@@ -1045,5 +1046,45 @@ describe('lookOf (M7 §1.9)', () => {
     expect(lookOf({ ...hosted(acme), type: 'group' })).toEqual(none);
     expect(lookOf({ ...hosted(acme), type: 'race' })).toEqual(none);
     expect(lookOf(null)).toEqual(none);
+  });
+
+  const raceOf = (brand: LicenceBrand | null): EscapeSession => ({
+    type: 'race',
+    cap: 500,
+    race: { format: 'solo', startsAt: null, started: false, siteRaceId: 'site-1', brand },
+    licence: null,
+    licenceUsed: false,
+    phoneHostUserId: null,
+  });
+  const channel: LicenceBrand = {
+    name: 'Channel 4',
+    logoUrl: 'https://cdn.example.com/c4.png',
+    accent: '#1d4ed8',
+    background: '#ffff00',
+    baseTheme: 'classic',
+    intro: 'Tonight’s race',
+  };
+
+  it('a race with its channel’s brand (M8): the same look as a hosted event’s', () => {
+    const look = lookOf(raceOf(channel));
+    expect(look).toEqual({
+      theme: brandThemeOf(channel),
+      brand: { name: 'Channel 4', logoUrl: channel.logoUrl, intro: channel.intro },
+    });
+    expect(JSON.stringify(look)).not.toMatch(/site-1|siteRaceId/);
+    expect(lookOf(raceOf(null))).toEqual({ theme: null, brand: null });
+  });
+
+  it('a race brand gets the hosted contrast fallback', () => {
+    // A pale background with a pale accent fails a check: the background is dropped.
+    const pale = { ...channel, accent: '#fde68a', background: '#fffbeb' };
+    expect(lookOf(raceOf(pale)).theme).toEqual(brandThemeOf(pale));
+    expect(lookOf(raceOf(pale)).theme).toEqual(lookOf(hosted({ ...acme, brand: pale })).theme);
+  });
+
+  it('a race brand never shows in group play or a hosted room', () => {
+    const s = raceOf(channel);
+    expect(lookOf({ ...s, type: 'group' })).toEqual({ theme: null, brand: null });
+    expect(lookOf({ ...s, type: 'hosted', licence: null })).toEqual({ theme: null, brand: null });
   });
 });
