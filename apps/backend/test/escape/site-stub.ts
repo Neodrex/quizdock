@@ -58,7 +58,12 @@ export async function startSiteStub(): Promise<SiteStub> {
     stub.answers.clear();
     stub.down = false;
   };
-  stub.close = () => new Promise((resolve) => server.close(() => resolve()));
+  stub.close = () =>
+    new Promise((resolve) => {
+      server.close(() => resolve());
+      // fetch keeps its sockets alive: close them, or the server never closes.
+      server.closeAllConnections();
+    });
   return stub;
 }
 
