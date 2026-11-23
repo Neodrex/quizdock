@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import {
-  BUILTIN_THEMES,
   ESCAPE_SESSION_TYPES,
   type EscapeFinale,
   GameState,
@@ -11,6 +10,7 @@ import { gameKeys, type GameId } from '../game/game.keys';
 import { RedisService } from '../redis/redis.service';
 import type { EscapeRun, EscapeSession, EscapeSnapshot, TeamRecord } from './escape-live.types';
 import { ESCAPE_TTL_S, escapeKeys, escapeRoomKeys } from './escape.keys';
+import { licenceBrandSchema } from './licences/brand-schema';
 import type { Same, TeamState } from './escape.types';
 
 /** Parsed snapshots kept in memory, as GameService keeps quiz snapshots. */
@@ -118,16 +118,7 @@ const sessionSchema = z.object({
       participantCap: z.number().int(),
       expiresAt: ms,
       package: z.enum(['single', 'bundle', 'annual']),
-      brand: z
-        .object({
-          name: z.string(),
-          logoUrl: z.string().nullable(),
-          accent: z.string(),
-          background: z.string().nullable(),
-          baseTheme: z.enum(BUILTIN_THEMES),
-          intro: z.string().nullable(),
-        })
-        .nullable(),
+      brand: licenceBrandSchema.nullable(),
     })
     .nullable(),
   licenceUsed: z.boolean(),

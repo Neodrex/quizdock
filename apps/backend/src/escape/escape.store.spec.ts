@@ -2,9 +2,10 @@ import { type EscapeFinale, GameState } from '@quiz-dock/contracts';
 import { GAME_TTL_S, type GameId, gameKeys } from '../game/game.keys';
 import { RedisService } from '../redis/redis.service';
 import { onTestRedis } from '../../test/test-targets';
-import type { EscapeRun, EscapeSnapshot, TeamRecord } from './escape-live.types';
+import type { EscapeRun, EscapeSession, EscapeSnapshot, TeamRecord } from './escape-live.types';
+import { ACME_LICENCE } from './licences/dev-licences';
 import { newTeam } from './escape-rules';
-import { escapeKeys } from './escape.keys';
+import { escapeKeys, escapeRoomKeys } from './escape.keys';
 import { EscapeStore } from './escape.store';
 import { tpl } from './fixtures';
 
@@ -122,6 +123,34 @@ describe('EscapeStore (Redis)', () => {
     await expect(store.run(id)).rejects.toThrow();
     await redis.hset(escapeKeys.teams(id), 't1', JSON.stringify({ team: { id: 't1' } }));
     await expect(store.team(id, 't1')).rejects.toThrow();
+  });
+
+  it('checks a stored licence brand as every licence source must give it', async () => {
+    const pin = `9${String(n).padStart(5, '0')}`;
+    const session: EscapeSession = {
+      type: 'hosted',
+      cap: 8,
+      race: null,
+      licence: {
+        id: 'acme',
+        organisationId: 'acme-org',
+        participantCap: 8,
+        expiresAt: ACME_LICENCE.expiresAt,
+        package: 'bundle',
+        brand: ACME_LICENCE.brand,
+      },
+      licenceUsed: false,
+      phoneHostUserId: null,
+    };
+    await store.writeSession(pin, session);
+    expect(await store.session(pin)).toEqual(session);
+    const bad = { ...session.licence!, brand: { ...ACME_LICENCE.brand!, accent: 'red' } };
+    await store.writeSession(pin, { ...session, licence: bad });
+    await expect(store.session(pin)).rejects.toThrow();
+    const http = { ...ACME_LICENCE.brand!, logoUrl: 'http://example.com/a.png' };
+    await store.writeSession(pin, { ...session, licence: { ...bad, brand: http } });
+    await expect(store.session(pin)).rejects.toThrow();
+    await redis.del(escapeRoomKeys.session(pin));
   });
 
   it('gives every key it writes the game TTL', async () => {

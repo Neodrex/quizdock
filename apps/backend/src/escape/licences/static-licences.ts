@@ -1,5 +1,5 @@
-import { BUILTIN_THEMES, HEX_COLOR } from '@quiz-dock/contracts';
 import { z } from 'zod';
+import { licenceBrandSchema } from './brand-schema';
 import type {
   Licence,
   LicenceCheck,
@@ -13,27 +13,6 @@ import type {
 export type StaticLicence = Licence & { hosts: string[] };
 
 const ms = z.number().int().nonnegative();
-const hex = z.string().regex(HEX_COLOR);
-
-/** https, or a localhost origin: the static source serves development too. */
-const logoUrl = z.string().refine((v) => {
-  try {
-    const url = new URL(v);
-    return url.protocol === 'https:' || (url.protocol === 'http:' && url.hostname === 'localhost');
-  } catch {
-    return false;
-  }
-}, 'an https URL (or http://localhost)');
-
-const brandSchema = z.object({
-  name: z.string().trim().min(1).max(80),
-  logoUrl: logoUrl.nullable(),
-  accent: hex,
-  background: hex.nullable(),
-  baseTheme: z.enum(BUILTIN_THEMES),
-  intro: z.string().max(280).nullable(),
-});
-
 const licenceSchema = z.object({
   id: z.string().min(1).max(64),
   organisationId: z.string().min(1).max(64),
@@ -42,7 +21,7 @@ const licenceSchema = z.object({
   validFrom: ms.nullable(),
   expiresAt: ms,
   eventsLeft: z.number().int().nonnegative().nullable(),
-  brand: brandSchema.nullable(),
+  brand: licenceBrandSchema.nullable(),
   hosts: z.array(z.string().min(1)).min(1),
 });
 
