@@ -561,7 +561,11 @@
       "joinGo": "Unirse",
       "share": "Comparte este código",
       "codeLabel": "Código del equipo: {{letters}}",
-      "failed": "No ha funcionado. Inténtalo de nuevo."
+      "failed": "No ha funcionado. Inténtalo de nuevo.",
+      "leave": "Salir del equipo",
+      "leaveTitle": "¿Salir de tu equipo?",
+      "leaveText": "Correrás en solitario, o puedes crear otro equipo o unirte a otro. Si eres el último, el equipo y su código desaparecen.",
+      "leaveConfirm": "Salir"
     },
     "finale": {
       "you": "Tú: puesto {{place}} de {{total}}",

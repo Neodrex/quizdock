@@ -533,7 +533,11 @@
       "joinGo": "加入",
       "share": "分享此代碼",
       "codeLabel": "隊伍代碼：{{letters}}",
-      "failed": "操作未成功，請重試。"
+      "failed": "操作未成功，請重試。",
+      "leave": "退出隊伍",
+      "leaveTitle": "退出你的隊伍？",
+      "leaveText": "你將單人參賽，也可以建立或加入另一支隊伍。如果你是最後一名成員，隊伍及其代碼將被刪除。",
+      "leaveConfirm": "退出"
     },
     "finale": {
       "you": "你：第 {{place}} 名（共 {{total}} 隊）",

@@ -561,7 +561,11 @@
       "joinGo": "Rejoindre",
       "share": "Partagez ce code",
       "codeLabel": "Code d’équipe : {{letters}}",
-      "failed": "Cela n’a pas marché. Réessayez."
+      "failed": "Cela n’a pas marché. Réessayez.",
+      "leave": "Quitter l’équipe",
+      "leaveTitle": "Quitter votre équipe ?",
+      "leaveText": "Vous ferez la course en solo, ou vous pourrez créer une autre équipe ou en rejoindre une. Si vous êtes le dernier, l’équipe et son code disparaissent.",
+      "leaveConfirm": "Quitter"
     },
     "finale": {
       "you": "Vous : {{place}}ᵉ sur {{total}}",

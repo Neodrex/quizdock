@@ -561,7 +561,11 @@
       "joinGo": "Unisciti",
       "share": "Condividi questo codice",
       "codeLabel": "Codice squadra: {{letters}}",
-      "failed": "Non ha funzionato. Riprova."
+      "failed": "Non ha funzionato. Riprova.",
+      "leave": "Lascia la squadra",
+      "leaveTitle": "Lasciare la tua squadra?",
+      "leaveText": "Gareggerai da solo, oppure potrai creare un’altra squadra o unirti a una. Se sei l’ultimo, la squadra e il suo codice spariscono.",
+      "leaveConfirm": "Lascia"
     },
     "finale": {
       "you": "Tu: {{place}}° su {{total}}",

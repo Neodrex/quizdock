@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Avatar } from '../avatar';
 import { loadPlayerSession } from '../game-client';
 import { RaceCountdown } from './session/race-countdown';
-import { RaceTeamCode, RaceTeamPicker } from './session/race-team-picker';
+import { RaceLeaveTeam, RaceTeamCode, RaceTeamPicker } from './session/race-team-picker';
 
 type Team = NonNullable<EscapePlayerState['team']>;
 
@@ -16,7 +16,8 @@ const noTeamRace = () => Promise.reject(new Error(''));
  * Before the run, and whenever the phone has no team: who the player plays with.
  * Auto formation waits for the host; self formation lists the teams to pick from.
  * A race (M7) counts down to its scheduled start; a solo race says the player races
- * alone, and a team race offers solo, a new team or a team's code.
+ * alone, and a team race offers solo, a new team or a team's code; a player in a
+ * team may leave it before the start (M8).
  */
 export function EscapeLobby({
   state,
@@ -24,6 +25,7 @@ export function EscapeLobby({
   chooseTeam,
   newTeam = noTeamRace,
   joinTeam = noTeamRace,
+  leaveTeam = noTeamRace,
 }: {
   state: EscapePlayerState;
   me: string | null;
@@ -32,6 +34,8 @@ export function EscapeLobby({
   /** A team race: start a team, or join one by code. Reject with the refusal's text. */
   newTeam?: (name: string) => Promise<unknown>;
   joinTeam?: (code: string) => Promise<unknown>;
+  /** A team race, before the start: leave the team and race solo. */
+  leaveTeam?: () => Promise<unknown>;
 }) {
   const { t } = useTranslation('escape');
   const race = state.session?.type === 'race' ? state.session : null;
@@ -54,6 +58,7 @@ export function EscapeLobby({
           <>
             <TeamCard team={state.team} me={me} />
             {state.team.code ? <RaceTeamCode code={state.team.code} /> : null}
+            {state.phase === 'forming' ? <RaceLeaveTeam leaveTeam={leaveTeam} /> : null}
           </>
         ) : (
           <RaceTeamPicker

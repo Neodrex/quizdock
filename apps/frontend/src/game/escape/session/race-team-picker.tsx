@@ -1,7 +1,8 @@
-import { LogIn, User, UserPlus } from 'lucide-react';
+import { LogIn, LogOut, User, UserPlus } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
@@ -205,6 +206,65 @@ export function RaceTeamCode({ code }: { code: string }) {
       >
         {code}
       </span>
+    </div>
+  );
+}
+
+/**
+ * M8: a team race's player leaves its team before the start, after a confirm,
+ * and races solo (or starts or joins another team). A team left empty is gone
+ * with its code. A refusal (the race has started) shows its text.
+ */
+export function RaceLeaveTeam({ leaveTeam }: { leaveTeam: () => Promise<unknown> }) {
+  const { t } = useTranslation('escape');
+  const [asking, setAsking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+
+  const leave = async () => {
+    setAsking(false);
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setError(null);
+    try {
+      await leaveTeam();
+    } catch (e) {
+      setError((e as Error).message || t('race.phone.failed'));
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="lg"
+        className="min-h-12"
+        disabled={busy}
+        aria-busy={busy}
+        onClick={() => setAsking(true)}
+      >
+        <LogOut aria-hidden className="size-5" />
+        {t('race.phone.leave')}
+      </Button>
+      {error && (
+        <p role="alert" className="text-destructive text-sm">
+          {error}
+        </p>
+      )}
+      <ConfirmDialog
+        open={asking}
+        title={t('race.phone.leaveTitle')}
+        description={t('race.phone.leaveText')}
+        confirmLabel={t('race.phone.leaveConfirm')}
+        onConfirm={() => void leave()}
+        onCancel={() => setAsking(false)}
+      />
     </div>
   );
 }

@@ -94,6 +94,7 @@ export function EscapePlayer({
         chooseTeam={escape.chooseTeam}
         newTeam={escape.newTeam}
         joinTeam={escape.joinTeam}
+        leaveTeam={escape.leaveTeam}
       />
     );
   } else if (team.escaped) {

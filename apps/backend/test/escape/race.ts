@@ -282,6 +282,87 @@ export function raceSessionTests(ctx: EscapeContext): void {
     );
   });
 
+  // ── Leaving a team (M8 Task 8.16) ──
+
+  type NewTeam = { ok: boolean; teamId: string; code: string };
+
+  it('a player leaves its team while forming, races solo at the start, and its empty team is gone', async () => {
+    const { host, pin } = await raceRoom('teams');
+    const [a, b, c] = await Promise.all(
+      ['Ann', 'Ben', 'Cat'].map((n) => joinAndSync(ctx.h, pin, n)),
+    );
+    const owls = (await a.socket.emitWithAck('escape:new-team', { pin, name: 'Owls' })) as NewTeam;
+    expect(await b.socket.emitWithAck('escape:join-team', { pin, code: owls.code })).toMatchObject({
+      ok: true,
+    });
+    const bats = (await c.socket.emitWithAck('escape:new-team', { pin, name: 'Bats' })) as NewTeam;
+
+    // B leaves Owls: back to no team; A stays in Owls.
+    const free = stateWhere(b.socket, (s) => s.team === null);
+    expect(await b.socket.emitWithAck('escape:leave-team', { pin })).toEqual({ ok: true });
+    await free;
+    await eventually(async () => expect(a.last().team?.members).toHaveLength(1));
+
+    // C leaves Bats, its only member: the team and its code are gone.
+    const gone = nextEvent<EscapeHostState>(host, 'escape:host', {
+      where: (s) => !s.teams.some((t) => t.id === bats.teamId),
+    });
+    expect(await c.socket.emitWithAck('escape:leave-team', { pin })).toEqual({ ok: true });
+    await gone;
+    expect(await b.socket.emitWithAck('escape:join-team', { pin, code: bats.code })).toMatchObject(
+      refused('escape.team_code_unknown'),
+    );
+    // Leaving again, with no team, changes nothing.
+    expect(await c.socket.emitWithAck('escape:leave-team', { pin })).toEqual({ ok: true });
+
+    // At the start B and C race solo, each in a team of one; A in Owls.
+    const running = [a, b, c].map((p) => stateWhere(p.socket, (s) => s.phase === 'running'));
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    const [ra, rb, rc] = await Promise.all(running);
+    expect(ra.team?.id).toBe(owls.teamId);
+    for (const r of [rb, rc]) {
+      expect(r.team?.members).toHaveLength(1);
+      expect(r.team?.id).not.toBe(owls.teamId);
+    }
+    expect(rb.team?.id).not.toBe(rc.team?.id);
+  });
+
+  it('after leaving, a player can join another team by its code', async () => {
+    const { pin } = await raceRoom('teams');
+    const [a, b] = await Promise.all(['Ann', 'Ben'].map((n) => joinAndSync(ctx.h, pin, n)));
+    const owls = (await a.socket.emitWithAck('escape:new-team', { pin, name: 'Owls' })) as NewTeam;
+    await b.socket.emitWithAck('escape:new-team', { pin, name: 'Bats' });
+    expect(await b.socket.emitWithAck('escape:leave-team', { pin })).toEqual({ ok: true });
+    expect(await b.socket.emitWithAck('escape:join-team', { pin, code: owls.code })).toEqual({
+      ok: true,
+      teamId: owls.teamId,
+    });
+    await eventually(async () => expect(a.last().team?.members).toHaveLength(2));
+  });
+
+  it('leaving is refused once the race runs, in a solo race and outside a race', async () => {
+    const { host, pin } = await raceRoom('teams');
+    const a = await joinAndSync(ctx.h, pin, 'Ann');
+    await a.socket.emitWithAck('escape:new-team', { pin, name: 'Owls' });
+    await start(host, pin, [a]);
+    expect(await a.socket.emitWithAck('escape:leave-team', { pin })).toMatchObject(
+      refused('escape.wrong_phase'),
+    );
+
+    const solo = await raceRoom('solo');
+    const s = await joinAndSync(ctx.h, solo.pin, 'Sol');
+    expect(await s.socket.emitWithAck('escape:leave-team', { pin: solo.pin })).toMatchObject(
+      refused('escape.not_in_session'),
+    );
+
+    const groupHost = ctx.h.connectHost();
+    const { pin: g } = await createAs(groupHost, library, 'group');
+    const p = await joinAndSync(ctx.h, g!, 'Gus');
+    expect(await p.socket.emitWithAck('escape:leave-team', { pin: g })).toMatchObject(
+      refused('escape.not_in_session'),
+    );
+  });
+
   // ── Scheduled start (Task 7.8) ──
 
   describe('scheduled start', () => {

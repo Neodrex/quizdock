@@ -575,7 +575,11 @@
       "joinGo": "Dołącz",
       "share": "Udostępnij ten kod",
       "codeLabel": "Kod drużyny: {{letters}}",
-      "failed": "Nie udało się. Spróbuj ponownie."
+      "failed": "Nie udało się. Spróbuj ponownie.",
+      "leave": "Opuść drużynę",
+      "leaveTitle": "Opuścić drużynę?",
+      "leaveText": "Będziesz ścigać się solo albo możesz założyć inną drużynę lub do niej dołączyć. Jeśli jesteś ostatni, drużyna i jej kod znikną.",
+      "leaveConfirm": "Opuść"
     },
     "finale": {
       "you": "Ty: miejsce {{place}} z {{total}}",

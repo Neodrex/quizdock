@@ -547,7 +547,11 @@
       "joinGo": "Beitreten",
       "share": "Teile diesen Code",
       "codeLabel": "Teamcode: {{letters}}",
-      "failed": "Das hat nicht geklappt. Versuche es erneut."
+      "failed": "Das hat nicht geklappt. Versuche es erneut.",
+      "leave": "Team verlassen",
+      "leaveTitle": "Dein Team verlassen?",
+      "leaveText": "Du fährst dann solo, oder du gründest ein anderes Team oder trittst einem bei. Bist du das letzte Mitglied, verschwinden das Team und sein Code.",
+      "leaveConfirm": "Verlassen"
     },
     "finale": {
       "you": "Du: Platz {{place}} von {{total}}",

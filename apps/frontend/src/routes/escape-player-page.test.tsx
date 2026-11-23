@@ -53,6 +53,7 @@ const session = (ui: Partial<EscapeUi>, look: EscapeLook = NO_LOOK): EscapeSessi
   chooseTeam: vi.fn(),
   newTeam: vi.fn(),
   joinTeam: vi.fn(),
+  leaveTeam: vi.fn(),
   resultsFromRecord: vi.fn(),
 });
 

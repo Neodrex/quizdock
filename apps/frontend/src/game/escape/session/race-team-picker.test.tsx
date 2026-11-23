@@ -1,9 +1,10 @@
 import type { EscapePlayerState } from '@quiz-dock/contracts';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { savePlayerSession } from '../../game-client';
 import { EscapeLobby } from '../escape-lobby';
-import { drawEn, ME, state, team } from '../test-fixtures';
+import { drawEn, en, ME, state, team } from '../test-fixtures';
 import { codeInput } from './race-team-picker';
 
 const NOW = 1_000_000_000;
@@ -128,6 +129,77 @@ describe('race on the phone', () => {
   it('no countdown without a scheduled start', () => {
     draw(lobby({ session: race('teams') }));
     expect(screen.queryByRole('timer')).toBeNull();
+  });
+
+  // ── Leaving a team (M8 Task 8.16) ──
+
+  const owls = () => team({ name: 'Owls', code: 'ABCD' });
+
+  it('in a team race lobby, a team member can leave after a confirm', async () => {
+    const leaveTeam = vi.fn().mockResolvedValue(undefined);
+    const s = lobby({ team: owls() });
+    const { rerender } = drawEn(
+      <EscapeLobby state={s} me={ME} chooseTeam={vi.fn()} leaveTeam={leaveTeam} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Leave the team' }));
+    expect(leaveTeam).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/race solo/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Leave' }));
+    await waitFor(() => expect(leaveTeam).toHaveBeenCalledTimes(1));
+    // The server's next state has no team: back to the three choices.
+    rerender(
+      <I18nextProvider i18n={en}>
+        <EscapeLobby
+          state={lobby({ team: null })}
+          me={ME}
+          chooseTeam={vi.fn()}
+          leaveTeam={leaveTeam}
+        />
+      </I18nextProvider>,
+    );
+    expect(screen.getByRole('radiogroup', { name: 'How do you race?' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Leave the team' })).toBeNull();
+  });
+
+  it('cancelling the confirm leaves nothing; a refusal shows its text', async () => {
+    const leaveTeam = vi
+      .fn()
+      .mockRejectedValue(refusal('The race has started', 'escape.wrong_phase'));
+    drawEn(
+      <EscapeLobby
+        state={lobby({ team: owls() })}
+        me={ME}
+        chooseTeam={vi.fn()}
+        leaveTeam={leaveTeam}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Leave the team' }));
+    fireEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }),
+    );
+    expect(leaveTeam).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Leave the team' }));
+    fireEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Leave' }),
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('The race has started');
+  });
+
+  it('no Leave button once running, in a solo race, or outside a race', () => {
+    const leaveTeam = vi.fn();
+    const cases: EscapePlayerState[] = [
+      lobby({ team: owls(), phase: 'running' }),
+      lobby({ team: owls(), session: race('solo') }),
+      state({ phase: 'forming', team: owls(), view: null }),
+    ];
+    for (const s of cases) {
+      const { unmount } = drawEn(
+        <EscapeLobby state={s} me={ME} chooseTeam={vi.fn()} leaveTeam={leaveTeam} />,
+      );
+      expect(screen.queryByRole('button', { name: 'Leave the team' })).toBeNull();
+      unmount();
+    }
   });
 
   it('codeInput keeps letters, upper case, four at most', () => {

@@ -547,7 +547,11 @@
       "joinGo": "Join",
       "share": "Share this code",
       "codeLabel": "Team code: {{letters}}",
-      "failed": "That did not work. Try again."
+      "failed": "That did not work. Try again.",
+      "leave": "Leave the team",
+      "leaveTitle": "Leave your team?",
+      "leaveText": "You will race solo, or you can start or join another team. If you are the last one in it, the team and its code are gone.",
+      "leaveConfirm": "Leave"
     },
     "finale": {
       "you": "You: #{{place}} of {{total}}",

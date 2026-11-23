@@ -642,6 +642,28 @@ export class EscapeEngine implements OnModuleDestroy {
     });
   }
 
+  /**
+   * M8: a player of a team race leaves its team, back to no team, so it races
+   * solo at the start (or starts or joins another team). Forming only. A team
+   * left empty is dropped, its code with it. Not in a team: nothing changes.
+   */
+  async leaveTeam(socket: EscapeSocket, pin: string): Promise<void> {
+    const me = playerOf(socket, pin);
+    if (!me) throw new BadRequestException('escape.not_joined');
+    await this.mutate(pin, undefined, async (ref) => {
+      const v = await this.viewOf(ref);
+      if (v.session?.type !== 'race' || v.session.race?.format !== 'teams') {
+        throw new BadRequestException('escape.not_in_session');
+      }
+      if (ref.run.phase !== 'forming') throw new BadRequestException('escape.wrong_phase');
+      const left = teamOf(this.teamsOf(v), me.playerId)?.id;
+      if (!left) return;
+      const moved = await this.applyMove(ref, v, me.playerId, null);
+      const out = await this.dropEmptied(ref, moved, left);
+      await this.broadcast(out.ref, out.v, this.formationPhones(v, out.v, me.playerId));
+    });
+  }
+
   /** A team race, forming, or running for a player without a team. */
   private requireTeamRace(ref: RunRef, v: RunView, playerId: string): void {
     if (v.session?.type !== 'race' || v.session.race?.format !== 'teams') {

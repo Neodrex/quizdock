@@ -208,6 +208,11 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
   const joinTeam = async (code: string) =>
     emitWithAckOrError<{ teamId: string }>(await socket(), 'escape:join-team', { pin, code });
 
+  /** A team race, before the start (M8): leaves the team (`escape.wrong_phase` once running). */
+  const leaveTeam = async () => {
+    await emitWithAckOrError(await socket(), 'escape:leave-team', { pin });
+  };
+
   /** After a reload into an ended room: the finale by the record's token, or null (record cleared). */
   const resultsFromRecord = async (): Promise<EscapeFinale | null> => {
     const record = loadEscapeRecord(pin);
@@ -261,6 +266,7 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
     chooseTeam,
     newTeam,
     joinTeam,
+    leaveTeam,
     resultsFromRecord,
   };
 }

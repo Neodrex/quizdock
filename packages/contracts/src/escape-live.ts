@@ -616,6 +616,12 @@ export interface EscapeClientToServerEvents {
     p: EscapeJoinTeam,
     ack: (res: EscapeAck<{ teamId: string }>) => void,
   ) => void;
+  /**
+   * M8: player, in a team race while forming: leaves its team and races solo
+   * (a team left empty is gone with its code). Refusals: `escape.not_in_session`
+   * (not a team race), `escape.wrong_phase` (the race has started).
+   */
+  'escape:leave-team': (p: EscapePin, ack: (res: EscapeAck) => void) => void;
   /** Player: tries a lock. */
   'escape:submit': (p: EscapeSubmit, ack: (res: EscapeSubmitAck) => void) => void;
   /** Player: asks for the hint it was offered. */

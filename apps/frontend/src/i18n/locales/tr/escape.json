@@ -547,7 +547,11 @@
       "joinGo": "Katıl",
       "share": "Bu kodu paylaşın",
       "codeLabel": "Takım kodu: {{letters}}",
-      "failed": "Olmadı. Tekrar deneyin."
+      "failed": "Olmadı. Tekrar deneyin.",
+      "leave": "Takımdan ayrıl",
+      "leaveTitle": "Takımından ayrılmak mı istiyorsun?",
+      "leaveText": "Tek başına yarışırsın ya da başka bir takım kurabilir veya birine katılabilirsin. Son üye sensen takım ve kodu silinir.",
+      "leaveConfirm": "Ayrıl"
     },
     "finale": {
       "you": "Siz: {{total}} takım içinde {{place}}.",

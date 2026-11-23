@@ -158,6 +158,17 @@ export class EscapeGateway implements OnGatewayInit, OnGatewayDisconnect {
     return { ok: true, ...(await this.engine.joinTeam(socket, dto.pin, dto.code)) };
   }
 
+  /** M8: a player of a team race leaves its team while forming, and races solo. */
+  @SubscribeMessage('escape:leave-team')
+  async leaveTeam(
+    @ConnectedSocket() socket: EscapeSocket,
+    @MessageBody() payload: unknown,
+  ): Promise<Ok> {
+    const dto = parse(escapePinSchema, payload);
+    await this.engine.leaveTeam(socket, dto.pin);
+    return { ok: true };
+  }
+
   /** U1–U5: refusals are in the ack (`{ ok: false, reason }`), not errors. */
   @SubscribeMessage('escape:submit')
   async submit(
