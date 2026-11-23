@@ -475,6 +475,22 @@
       "seatsFull": "{{joined}} / {{cap}} · 満員",
       "seatsLabel": "ルームのプレイヤー：{{cap}}人中{{joined}}人",
       "licence": "{{name}} · {{date}}まで"
+    },
+    "hostBar": {
+      "label": "ホスト操作",
+      "start": "開始",
+      "openConsole": "コンソールを開く",
+      "pause": "一時停止",
+      "resume": "再開",
+      "hint": "自分のチームにヒント",
+      "hintTitle": "チームに次のヒントを出しますか？",
+      "hintCost": "チームのスコアに{{seconds}}秒加算されます。",
+      "hintConfirm": "ヒントを出す",
+      "end": "終了",
+      "endTitle": "全員のゲームを終了しますか？",
+      "endDescription": "各チームはその場で止まり、結果が表示されます。",
+      "endConfirm": "今すぐ終了",
+      "finaleAgain": "フィナーレをもう一度表示"
     }
   },
   "race": {

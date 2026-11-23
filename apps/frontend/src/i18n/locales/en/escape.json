@@ -489,6 +489,22 @@
       "seatsFull": "{{joined}} / {{cap}} · full",
       "seatsLabel": "Players in the room: {{joined}} of {{cap}}",
       "licence": "{{name}} · until {{date}}"
+    },
+    "hostBar": {
+      "label": "Host controls",
+      "start": "Start",
+      "openConsole": "Open console",
+      "pause": "Pause",
+      "resume": "Resume",
+      "hint": "Hint for my team",
+      "hintTitle": "Give your team its next hint?",
+      "hintCost": "It adds {{seconds}} s to your team’s score.",
+      "hintConfirm": "Give the hint",
+      "end": "End",
+      "endTitle": "End the game for everyone?",
+      "endDescription": "Every team stops where it is, and the results show.",
+      "endConfirm": "End now",
+      "finaleAgain": "Show the finale again"
     }
   },
   "race": {

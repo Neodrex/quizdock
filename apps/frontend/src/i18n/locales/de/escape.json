@@ -489,6 +489,22 @@
       "seatsFull": "{{joined}} / {{cap}} · voll",
       "seatsLabel": "Spieler im Raum: {{joined}} von {{cap}}",
       "licence": "{{name}} · bis {{date}}"
+    },
+    "hostBar": {
+      "label": "Spielleitung",
+      "start": "Starten",
+      "openConsole": "Konsole öffnen",
+      "pause": "Pause",
+      "resume": "Fortsetzen",
+      "hint": "Hinweis für mein Team",
+      "hintTitle": "Deinem Team den nächsten Hinweis geben?",
+      "hintCost": "Das fügt dem Ergebnis deines Teams {{seconds}} s hinzu.",
+      "hintConfirm": "Hinweis geben",
+      "end": "Beenden",
+      "endTitle": "Spiel für alle beenden?",
+      "endDescription": "Jedes Team stoppt, wo es ist, und die Ergebnisse erscheinen.",
+      "endConfirm": "Jetzt beenden",
+      "finaleAgain": "Finale erneut zeigen"
     }
   },
   "race": {

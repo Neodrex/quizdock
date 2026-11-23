@@ -517,6 +517,22 @@
       "seatsFull": "{{joined}} / {{cap}} · pełny",
       "seatsLabel": "Gracze w pokoju: {{joined}} z {{cap}}",
       "licence": "{{name}} · do {{date}}"
+    },
+    "hostBar": {
+      "label": "Sterowanie gospodarza",
+      "start": "Start",
+      "openConsole": "Otwórz konsolę",
+      "pause": "Pauza",
+      "resume": "Wznów",
+      "hint": "Podpowiedź dla mojej drużyny",
+      "hintTitle": "Dać drużynie następną podpowiedź?",
+      "hintCost": "Dodaje {{seconds}} s do wyniku twojej drużyny.",
+      "hintConfirm": "Daj podpowiedź",
+      "end": "Zakończ",
+      "endTitle": "Zakończyć grę dla wszystkich?",
+      "endDescription": "Każda drużyna zatrzymuje się tam, gdzie jest, i pojawiają się wyniki.",
+      "endConfirm": "Zakończ teraz",
+      "finaleAgain": "Pokaż finał ponownie"
     }
   },
   "race": {

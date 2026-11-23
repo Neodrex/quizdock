@@ -15,6 +15,17 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }));
 
+// Group play's phone host: its host-state counts, faked (M7 Task 7.16).
+const { phoneHost } = vi.hoisted(() => ({
+  phoneHost: { calls: [] as boolean[] },
+}));
+vi.mock('../game/escape/host/use-phone-host', () => ({
+  usePhoneHost: (_pin: string, enabled: boolean) => {
+    phoneHost.calls.push(enabled);
+    return { room: { joined: 4, cap: 6, ready: true }, send: vi.fn() };
+  },
+}));
+
 // The fixtures' server time: their deadline is ten minutes on.
 vi.mock('../game/clock', async (orig) => ({
   ...(await orig<typeof import('../game/clock')>()),
@@ -156,5 +167,34 @@ describe('end-of-run screens', () => {
     drawEn(<TimeUpView state={state({ team: team({ timedOut: true, stageIndex: 2 }) })} />);
     expect(screen.getByRole('heading', { name: "Time's up" })).toBeInTheDocument();
     expect(screen.getByText('Stages cleared: 2 of 4')).toBeInTheDocument();
+  });
+});
+
+describe('EscapePlayer: the phone host bar (group play)', () => {
+  const host = { type: 'group' as const, raceFormat: null, startsAt: null, isPhoneHost: true };
+
+  it('a phone that hosts carries the bar, in every phase', () => {
+    const lobby = draw({
+      state: state({ phase: 'forming', session: host, team: null, view: null }),
+    });
+    expect(screen.getByRole('region', { name: 'Host controls' })).toBeInTheDocument();
+    expect(screen.getByText('4 / 6')).toBeInTheDocument();
+    lobby.unmount();
+    const run = draw({ state: state({ session: host }) });
+    expect(screen.getByRole('button', { name: 'Hint for my team' })).toBeInTheDocument();
+    // The stage stays above it.
+    expect(screen.getByRole('textbox', { name: 'Answer for Keypad' })).toBeInTheDocument();
+    run.unmount();
+    draw({ state: state({ session: host, phase: 'finale' }), finale });
+    expect(screen.getByRole('button', { name: 'Show the finale again' })).toBeInTheDocument();
+  });
+
+  it('a phone that does not host never renders it, nor listens for the host', () => {
+    phoneHost.calls.length = 0;
+    draw({ state: state({ session: { ...host, isPhoneHost: false } }) });
+    expect(screen.queryByRole('region', { name: 'Host controls' })).toBeNull();
+    draw({ state: state() });
+    expect(screen.queryByRole('region', { name: 'Host controls' })).toBeNull();
+    expect(phoneHost.calls.every((on) => !on)).toBe(true);
   });
 });

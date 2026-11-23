@@ -501,6 +501,22 @@
       "seatsFull": "{{joined}} / {{cap}} · al completo",
       "seatsLabel": "Giocatori nella sala: {{joined}} su {{cap}}",
       "licence": "{{name}} · fino al {{date}}"
+    },
+    "hostBar": {
+      "label": "Comandi dell’host",
+      "start": "Avvia",
+      "openConsole": "Apri la console",
+      "pause": "Pausa",
+      "resume": "Riprendi",
+      "hint": "Indizio per la mia squadra",
+      "hintTitle": "Dare alla tua squadra il prossimo indizio?",
+      "hintCost": "Aggiunge {{seconds}} s al punteggio della tua squadra.",
+      "hintConfirm": "Dai l’indizio",
+      "end": "Termina",
+      "endTitle": "Terminare la partita per tutti?",
+      "endDescription": "Ogni squadra si ferma dov’è e compaiono i risultati.",
+      "endConfirm": "Termina ora",
+      "finaleAgain": "Mostra di nuovo il finale"
     }
   },
   "race": {

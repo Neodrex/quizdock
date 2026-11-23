@@ -12,9 +12,11 @@ import { EscapeFinaleView } from '../game/escape/escape-finale';
 import { EscapeLobby } from '../game/escape/escape-lobby';
 import { loadEscapeRecord } from '../game/escape/escape-record';
 import { HintPanel } from '../game/escape/hint-panel';
+import { usePhoneHost } from '../game/escape/host/use-phone-host';
 import { blockOf, LockList } from '../game/escape/locks/lock-list';
 import { ProgressDots } from '../game/escape/progress-dots';
 import { RoleCard } from '../game/escape/role-card';
+import { PhoneHostBar } from '../game/escape/session/phone-host-bar';
 import { TeamTimer, formatClock } from '../game/escape/team-timer';
 import { STAGE_TITLE_ID, UnlockMoment } from '../game/escape/unlock-moment';
 import type { EscapeSession } from '../game/escape/use-escape-session';
@@ -60,6 +62,9 @@ export function EscapePlayer({
   }
 
   const myTeamId = team?.id ?? loadEscapeRecord(pin)?.teamId ?? null;
+  // Group play: this phone also hosts (M7 owner question 1).
+  const isPhoneHost = !!state?.session?.isPhoneHost;
+  const phoneHost = usePhoneHost(pin, isPhoneHost);
 
   let screen: React.ReactNode;
   if (ui.finale) {
@@ -142,6 +147,9 @@ export function EscapePlayer({
         </p>
       )}
       {screen}
+      {isPhoneHost && state && ui.ended !== 'final' ? (
+        <PhoneHostBar pin={pin} state={state} room={phoneHost.room} send={phoneHost.send} />
+      ) : null}
       <UnlockMoment overlay={ui.overlay} onClose={() => dispatch({ type: 'dismissOverlay' })} />
       <EscapeAnnouncer polite={ui.polite} assertive={ui.assertive} />
     </div>

@@ -489,6 +489,22 @@
       "seatsFull": "{{joined}} / {{cap}} · dolu",
       "seatsLabel": "Odadaki oyuncular: {{cap}} kişiden {{joined}}",
       "licence": "{{name}} · {{date}} tarihine kadar"
+    },
+    "hostBar": {
+      "label": "Ev sahibi kontrolleri",
+      "start": "Başlat",
+      "openConsole": "Konsolu aç",
+      "pause": "Duraklat",
+      "resume": "Devam et",
+      "hint": "Takımıma ipucu",
+      "hintTitle": "Takımınıza sıradaki ipucu verilsin mi?",
+      "hintCost": "Takımınızın skoruna {{seconds}} sn ekler.",
+      "hintConfirm": "İpucunu ver",
+      "end": "Bitir",
+      "endTitle": "Oyun herkes için bitirilsin mi?",
+      "endDescription": "Her takım olduğu yerde durur ve sonuçlar gösterilir.",
+      "endConfirm": "Şimdi bitir",
+      "finaleAgain": "Finali yeniden göster"
     }
   },
   "race": {

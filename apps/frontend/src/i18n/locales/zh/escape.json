@@ -475,6 +475,22 @@
       "seatsFull": "{{joined}} / {{cap}} · 已满",
       "seatsLabel": "房间内玩家：{{joined}} / {{cap}}",
       "licence": "{{name}} · 至 {{date}}"
+    },
+    "hostBar": {
+      "label": "主持人控制",
+      "start": "开始",
+      "openConsole": "打开控制台",
+      "pause": "暂停",
+      "resume": "继续",
+      "hint": "给我的队伍提示",
+      "hintTitle": "给你的队伍下一条提示？",
+      "hintCost": "这会给你队伍的成绩增加 {{seconds}} 秒。",
+      "hintConfirm": "给出提示",
+      "end": "结束",
+      "endTitle": "为所有人结束游戏？",
+      "endDescription": "每支队伍停在当前进度，并显示结果。",
+      "endConfirm": "立即结束",
+      "finaleAgain": "再次显示结局"
     }
   },
   "race": {
