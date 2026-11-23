@@ -1,0 +1,63 @@
+{
+  "comment": "Teams and their places by the M6 screen rule (lanesOf): escaped by escape time, then stage, locks solved, time left. Read by the backend placesOf and the frontend lanesOf tests.",
+  "teams": [
+    {
+      "id": "t1",
+      "stageIndex": 1,
+      "locksSolved": 0,
+      "escapedAtMs": null,
+      "adjustMs": 0
+    },
+    {
+      "id": "t2",
+      "stageIndex": 1,
+      "locksSolved": 1,
+      "escapedAtMs": null,
+      "adjustMs": 0
+    },
+    {
+      "id": "t3",
+      "stageIndex": 2,
+      "locksSolved": 0,
+      "escapedAtMs": null,
+      "adjustMs": 0
+    },
+    {
+      "id": "t4",
+      "stageIndex": 2,
+      "locksSolved": 0,
+      "escapedAtMs": 1500000,
+      "adjustMs": 0
+    },
+    {
+      "id": "t5",
+      "stageIndex": 2,
+      "locksSolved": 0,
+      "escapedAtMs": 1200000,
+      "adjustMs": 0
+    },
+    {
+      "id": "t6",
+      "stageIndex": 1,
+      "locksSolved": 0,
+      "escapedAtMs": null,
+      "adjustMs": 60000
+    },
+    {
+      "id": "t7",
+      "stageIndex": 1,
+      "locksSolved": 0,
+      "escapedAtMs": null,
+      "adjustMs": 0
+    }
+  ],
+  "places": [
+    ["t5", 1],
+    ["t4", 2],
+    ["t3", 3],
+    ["t2", 4],
+    ["t6", 5],
+    ["t1", 6],
+    ["t7", 6]
+  ]
+}

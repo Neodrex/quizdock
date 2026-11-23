@@ -1,4 +1,9 @@
-import { type EscapeHostState, GameState } from '@quiz-dock/contracts';
+import {
+  type EscapeFinale,
+  type EscapeHostState,
+  type EscapeScreenFinale,
+  GameState,
+} from '@quiz-dock/contracts';
 import { EscapeEngine } from '../../src/escape/escape.engine';
 import { EscapeTimings } from '../../src/escape/escape-timings';
 import { GameService } from '../../src/game/game.service';
@@ -305,5 +310,58 @@ export function raceSessionTests(ctx: EscapeContext): void {
         scheduled: false,
       });
     });
+  });
+
+  // ── Scale (Task 7.9) ──
+
+  it('the board and the host state go out at most once a second under a burst of submits', async () => {
+    const { host, pin } = await raceRoom('solo');
+    const players: SyncedPlayer[] = [];
+    for (let i = 0; i < 10; i++) players.push(await joinAndSync(ctx.h, pin, `R${i}`));
+    const screen = ctx.h.connect();
+    await screen.emitWithAck('spectator:join', { pin });
+    expect(await screen.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    await start(host, pin, players);
+    await settle(1_100); // the start's frames are out of the window
+    const hostSeen = record(host);
+    const screenSeen = record(screen);
+    const t0 = Date.now();
+    // 50 submits, and 10 phones joining meanwhile (each a host state and a board).
+    await Promise.all([
+      ...players.flatMap((p) =>
+        Array.from({ length: 5 }, () =>
+          p.socket.emitWithAck('escape:submit', { pin, lockId: 'catalogue', input: '00' }),
+        ),
+      ),
+      ...Array.from({ length: 10 }, (_, i) => joinAndSync(ctx.h, pin, `Late${i}`)),
+    ]);
+    await settle(Math.max(0, 3_000 - (Date.now() - t0)));
+    const count = (seen: [string, unknown][], e: string) => seen.filter(([n]) => n === e).length;
+    // 3 s at one a second, plus one at either edge of the window.
+    expect(count(hostSeen, 'escape:board')).toBeLessThanOrEqual(4);
+    expect(count(hostSeen, 'escape:host')).toBeLessThanOrEqual(4);
+    expect(count(screenSeen, 'escape:board')).toBeLessThanOrEqual(4);
+    expect(count(hostSeen, 'escape:host')).toBeGreaterThanOrEqual(1);
+    expect(count(screenSeen, 'escape:board')).toBeGreaterThanOrEqual(1);
+  });
+
+  it('a race finale: phones and the screen get the top teams and the total; the host all of them', async () => {
+    const { host, pin } = await raceRoom('solo');
+    const players: SyncedPlayer[] = [];
+    for (let i = 0; i < 3; i++) players.push(await joinAndSync(ctx.h, pin, `F${i}`));
+    const screen = ctx.h.connect();
+    await screen.emitWithAck('spectator:join', { pin });
+    expect(await screen.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    await start(host, pin, players);
+    const phone = nextEvent<EscapeFinale>(players[0].socket, 'escape:finale');
+    const own = nextEvent<EscapeFinale>(host, 'escape:finale');
+    const shown = nextEvent<EscapeScreenFinale>(screen, 'escape:screen-finale');
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    expect((await phone).totalTeams).toBe(3);
+    expect((await phone).ranking).toHaveLength(3);
+    expect((await shown).totalTeams).toBe(3);
+    const full = await own;
+    expect(full.ranking).toHaveLength(3);
+    expect(full.totalTeams).toBeUndefined();
   });
 }

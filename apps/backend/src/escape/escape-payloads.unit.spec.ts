@@ -5,6 +5,7 @@ import { ACME_LICENCE } from './licences/dev-licences';
 import {
   announceOf,
   boardOf,
+  finaleFor,
   finaleOf,
   hintUpdateOf,
   hostSessionOf,
@@ -12,6 +13,7 @@ import {
   hostTeamOf,
   hostOutlineOf,
   playerSessionOf,
+  placesOf,
   playerStateOf,
   type RoomPlayer,
   type RunView,
@@ -32,6 +34,26 @@ import {
 } from './escape-rules';
 import type { EscapeTemplate, Same, TeamState } from './escape.types';
 import { lostLibrary, vaultHeist } from './samples';
+import { RACE_BOARD_TEAMS, RACE_FINALE_TOP } from './escape-session';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+/** Shared with the frontend's lanesOf test: both sides rank teams the same way. */
+const placesFixture = JSON.parse(
+  readFileSync(
+    join(__dirname, '../../../../packages/contracts/test/fixtures/escape-places.json'),
+    'utf8',
+  ),
+) as {
+  teams: {
+    id: string;
+    stageIndex: number;
+    locksSolved: number;
+    escapedAtMs: number | null;
+    adjustMs: number;
+  }[];
+  places: [string, number][];
+};
 
 const tpl: EscapeTemplate = { ...vaultHeist, id: 'vh' };
 const NOW = 1_000_000;
@@ -830,5 +852,102 @@ describe('team updates', () => {
     expect(hint).toEqual({ teamId: 'a', kind: 'hint', hintId: 'lobby-h1', source: 'timer' });
     expect(leaksIn(hint, tpl)).toEqual([]);
     expect(timeUpOf('a')).toEqual({ teamId: 'a', kind: 'time-up' });
+  });
+});
+
+describe('race scale (M7 §1.7)', () => {
+  const raceSession: EscapeSession = {
+    type: 'race',
+    cap: 500,
+    race: { format: 'solo', startsAt: null, started: true },
+    licence: null,
+    licenceUsed: false,
+    phoneHostUserId: null,
+  };
+  /** `n` solo teams t1…tn, team k having solved k mod 4 locks of the first stage. */
+  const soloView = (n: number, session: EscapeSession | null = raceSession): RunView => {
+    const teams = Array.from({ length: n }, (_, i) => {
+      const t = newTeam(tpl, `t${i + 1}`, `Player number ${i + 1}`, [`p${i + 1}`]);
+      const solved = tpl.stages[0].locks.slice(0, (i + 1) % 4).map((l) => l.id);
+      return rec({ ...t, solved: solved.slice(0, tpl.stages[0].locks.length - 1) });
+    });
+    return {
+      ...view(),
+      run: { ...running, teamIds: teams.map((r) => r.team.id) },
+      teams,
+      players: teams.map((r, i) => ({
+        playerId: r.team.members[0],
+        nickname: `Player number ${i + 1}`,
+        avatar: null,
+        connected: true,
+        userId: null,
+      })),
+      session,
+    };
+  };
+
+  it('placesOf ranks as the screen’s lanesOf (the shared fixture)', () => {
+    const v: RunView = {
+      ...view(),
+      teams: placesFixture.teams.map((t) =>
+        rec(
+          {
+            ...newTeam(tpl, t.id, t.id, []),
+            stageIndex: t.stageIndex,
+            solved: tpl.stages[t.stageIndex].locks.slice(0, t.locksSolved).map((l) => l.id),
+            escapedAt: t.escapedAtMs,
+            adjustMs: t.adjustMs,
+          },
+          { timedOut: false },
+        ),
+      ),
+      run: { ...running, teamIds: placesFixture.teams.map((t) => t.id) },
+    };
+    expect(placesOf(v).map((p) => [p.summary.id, p.place])).toEqual(placesFixture.places);
+  });
+
+  it('a race board of 500 teams holds the top 30 by place and the totals, under 12 KB', () => {
+    const v = soloView(500);
+    const board = boardOf(v);
+    expect(board.teams).toHaveLength(RACE_BOARD_TEAMS);
+    expect(board.teams.map((t) => t.id)).toEqual(
+      placesOf(v)
+        .slice(0, RACE_BOARD_TEAMS)
+        .map((p) => p.summary.id),
+    );
+    expect(board.session).toEqual({
+      type: 'race',
+      startsAt: null,
+      totals: { teams: 500, players: 500, escaped: 0 },
+    });
+    expect(JSON.stringify(board).length).toBeLessThan(12 * 1024);
+  });
+
+  it('other session types keep every team on the board', () => {
+    const board = boardOf(soloView(40, { ...raceSession, type: 'hosted', race: null }));
+    expect(board.teams).toHaveLength(40);
+    expect(boardOf(soloView(40, null)).teams).toHaveLength(40);
+  });
+
+  it('a race phone’s finale: the top 20, its own row beyond them, and the total', () => {
+    const v = { ...soloView(500), run: { ...running, phase: 'finale' as const } };
+    const finale = finaleOf(v, 'g1');
+    expect(finale.ranking).toHaveLength(500);
+    const limits = { boardTeams: 30, boardEveryMs: 1000, finaleTop: RACE_FINALE_TOP };
+    const last = finale.ranking.at(-1)!;
+    const far = finaleFor(finale, last.teamId, limits);
+    expect(far.ranking).toHaveLength(RACE_FINALE_TOP + 1);
+    expect(far.ranking.at(-1)).toEqual(last);
+    expect(far.totalTeams).toBe(500);
+    const near = finaleFor(finale, finale.ranking[3].teamId, limits);
+    expect(near.ranking).toEqual(finale.ranking.slice(0, RACE_FINALE_TOP));
+    expect(finaleFor(finale, null, limits).ranking).toHaveLength(RACE_FINALE_TOP);
+    // No limits (group, hosted): the stored finale as it is.
+    expect(finaleFor(finale, last.teamId, null)).toBe(finale);
+    // The screen's: the top 20.
+    const screen = screenFinaleOf(finale, v);
+    expect(screen.ranking).toHaveLength(RACE_FINALE_TOP);
+    expect(screen.totalTeams).toBe(500);
+    expect(screenFinaleOf(finale, { ...v, session: null }).ranking).toHaveLength(500);
   });
 });

@@ -56,10 +56,12 @@ import {
   hostTeamOf,
   hostOutlineOf,
   playerStateOf,
+  finaleFor,
   type RunView,
   screenFinaleOf,
   submitUpdateOf,
   timeUpOf,
+  viewLimits,
 } from './escape-payloads';
 import { adjustTime, hostUnlock, newTeam, nextHint, submit, useHint } from './escape-rules';
 import { allDone, tickTeam } from './escape-tick';
@@ -197,7 +199,10 @@ export class EscapeEngine implements OnModuleDestroy {
    * `boardEveryMs` ago; `pending` when another was asked for meanwhile. An
    * entry removes itself once idle, so nothing stays behind a room.
    */
-  private readonly boards = new Map<string, { pending: boolean; timer: NodeJS.Timeout }>();
+  private readonly boards = new Map<
+    string,
+    { pending: boolean; host: boolean; timer: NodeJS.Timeout }
+  >();
   /**
    * R1/R2: when each player of a run lost their last socket (epoch ms), by
    * game id. In process, like the tickers: after a restart, members without a
@@ -1098,11 +1103,16 @@ export class EscapeEngine implements OnModuleDestroy {
    */
   private async sendFinale(ref: RunRef, finale: EscapeFinale, v: RunView): Promise<void> {
     const screen = screenFinaleOf(finale, v);
+    const limits = viewLimits(v);
     for (const s of await this.server.in(ref.pin).fetchSockets()) {
       const d = s.data;
       const phone = d.pin === ref.pin && !!d.playerId;
-      if (phone || isHostConsole(d, ref.pin, ref.meta.hostUserId)) s.emit('escape:finale', finale);
-      else s.emit('escape:screen-finale', screen);
+      if (isHostConsole(d, ref.pin, ref.meta.hostUserId)) s.emit('escape:finale', finale);
+      else if (phone) {
+        // M7 §1.7: a race's phone gets the top teams and its own row.
+        const team = teamOf(this.teamsOf(v), d.playerId!)?.id ?? null;
+        s.emit('escape:finale', finaleFor(finale, team, limits));
+      } else s.emit('escape:screen-finale', screen);
     }
   }
 
@@ -1451,8 +1461,16 @@ export class EscapeEngine implements OnModuleDestroy {
     if (updates.length) this.toBoard(ref, v);
   }
 
+  /**
+   * The host state to the host room: at once, except in a race (M7 §1.7),
+   * where it is coalesced with the board, at most every `boardEveryMs` of the race.
+   */
   private toHost(ref: RunRef, v: RunView): void {
-    this.server.to(escapeRooms.host(ref.pin)).emit('escape:host', hostStateOf(v));
+    if (!viewLimits(v)) {
+      this.server.to(escapeRooms.host(ref.pin)).emit('escape:host', hostStateOf(v));
+      return;
+    }
+    this.throttled(ref.pin, v, { board: false, host: true });
   }
 
   /** The player's socket in its team's room and no other team's. */
@@ -1467,45 +1485,57 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /** The board to the screens and the host, at most every `boardEveryMs` (the latest wins). */
   private toBoard(ref: RunRef, v: RunView): void {
-    const held = this.boards.get(ref.pin);
-    if (held) {
-      held.pending = true;
-      return;
-    }
-    this.emitBoard(ref.pin, v);
-    this.holdBoard(ref.pin);
+    this.throttled(ref.pin, v, { board: true, host: false });
   }
 
-  /** No board for `boardEveryMs`; then the latest, if one was asked for meanwhile. */
-  private holdBoard(pin: string): void {
+  /** The throttle of the board (and, in a race, of the host state): now, or with the next. */
+  private throttled(pin: string, v: RunView, what: { board: boolean; host: boolean }): void {
+    const held = this.boards.get(pin);
+    if (held) {
+      held.pending ||= what.board;
+      held.host ||= what.host;
+      return;
+    }
+    this.emitHeld(pin, v, what);
+    this.holdBoard(pin, this.boardEveryMs(v));
+  }
+
+  /** The board period: the timings', or a race's when longer. */
+  private boardEveryMs(v: RunView): number {
+    return Math.max(this.timings.boardEveryMs, viewLimits(v)?.boardEveryMs ?? 0);
+  }
+
+  /** Nothing for `everyMs`; then the latest, if one was asked for meanwhile. */
+  private holdBoard(pin: string, everyMs: number): void {
     const held = {
       pending: false,
+      host: false,
       timer: setTimeout(() => {
         if (this.boards.get(pin) === held) this.boards.delete(pin);
-        if (!held.pending) return;
-        void this.boardNow(pin).catch((err: Error) =>
+        if (!held.pending && !held.host) return;
+        const what = { board: held.pending, host: held.host };
+        void this.boardNow(pin, what).catch((err: Error) =>
           this.log.warn(`board ${pin}: ${err.message}`),
         );
-      }, this.timings.boardEveryMs),
+      }, everyMs),
     };
     held.timer.unref?.();
     this.boards.set(pin, held);
   }
 
-  /** A board held back by the throttle; nothing when the room or its run is gone meanwhile. */
-  private async boardNow(pin: string): Promise<void> {
+  /** What the throttle held back; nothing when the room or its run is gone meanwhile. */
+  private async boardNow(pin: string, what: { board: boolean; host: boolean }): Promise<void> {
     const meta = await this.game.getMeta(pin);
     if (meta?.kind !== 'escape') return;
     const [snap, run] = await Promise.all([this.store.snapshot(meta.id), this.store.run(meta.id)]);
     if (!snap || !run) return;
     const v = await this.viewOf({ pin, id: meta.id, meta, snap, run });
-    const held = this.boards.get(pin);
-    if (held) {
-      held.pending = true;
-      return;
-    }
-    this.emitBoard(pin, v);
-    this.holdBoard(pin);
+    this.throttled(pin, v, what);
+  }
+
+  private emitHeld(pin: string, v: RunView, what: { board: boolean; host: boolean }): void {
+    if (what.board) this.emitBoard(pin, v);
+    if (what.host) this.server.to(escapeRooms.host(pin)).emit('escape:host', hostStateOf(v));
   }
 
   private emitBoard(pin: string, v: RunView): void {

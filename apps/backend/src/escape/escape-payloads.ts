@@ -30,6 +30,7 @@ import { toolsOf } from '@quiz-dock/contracts';
 import { deadlineAt, remainingMs, runElapsed, stageOpenedAt } from './escape-clock';
 import type { EscapeRun, EscapeSession, EscapeSnapshot, TeamRecord } from './escape-live.types';
 import { awards, hashOrder, nextHint, playerView, rankTeams } from './escape-rules';
+import { type SessionLimits, limitsOf } from './escape-session';
 import type { EscapeTemplate, Lock, Stage, SubmitResult, TeamState } from './escape.types';
 
 /** A player of the room, as the engine sees it (R1 decides `connected`). */
@@ -197,18 +198,65 @@ function rosterOf(v: RunView): EscapeRosterEntry[] {
   }));
 }
 
+/** The payload limits of the run's session (a race's); null: none. */
+export const viewLimits = (v: RunView): SessionLimits | null =>
+  v.session ? limitsOf(v.session.type) : null;
+
+/**
+ * Negative when `a` ranks before `b`, the M6 screen's rule (`lanesOf`): escaped
+ * teams by their escape run time, then stage, locks solved and time left.
+ */
+export function compareSummaries(a: EscapeTeamSummary, b: EscapeTeamSummary): number {
+  if (a.escaped !== b.escaped) return a.escaped ? -1 : 1;
+  if (a.escaped) {
+    const byTime = (a.escapedAtMs ?? Infinity) - (b.escapedAtMs ?? Infinity);
+    if (byTime) return byTime;
+  } else {
+    if (a.stageIndex !== b.stageIndex) return b.stageIndex - a.stageIndex;
+    if (a.locksSolved !== b.locksSolved) return b.locksSolved - a.locksSolved;
+  }
+  return b.remainingMs - a.remainingMs;
+}
+
+/**
+ * Every team's summary by place (ties share one, team order among them), the
+ * screen's rule moved to the server so a race board can send its top teams only.
+ */
+export function placesOf(v: RunView): { summary: EscapeTeamSummary; place: number }[] {
+  const all = v.teams.map((r) => teamSummaryOf(v, r));
+  const sorted = all
+    .map((summary, i) => ({ summary, i }))
+    .sort((a, b) => compareSummaries(a.summary, b.summary) || a.i - b.i);
+  let place = 0;
+  return sorted.map(({ summary }, k) => {
+    if (k === 0 || compareSummaries(sorted[k - 1].summary, summary) !== 0) place = k + 1;
+    return { summary, place };
+  });
+}
+
 export function boardOf(v: RunView): EscapeBoard {
+  const limits = viewLimits(v);
+  const teams = limits
+    ? placesOf(v)
+        .slice(0, limits.boardTeams)
+        .map((p) => p.summary)
+    : v.teams.map((r) => teamSummaryOf(v, r));
   return {
     gameId: v.id,
     session: v.session && {
       type: v.session.type,
       startsAt: v.session.race?.startsAt ?? null,
+      totals: {
+        teams: v.teams.length,
+        players: v.players.length,
+        escaped: v.teams.filter((r) => r.team.escapedAt !== null).length,
+      },
     },
     phase: v.run.phase,
     clock: clockOf(v),
     title: v.snap.template.title,
     formation: { mode: v.run.formation, maxSize: v.run.maxSize || null },
-    teams: v.teams.map((r) => teamSummaryOf(v, r)),
+    teams,
     unassigned: unassignedOf(v).length,
     roster: rosterOf(v),
   };
@@ -430,6 +478,22 @@ export function finaleOf(v: RunView, gameId: string): EscapeFinale {
 }
 
 /**
+ * The finale for one phone (M7 §1.7): whole, except in a race, where it holds
+ * the top `finaleTop` teams plus the phone's own row, and `totalTeams`.
+ */
+export function finaleFor(
+  finale: EscapeFinale,
+  teamId: string | null,
+  limits: SessionLimits | null,
+): EscapeFinale {
+  if (!limits) return finale;
+  const top = finale.ranking.slice(0, limits.finaleTop);
+  const own = finale.ranking.find((r) => r.teamId === teamId);
+  const ranking = own && !top.includes(own) ? [...top, own] : top;
+  return { ...finale, ranking, totalTeams: finale.ranking.length };
+}
+
+/**
  * The finale for a screen (M6 §1.4), from the stored finale and the run: field
  * by field, without the host columns (`adjustMs`, `hostUnlocks`, `paidHints`)
  * and without any player id. Members stay nicknames (owner answer 1). Adds
@@ -439,14 +503,18 @@ export function finaleOf(v: RunView, gameId: string): EscapeFinale {
 export function screenFinaleOf(finale: EscapeFinale, v: RunView): EscapeScreenFinale {
   const timedOut = new Set(v.teams.filter((r) => r.timedOut).map((r) => r.team.id));
   const { awards: a } = finale;
+  // A race's screen gets its top teams only (M7 §1.7).
+  const limits = viewLimits(v);
+  const rows = limits ? finale.ranking.slice(0, limits.finaleTop) : finale.ranking;
   return {
     gameId: finale.gameId,
+    ...(limits ? { totalTeams: finale.ranking.length } : {}),
     title: finale.title,
     finale: finale.finale,
     limitMs: v.run.clock.limitMs,
     endedMs: v.run.clock.endedElapsedMs,
     stages: v.snap.template.stages.map((s) => ({ title: s.title })),
-    ranking: finale.ranking.map((r) => ({
+    ranking: rows.map((r) => ({
       teamId: r.teamId,
       name: r.name,
       place: r.place,

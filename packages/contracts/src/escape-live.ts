@@ -311,6 +311,8 @@ export interface EscapeBoardSession {
   type: EscapeSessionType;
   /** A scheduled race's start (server epoch ms): the lobby counts down to it. */
   startsAt: number | null;
+  /** The whole room, also when `teams` holds only a race's top teams. */
+  totals: { teams: number; players: number; escaped: number };
 }
 
 export interface EscapeBoard {
@@ -323,6 +325,7 @@ export interface EscapeBoard {
   title: string;
   /** How teams form: auto (dealt) or self (picked on the phone), and the cap (null: none). */
   formation: Pick<EscapeFormation, 'mode' | 'maxSize'>;
+  /** Every team in team order; in a race, the top teams by place only (M7 §1.7). */
   teams: EscapeTeamSummary[];
   /** Players in the room without a team. */
   unassigned: number;
@@ -449,6 +452,11 @@ export interface EscapeHostOutline {
 export interface EscapeFinale {
   /** The run's game id: the key `escape:results` reads them back by. */
   gameId: string;
+  /**
+   * A race's phone (M7 §1.7): `ranking` holds the top teams plus the phone's own,
+   * and this counts them all. Absent: `ranking` is whole.
+   */
+  totalTeams?: number;
   title: string;
   finale: string;
   ranking: {
@@ -485,6 +493,8 @@ export interface EscapeFinale {
  */
 export interface EscapeScreenFinale {
   gameId: string;
+  /** A race: `ranking` holds the top teams only, and this counts them all. */
+  totalTeams?: number;
   title: string;
   /** The template's closing text. */
   finale: string;

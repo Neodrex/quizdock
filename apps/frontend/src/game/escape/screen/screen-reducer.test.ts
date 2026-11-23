@@ -1,3 +1,4 @@
+import placesFixture from '../../../../../../packages/contracts/test/fixtures/escape-places.json';
 import { describe, expect, it } from 'vitest';
 import {
   BANNER_MS,
@@ -214,6 +215,24 @@ describe('screenReducer: finale', () => {
 });
 
 describe('lanesOf', () => {
+  it('ranks as the server’s placesOf (the shared fixture, M7 §1.7)', () => {
+    const board = boardOf({
+      teams: placesFixture.teams.map((t) => ({
+        ...red,
+        id: t.id,
+        name: t.id,
+        stageIndex: t.stageIndex,
+        locksSolved: t.locksSolved,
+        escaped: t.escapedAtMs !== null,
+        escapedAtMs: t.escapedAtMs,
+        remainingMs: 1_000_000 + t.adjustMs,
+      })),
+    });
+    const lanes = lanesOf(board).map((l) => [l.id, l.place] as [string, number]);
+    const places = placesFixture.places as [string, number][];
+    expect([...lanes].sort((a, b) => a[1] - b[1])).toEqual([...places].sort((a, b) => a[1] - b[1]));
+  });
+
   it('keeps team order and gives live places', () => {
     const board = boardOf({
       teams: [

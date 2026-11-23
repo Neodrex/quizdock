@@ -154,8 +154,8 @@ export function raceTests(ctx: EscapeContext): void {
     // The room is there for the first read, gone for the next.
     jest.spyOn(game, 'getMeta').mockResolvedValueOnce(meta).mockResolvedValue(null);
     const engine = ctx.h.app.get(EscapeEngine) as unknown as {
-      boardNow(pin: string): Promise<void>;
+      boardNow(pin: string, what: { board: boolean; host: boolean }): Promise<void>;
     };
-    await expect(engine.boardNow(pin)).resolves.toBeUndefined();
+    await expect(engine.boardNow(pin, { board: true, host: true })).resolves.toBeUndefined();
   });
 }
