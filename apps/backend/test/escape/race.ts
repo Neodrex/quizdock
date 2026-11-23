@@ -6,6 +6,7 @@ import {
 } from '@quiz-dock/contracts';
 import { EscapeEngine } from '../../src/escape/escape.engine';
 import { EscapeTimings } from '../../src/escape/escape-timings';
+import { EscapeStore } from '../../src/escape/escape.store';
 import { GameService } from '../../src/game/game.service';
 import { gameKeys } from '../../src/game/game.keys';
 import { RedisService } from '../../src/redis/redis.service';
@@ -125,16 +126,23 @@ export function raceSessionTests(ctx: EscapeContext): void {
       refused('escape.too_many_codes'),
     );
 
-    // F starts a team, then another: the first is left empty.
+    // F starts a team, then another: the first, left empty, is gone with its code.
     const ghost = (await f.socket.emitWithAck('escape:new-team', { pin, name: 'Ghost' })) as {
       teamId: string;
       code: string;
     };
+    const gone = nextEvent<EscapeHostState>(host, 'escape:host', {
+      where: (s) => s.teams.some((t) => t.name === 'Bats'),
+    });
     const bats = (await f.socket.emitWithAck('escape:new-team', { pin, name: 'Bats' })) as {
       teamId: string;
       code: string;
     };
     expect(bats.code).not.toBe(ghost.code);
+    expect((await gone).teams.map((t) => t.name)).toEqual(['Owls', 'Bats']);
+    expect(await d.socket.emitWithAck('escape:join-team', { pin, code: ghost.code })).toMatchObject(
+      refused('escape.team_code_unknown'),
+    );
 
     // Picking a listed team is not how a race forms.
     expect(
@@ -239,6 +247,28 @@ export function raceSessionTests(ctx: EscapeContext): void {
     await settle(200);
     expect(counts.map((n) => n())).toEqual([0, 0, 0]);
     expect(first[0].last().formation.teams).toHaveLength(1);
+  });
+
+  it('a team race holds at most as many teams as its cap', async () => {
+    const { pin } = await raceRoom('teams');
+    const [a, b, c] = await Promise.all(
+      ['Ann', 'Ben', 'Cat'].map((n) => joinAndSync(ctx.h, pin, n)),
+    );
+    expect(await a.socket.emitWithAck('escape:new-team', { pin, name: 'A' })).toMatchObject({
+      ok: true,
+    });
+    expect(await b.socket.emitWithAck('escape:new-team', { pin, name: 'B' })).toMatchObject({
+      ok: true,
+    });
+    const store = ctx.h.app.get(EscapeStore);
+    await store.writeSession(pin, { ...(await store.session(pin))!, cap: 2 });
+    expect(await c.socket.emitWithAck('escape:new-team', { pin, name: 'C' })).toMatchObject(
+      refused('session.full'),
+    );
+    // A team that empties as its player starts another makes room for it.
+    expect(await a.socket.emitWithAck('escape:new-team', { pin, name: 'A2' })).toMatchObject({
+      ok: true,
+    });
   });
 
   it('escape:new-team and escape:join-team belong to team races', async () => {

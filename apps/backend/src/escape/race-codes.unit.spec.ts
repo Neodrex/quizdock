@@ -1,4 +1,4 @@
-import { CODE_ALPHABET, CODE_LENGTH, newCode, normaliseCode } from './race-codes';
+import { CODE_ALPHABET, CODE_LENGTH, CODE_TRIES_MAX, newCode, normaliseCode } from './race-codes';
 
 describe('race codes (M7 §1.7)', () => {
   it('are four letters of the alphabet, without I or O', () => {
@@ -19,6 +19,16 @@ describe('race codes (M7 §1.7)', () => {
     const taken = new Set<string>();
     for (let i = 0; i < 500; i++) taken.add(newCode(taken));
     expect(taken.size).toBe(500);
+  });
+
+  it('give up after a bounded number of draws', () => {
+    let draws = 0;
+    const random = () => {
+      draws++;
+      return 0;
+    };
+    expect(() => newCode(new Set(['AAAA']), random)).toThrow('no free team code');
+    expect(draws).toBe(CODE_TRIES_MAX * CODE_LENGTH);
   });
 
   it('accept lower case and spaces, and nothing else', () => {

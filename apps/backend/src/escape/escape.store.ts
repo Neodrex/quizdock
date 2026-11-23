@@ -168,6 +168,8 @@ export interface EscapeWrite {
   teams?: TeamRecord[];
   /** The members index: playerId → teamId to set, playerIds to drop. */
   members?: { set?: Record<string, string>; del?: string[] };
+  /** Team records to delete (a race's team left empty, M7 §1.7). */
+  drop?: string[];
 }
 
 /** An escape run's records in Redis, under its game id (M3 plan §1.4). */
@@ -271,10 +273,12 @@ export class EscapeStore {
     const teams = write.teams ?? [];
     const set = write.members?.set ?? {};
     const del = write.members?.del ?? [];
+    const drop = write.drop ?? [];
     const members = Object.keys(set).length > 0 || del.length > 0;
-    if (!write.run && !write.replace && !teams.length && !members) return;
+    if (!write.run && !write.replace && !teams.length && !members && !drop.length) return;
     const pipe = this.redis.multi();
     if (write.replace) pipe.del(escapeKeys.teams(id), escapeKeys.members(id));
+    if (drop.length) pipe.hdel(escapeKeys.teams(id), ...drop);
     if (write.run) pipe.set(escapeKeys.run(id), JSON.stringify(write.run), 'EX', ESCAPE_TTL_S);
     if (teams.length) {
       const key = escapeKeys.teams(id);

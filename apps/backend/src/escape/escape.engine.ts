@@ -516,12 +516,19 @@ export class EscapeEngine implements OnModuleDestroy {
     return this.mutate(pin, undefined, async (ref) => {
       const v = await this.viewOf(ref);
       this.requireTeamRace(ref, v, me.playerId);
+      // At most a team per player of the cap; a team the player leaves empty makes room.
+      const mine = teamOf(this.teamsOf(v), me.playerId);
+      const freed = mine?.members.length === 1 ? 1 : 0;
+      if (ref.run.teamIds.length - freed >= (v.session?.cap ?? Infinity)) {
+        throw new ForbiddenException('session.full');
+      }
       const taken = new Set(v.teams.flatMap((r) => (r.code ? [r.code] : [])));
       const code = newCode(taken);
       const { ref: next, v: added } = await this.addTeam(ref, v, name, code);
       const teamId = added.run.teamIds.at(-1)!;
       const moved = await this.applyMove(next, added, me.playerId, teamId);
-      await this.broadcast(next, moved, this.formationPhones(v, moved, me.playerId));
+      const out = await this.dropEmptied(next, moved, mine?.id);
+      await this.broadcast(out.ref, out.v, this.formationPhones(v, out.v, me.playerId));
       return { teamId, code };
     });
   }
@@ -551,8 +558,10 @@ export class EscapeEngine implements OnModuleDestroy {
       if (to.team.members.length >= RACE_TEAM_MAX) {
         throw new BadRequestException('escape.team_full');
       }
+      const left = teamOf(this.teamsOf(v), me.playerId)?.id;
       const moved = await this.applyMove(ref, v, me.playerId, teamId);
-      await this.broadcast(ref, moved, this.formationPhones(v, moved, me.playerId));
+      const out = await this.dropEmptied(ref, moved, left);
+      await this.broadcast(out.ref, out.v, this.formationPhones(v, out.v, me.playerId));
       return { teamId };
     });
   }
@@ -565,6 +574,24 @@ export class EscapeEngine implements OnModuleDestroy {
     const mine = teamOf(this.teamsOf(v), playerId);
     const open = ref.run.phase === 'forming' || (ref.run.phase === 'running' && !mine);
     if (!open) throw new BadRequestException('escape.wrong_phase');
+  }
+
+  /**
+   * M7 §1.7: the race team `teamId` (the one a player just left) is deleted
+   * when nobody is left in it: out of the run's teams, its record and its code
+   * gone. The run and view after.
+   */
+  private async dropEmptied(
+    ref: RunRef,
+    v: RunView,
+    teamId: string | undefined,
+  ): Promise<{ ref: RunRef; v: RunView }> {
+    const rec = v.teams.find((r) => r.team.id === teamId);
+    if (!rec || rec.team.members.length) return { ref, v };
+    const run: EscapeRun = { ...ref.run, teamIds: ref.run.teamIds.filter((t) => t !== teamId) };
+    await this.store.save(ref.id, { run, drop: [rec.team.id] });
+    const teams = v.teams.filter((r) => r !== rec);
+    return { ref: { ...ref, run }, v: { ...v, run, teams } };
   }
 
   /** A new empty team at the end of the run (a race's), saved; the run and view with it. */

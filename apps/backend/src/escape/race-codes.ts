@@ -19,13 +19,17 @@ export function normaliseCode(input: string): string | null {
   return VALID.test(code) ? code : null;
 }
 
+/** Draws before newCode gives up (a run holds at most a few hundred of 331 776 codes). */
+export const CODE_TRIES_MAX = 1000;
+
 /** A code no team of the run has. `random` in [0, 1), for the tests. */
 export function newCode(taken: ReadonlySet<string>, random: () => number = Math.random): string {
-  for (;;) {
+  for (let tries = 0; tries < CODE_TRIES_MAX; tries++) {
     let code = '';
     for (let i = 0; i < CODE_LENGTH; i++) {
       code += CODE_ALPHABET[Math.floor(random() * CODE_ALPHABET.length)];
     }
     if (!taken.has(code)) return code;
   }
+  throw new Error('no free team code');
 }
