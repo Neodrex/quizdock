@@ -90,6 +90,7 @@ const attachAndSync = (from = 0) =>
 
 const stage = (index: number, roles = ['lookout']): EscapePlayerState => ({
   gameId: GAME,
+  session: null,
   phase: 'running',
   clock: { serverNow: Date.now(), paused: false, elapsedMs: 60_000, limitMs: 3_600_000 },
   title: 'Vault Heist',

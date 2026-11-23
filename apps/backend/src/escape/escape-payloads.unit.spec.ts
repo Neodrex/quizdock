@@ -11,6 +11,7 @@ import {
   hostStateOf,
   hostTeamOf,
   hostOutlineOf,
+  playerSessionOf,
   playerStateOf,
   type RoomPlayer,
   type RunView,
@@ -51,11 +52,11 @@ const running: EscapeRun = {
 };
 
 const players: RoomPlayer[] = [
-  { playerId: 'p1', nickname: 'Ann', avatar: 'ann', connected: true },
-  { playerId: 'p2', nickname: 'Bob', avatar: null, connected: true },
-  { playerId: 'p3', nickname: 'Cy', avatar: 'cy', connected: false },
-  { playerId: 'q1', nickname: 'Dee', avatar: 'dee', connected: true },
-  { playerId: 'x', nickname: 'Lone', avatar: 'lone', connected: true },
+  { playerId: 'p1', nickname: 'Ann', avatar: 'ann', connected: true, userId: 'u-ann' },
+  { playerId: 'p2', nickname: 'Bob', avatar: null, connected: true, userId: null },
+  { playerId: 'p3', nickname: 'Cy', avatar: 'cy', connected: false, userId: null },
+  { playerId: 'q1', nickname: 'Dee', avatar: 'dee', connected: true, userId: 'u-dee' },
+  { playerId: 'x', nickname: 'Lone', avatar: 'lone', connected: true, userId: null },
 ];
 
 const rec = (team: TeamState, extra: Partial<TeamRecord> = {}): TeamRecord => ({
@@ -395,6 +396,60 @@ describe('host payloads', () => {
     expect(leaks).toEqual(
       expect.arrayContaining([expect.stringContaining('answer of lock lobby-door')]),
     );
+  });
+});
+
+describe('playerSessionOf (M7 §1.4)', () => {
+  const group: EscapeSession = {
+    type: 'group',
+    cap: 6,
+    race: null,
+    licence: null,
+    licenceUsed: false,
+    phoneHostUserId: 'u-ann',
+  };
+
+  it('marks the phone host by its account, and nobody else', () => {
+    const v = { ...view(), session: group };
+    expect(playerSessionOf(v, 'p1')).toEqual({
+      type: 'group',
+      raceFormat: null,
+      startsAt: null,
+      isPhoneHost: true,
+    });
+    for (const id of ['p2', 'q1', 'x', 'nobody']) {
+      expect(playerSessionOf(v, id)?.isPhoneHost).toBe(false);
+    }
+    // A guest never matches a session without a phone host.
+    const hosted = { ...v, session: { ...group, type: 'hosted' as const, phoneHostUserId: null } };
+    expect(playerSessionOf(hosted, 'p2')?.isPhoneHost).toBe(false);
+    expect(playerStateOf(v, 'p1').session?.isPhoneHost).toBe(true);
+  });
+
+  it('gives a race its format and start, and nothing for a room without a session', () => {
+    const race = {
+      ...view(),
+      session: {
+        ...group,
+        type: 'race' as const,
+        phoneHostUserId: null,
+        race: { format: 'solo' as const, startsAt: 123, started: false },
+      },
+    };
+    expect(playerSessionOf(race, 'p1')).toEqual({
+      type: 'race',
+      raceFormat: 'solo',
+      startsAt: 123,
+      isPhoneHost: false,
+    });
+    expect(playerStateOf(view(), 'p1').session).toBeNull();
+  });
+
+  it('never sends a player’s account', () => {
+    expect(JSON.stringify(playerStateOf({ ...view(), session: group }, 'p1'))).not.toContain(
+      'u-ann',
+    );
+    expect(JSON.stringify(hostStateOf(view()))).not.toContain('u-ann');
   });
 });
 

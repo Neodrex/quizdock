@@ -60,6 +60,7 @@ export const team = (over: Partial<Team> = {}): Team => ({
 
 export const state = (over: Partial<EscapePlayerState> = {}): EscapePlayerState => ({
   gameId: GAME,
+  session: null,
   phase: 'running',
   clock: { serverNow: 1_000_000_000, paused: false, elapsedMs: 0, limitMs: 3_600_000 },
   title: 'Vault Heist',

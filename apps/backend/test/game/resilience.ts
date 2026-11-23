@@ -266,4 +266,21 @@ export function resilienceTests(ctx: GameContext): void {
 
     await endedP; // doit survenir avant le timeout (grâce 200 ms + fenêtre 800 ms)
   }, 15_000);
+
+  it('a host control that also joined as a player: its disconnect runs the player and the host handling', async () => {
+    const host = connect({ localUser: 'Animateur' });
+    const { pin } = await host.emitWithAck('host:create', { quizId });
+    const { playerId } = await host.emitWithAck('player:join', { pin, nickname: 'Hôte' });
+    const other = connect();
+    await other.emitWithAck('player:join', { pin, nickname: 'Iris' });
+    const left = nextEvent<{ playerId: string }>(other, 'player:left', {
+      where: (l) => l.playerId === playerId,
+    });
+    const away = stateEvent(other, 'HOST_DISCONNECTED');
+    host.disconnect();
+    await left;
+    await away;
+    const record = await app.get(GameService).getPlayer(pin, playerId);
+    expect(record?.connected).toBe(false);
+  }, 15_000);
 }

@@ -18,6 +18,7 @@ import type {
   EscapeHostState,
   EscapeHostTeam,
   EscapeMember,
+  EscapePlayerSession,
   EscapePlayerState,
   EscapeRosterEntry,
   EscapeScreenFinale,
@@ -37,6 +38,8 @@ export interface RoomPlayer {
   nickname: string;
   avatar: string | null;
   connected: boolean;
+  /** The account the player joined with (null: a guest). Server side only. */
+  userId: string | null;
 }
 
 /** Everything a payload is built from, read once per change. */
@@ -107,6 +110,19 @@ function membersOf(v: RunView, team: TeamState): EscapeMember[] {
 const recOf = (v: RunView, playerId: string) =>
   v.teams.find((r) => r.team.members.includes(playerId)) ?? null;
 
+/** The session for one phone: its type and race, and whether it is the phone host. */
+export function playerSessionOf(v: RunView, playerId: string): EscapePlayerSession | null {
+  const s = v.session;
+  if (!s) return null;
+  const userId = v.players.find((p) => p.playerId === playerId)?.userId ?? null;
+  return {
+    type: s.type,
+    raceFormat: s.race?.format ?? null,
+    startsAt: s.race?.startsAt ?? null,
+    isPhoneHost: s.phoneHostUserId !== null && userId === s.phoneHostUserId,
+  };
+}
+
 /** To one phone. */
 export function playerStateOf(v: RunView, playerId: string): EscapePlayerState {
   const tpl = v.snap.template;
@@ -117,6 +133,7 @@ export function playerStateOf(v: RunView, playerId: string): EscapePlayerState {
   const hint = playing ? nextHint(tpl, rec.team) : null;
   return {
     gameId: v.id,
+    session: playerSessionOf(v, playerId),
     phase: v.run.phase,
     clock: clockOf(v),
     title: tpl.title,

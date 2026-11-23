@@ -304,15 +304,16 @@ export class EscapeEngine implements OnModuleDestroy {
   async sync(socket: EscapeSocket, pin: string): Promise<void> {
     await this.mutate(pin, undefined, async (ref) => {
       const { data } = socket;
-      if (isHostConsole(data, pin, ref.meta.hostUserId)) {
+      const hostConsole = isHostConsole(data, pin, ref.meta.hostUserId);
+      if (hostConsole) {
         await socket.join(escapeRooms.host(pin));
         const v = await this.viewOf(ref);
         socket.emit('escape:outline', hostOutlineOf(ref.snap, ref.id));
         socket.emit('escape:host', hostStateOf(v));
         socket.emit('escape:board', boardOf(v));
-        return;
       }
       const me = playerOf(socket, pin);
+      // Group play (M7 §1.8): a host console that also joined as a player gets its phone state too.
       if (me) {
         const v = await this.viewOf(ref);
         // F5: a late joiner in auto formation goes to the smallest team.
@@ -337,6 +338,7 @@ export class EscapeEngine implements OnModuleDestroy {
         if (ref.run.phase !== 'finale') this.toBoard(ref, v);
         return;
       }
+      if (hostConsole) return;
       if (!socket.rooms.has(pin)) throw new ForbiddenException('escape.not_in_room');
       // A console that joined as a spectator is a screen now: out of the host room.
       await socket.leave(escapeRooms.host(pin));
@@ -1128,6 +1130,7 @@ export class EscapeEngine implements OnModuleDestroy {
           nickname: r.nickname,
           avatar: r.avatar,
           connected: live.has(playerId),
+          userId: r.userId,
         })),
       session,
       now: Date.now(),

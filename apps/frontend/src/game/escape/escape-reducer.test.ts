@@ -56,6 +56,7 @@ const team = (over: Partial<Team> = {}): Team => ({
 function stateOf(over: Partial<EscapePlayerState> = {}): EscapePlayerState {
   return {
     gameId: GAME,
+    session: null,
     phase: 'running',
     clock: { serverNow: 1_000_000, paused: false, elapsedMs: 0, limitMs: 1_800_000 },
     title: 'Vault Heist',

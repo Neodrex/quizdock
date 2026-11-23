@@ -1,6 +1,16 @@
-import { type EscapeHostState, toolsOf } from '@quiz-dock/contracts';
+import {
+  type EscapeFinale,
+  type EscapeHostState,
+  type EscapePlayerState,
+  GameState,
+  toolsOf,
+} from '@quiz-dock/contracts';
 import type { Socket } from 'socket.io-client';
 import { lostLibrary } from '../../src/escape/samples';
+import { EscapeEngine } from '../../src/escape/escape.engine';
+import { escapeRooms } from '../../src/escape/escape.keys';
+import type { EscapeTemplate } from '../../src/escape/escape.types';
+import { GameService } from '../../src/game/game.service';
 import { EscapeStore } from '../../src/escape/escape.store';
 import {
   ACME_LICENCE,
@@ -15,10 +25,12 @@ import {
   createAs,
   createEscape,
   joinAndSync,
+  record,
   seedTemplate,
   stateWhere,
   useLicences,
 } from './escape-harness';
+import { hostLeaks } from './leaks';
 import { nextEvent } from '../game-harness';
 
 const MIN = 60_000;
@@ -318,5 +330,144 @@ export function sessionTests(ctx: EscapeContext): void {
     for (const secret of ['eventsLeft', 'hosts', 'acme-org', 'organisationId', '"acme"']) {
       expect(json).not.toContain(secret);
     }
+  });
+}
+
+/** Group play: the creator's phone hosts and plays (M7 Task 7.6, owner question 1). */
+export function phoneHostTests(ctx: EscapeContext): void {
+  let library: string;
+  let tpl: EscapeTemplate;
+
+  beforeAll(async () => {
+    library = await seedTemplate(ctx.h, lostLibrary);
+    tpl = { id: library, ...lostLibrary };
+  });
+
+  /** Whether socket `id` is in the server room `room`. */
+  const inRoom = async (room: string, id: string | undefined): Promise<boolean> => {
+    const engine = ctx.h.app.get(EscapeEngine) as unknown as {
+      server: { in(room: string): { fetchSockets(): Promise<{ id: string }[]> } };
+    };
+    return (await engine.server.in(room).fetchSockets()).some((s) => s.id === id);
+  };
+  const gameIdOf = async (pin: string) => (await ctx.h.app.get(GameService).getMeta(pin))!.id;
+
+  /**
+   * A group room whose creating socket joined it as the player `Hostess`, with
+   * another phone; both in one team, the host's sync recorded.
+   */
+  const groupRoom = async () => {
+    const host = ctx.h.connectHost();
+    const { pin } = await createAs(host, library, 'group');
+    const joined = (await host.emitWithAck('player:join', { pin, nickname: 'Hostess' })) as {
+      playerId?: string;
+      sessionToken?: string;
+    };
+    expect(joined.playerId).toBeTruthy();
+    const seen = record(host);
+    expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    const other = await joinAndSync(ctx.h, pin!, 'Friend');
+    const grouped = stateWhere(host, (s) => s.team !== null);
+    expect(await host.emitWithAck('escape:teams', { pin, mode: 'auto', count: 1 })).toEqual({
+      ok: true,
+    });
+    const state = await grouped;
+    return {
+      host,
+      pin: pin!,
+      playerId: joined.playerId!,
+      sessionToken: joined.sessionToken!,
+      other,
+      seen,
+      teamId: state.team!.id,
+    };
+  };
+
+  it('a host that joins its group room as a player gets the host payloads and its phone state', async () => {
+    const { host, pin, seen, other, teamId } = await groupRoom();
+    const events = seen.map(([e]) => e);
+    for (const e of ['escape:outline', 'escape:host', 'escape:board', 'escape:state']) {
+      expect(events).toContain(e);
+    }
+    const id = await gameIdOf(pin);
+    expect(await inRoom(escapeRooms.host(pin), host.id)).toBe(true);
+    expect(await inRoom(escapeRooms.team(id, teamId), host.id)).toBe(true);
+    const mine = seen.filter(([e]) => e === 'escape:state').at(-1)![1] as EscapePlayerState;
+    expect(mine.session).toEqual({
+      type: 'group',
+      raceFormat: null,
+      startsAt: null,
+      isPhoneHost: true,
+    });
+    expect(other.last().session?.isPhoneHost).toBe(false);
+  });
+
+  it('the phone host starts the run and plays it; its frames hold no answer', async () => {
+    const { host, pin, seen } = await groupRoom();
+    const running = stateWhere(host, (s) => s.phase === 'running');
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    expect((await running).session?.isPhoneHost).toBe(true);
+    expect(
+      await host.emitWithAck('escape:submit', { pin, lockId: 'catalogue', input: '42' }),
+    ).toEqual({ ok: true, outcome: 'lock-solved' });
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    expect(hostLeaks(seen, tpl)).toEqual([]);
+  });
+
+  it('the phone drops: it leaves as a player and as the host; it comes back with both roles', async () => {
+    const { host, pin, playerId, sessionToken, other, teamId } = await groupRoom();
+    const running = stateWhere(other.socket, (s) => s.phase === 'running');
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    await running;
+    const left = nextEvent<{ playerId: string }>(other.socket, 'player:left', {
+      where: (l) => l.playerId === playerId,
+    });
+    const away = nextEvent<{ state: string }>(other.socket, 'game:state', {
+      where: (s) => s.state === GameState.HostDisconnected,
+    });
+    host.disconnect();
+    await left; // the player handling
+    await away; // the host handling: its grace ran out
+    // The team keeps playing.
+    expect(
+      await other.socket.emitWithAck('escape:submit', { pin, lockId: 'catalogue', input: '42' }),
+    ).toEqual({ ok: true, outcome: 'lock-solved' });
+
+    const back = ctx.h.connectHost();
+    const resumed = nextEvent<{ state: string }>(other.socket, 'game:state', {
+      where: (s) => s.state === GameState.Escape,
+    });
+    expect(await back.emitWithAck('host:attach', { pin })).toEqual({ ok: true });
+    await resumed;
+    expect(await back.emitWithAck('player:reconnect', { sessionToken })).toEqual({ ok: true });
+    const hostState = nextEvent<EscapeHostState>(back, 'escape:host');
+    const phone = stateWhere(back, (s) => s.phase === 'running');
+    expect(await back.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    expect((await hostState).teams.map((t) => t.id)).toEqual([teamId]);
+    const mine = await phone;
+    expect(mine.session?.isPhoneHost).toBe(true);
+    expect(mine.team?.id).toBe(teamId);
+    expect(mine.view?.locks.find((l) => l.id === 'catalogue')?.solved).toBe(true);
+    const id = await gameIdOf(pin);
+    expect(await inRoom(escapeRooms.host(pin), back.id)).toBe(true);
+    expect(await inRoom(escapeRooms.team(id, teamId), back.id)).toBe(true);
+  });
+
+  it('while the phone host is away, the run still times out to a finale', async () => {
+    const { host, pin, other } = await groupRoom();
+    const running = stateWhere(other.socket, (s) => s.phase === 'running');
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    await running;
+    const away = nextEvent<{ state: string }>(other.socket, 'game:state', {
+      where: (s) => s.state === GameState.HostDisconnected,
+    });
+    host.disconnect();
+    await away;
+    const finale = nextEvent<EscapeFinale>(other.socket, 'escape:finale');
+    const store = ctx.h.app.get(EscapeStore);
+    const id = await gameIdOf(pin);
+    const run = (await store.run(id))!;
+    await store.saveRun(id, { ...run, clock: { ...run.clock, limitMs: 1 } });
+    expect((await finale).ranking).toHaveLength(1);
   });
 }

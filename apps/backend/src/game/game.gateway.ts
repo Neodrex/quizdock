@@ -703,7 +703,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayDisconnect {
       await this.engine.handlePlayerDisconnect(pin, playerId).catch((err: Error) => {
         this.log.warn(`handlePlayerDisconnect ${pin}/${playerId}: ${err.message}`);
       });
-      return;
+      // A host control that also plays (escape group play): its host handling too.
+      if (!isHostControl || !user) return;
     }
     if (pin && isHostControl && user) {
       await this.engine.handleHostDisconnect(pin, user.id).catch((err: Error) => {

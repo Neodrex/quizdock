@@ -60,6 +60,7 @@ const GAME = '0123456789abcdef0123456789abcdef';
 
 const state = (over: Partial<EscapePlayerState> = {}): EscapePlayerState => ({
   gameId: GAME,
+  session: null,
   phase: 'running',
   clock: { serverNow: 0, paused: false, elapsedMs: 0, limitMs: 60_000 },
   title: 'Vault Heist',

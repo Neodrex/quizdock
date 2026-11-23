@@ -227,10 +227,23 @@ export interface EscapeFormation {
   teams: { id: string; name: string; memberCount: number }[];
 }
 
+/** The room's session as a phone sees it (M7 §1.4). */
+export interface EscapePlayerSession {
+  type: EscapeSessionType;
+  /** A race's format; null for the other types. */
+  raceFormat: 'solo' | 'teams' | null;
+  /** A scheduled race's start (server epoch ms); null otherwise. */
+  startsAt: number | null;
+  /** Group play: this phone is also the session's host (owner question 1). */
+  isPhoneHost: boolean;
+}
+
 /** To one phone. */
 export interface EscapePlayerState {
   /** The run's id: the key for escape:results, and how a phone sees a new game in its room. */
   gameId: string;
+  /** null: a room opened before session types. */
+  session: EscapePlayerSession | null;
   phase: EscapePhase;
   clock: EscapeClock;
   title: string;
