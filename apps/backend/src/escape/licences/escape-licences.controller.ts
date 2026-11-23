@@ -25,12 +25,14 @@ const summaryOf = (l: Licence): Summary => ({
 export class EscapeLicencesController {
   constructor(@Inject(LICENCE_PORT) private readonly licences: Pick<LicencePort, 'usableBy'>) {}
 
-  /** The host's usable licences now, the soonest to expire first. */
+  /** The host's usable licences now, the soonest to expire first (then by id). */
   @Get()
   @ApiOkResponse({ type: EscapeLicenceSummaryDto, isArray: true })
   async list(@CurrentUser() user: User): Promise<Summary[]> {
     const host = { userId: user.id, email: user.email, oidcSubject: user.oidcSubject };
     const usable = await this.licences.usableBy(host, Date.now());
-    return usable.sort((a, b) => a.expiresAt - b.expiresAt).map(summaryOf);
+    return [...usable]
+      .sort((a, b) => a.expiresAt - b.expiresAt || a.id.localeCompare(b.id))
+      .map(summaryOf);
   }
 }

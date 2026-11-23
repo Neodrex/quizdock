@@ -88,16 +88,7 @@ describe('EscapeLicencesController', () => {
         eventsLeft: 2,
         hasBrand: true,
       },
-      // Equal expiries keep the source's order.
-      {
-        id: 'dev-licence',
-        organisationName: null,
-        package: 'annual',
-        participantCap: 500,
-        expiresAt: DEV_LICENCE.expiresAt,
-        eventsLeft: null,
-        hasBrand: false,
-      },
+      // Equal expiries: by id.
       {
         id: 'acme',
         organisationName: 'Acme',
@@ -107,9 +98,31 @@ describe('EscapeLicencesController', () => {
         eventsLeft: 2,
         hasBrand: true,
       },
+      {
+        id: 'dev-licence',
+        organisationName: null,
+        package: 'annual',
+        participantCap: 500,
+        expiresAt: DEV_LICENCE.expiresAt,
+        eventsLeft: null,
+        hasBrand: false,
+      },
     ]);
     // Expired Co and someone else's are left out; no brand details nor hosts.
     expect(JSON.stringify(res.body)).not.toMatch(/expired-co|theirs|hosts|logoUrl|acme-org/);
+  });
+
+  it('sorts a copy: the port’s own list is left as it was', async () => {
+    const own = await new StaticLicences(DEV_LICENCES).usableBy(
+      { userId: 'user-1', email: null, oidcSubject: '' },
+      Date.now(),
+    );
+    const before = own.map((l) => l.id);
+    port = new NoLicences();
+    jest.spyOn(port, 'usableBy').mockResolvedValue(own);
+    const res = await list().set(as('host')).expect(200);
+    expect(res.body.map((l: { id: string }) => l.id)).toEqual(['acme', 'dev-licence']);
+    expect(own.map((l) => l.id)).toEqual(before);
   });
 
   it('asks the port as the signed-in host', async () => {
