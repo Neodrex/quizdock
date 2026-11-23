@@ -909,6 +909,40 @@ describe('race scale (M7 §1.7)', () => {
     };
   };
 
+  it('a host state walks the players and the teams a few times, not once per team (M9 Task 9.4)', () => {
+    /** The array, counting each whole walk (map, filter, find, some, a for…of…). */
+    const counted = <T>(xs: T[]) => {
+      const walks = { n: 0 };
+      const walkers = new Set([
+        'map',
+        'filter',
+        'find',
+        'findIndex',
+        'some',
+        'every',
+        'forEach',
+        'flatMap',
+        'reduce',
+      ]);
+      const proxy = new Proxy(xs, {
+        get(target, key, receiver) {
+          if (key === Symbol.iterator || walkers.has(key as string)) walks.n++;
+          return Reflect.get(target, key, receiver) as unknown;
+        },
+      });
+      return { proxy, walks };
+    };
+    for (const session of [raceSession, null]) {
+      const base = soloView(500, session);
+      const players = counted(base.players);
+      const teams = counted(base.teams);
+      const v = { ...base, players: players.proxy, teams: teams.proxy };
+      hostStateOf(v);
+      expect(players.walks.n).toBeLessThan(10);
+      expect(teams.walks.n).toBeLessThan(20);
+    }
+  });
+
   it('placesOf ranks as the screen’s lanesOf (the shared fixture)', () => {
     const v: RunView = {
       ...view(),

@@ -98,8 +98,38 @@ export function formationOf(v: RunView, recs: readonly TeamRecord[] = v.teams): 
   };
 }
 
+/**
+ * A view's players by id and each player's team record, built once per view
+ * (M9 Task 9.4): a host state asks for every team's members and every
+ * player's team, which was teams × players. Views are never changed in place
+ * (a new view gets new arrays), so the arrays key the index.
+ */
+const playerIndex = new WeakMap<RoomPlayer[], Map<string, RoomPlayer>>();
+const teamIndex = new WeakMap<TeamRecord[], Map<string, TeamRecord>>();
+
+function playersById(v: RunView): Map<string, RoomPlayer> {
+  let byId = playerIndex.get(v.players);
+  if (!byId) {
+    byId = new Map(v.players.map((p) => [p.playerId, p]));
+    playerIndex.set(v.players, byId);
+  }
+  return byId;
+}
+
+function recsByPlayer(v: RunView): Map<string, TeamRecord> {
+  let byPlayer = teamIndex.get(v.teams);
+  if (!byPlayer) {
+    byPlayer = new Map();
+    // The first team listing a player wins, as a find over the teams would.
+    for (const r of v.teams)
+      for (const id of r.team.members) if (!byPlayer.has(id)) byPlayer.set(id, r);
+    teamIndex.set(v.teams, byPlayer);
+  }
+  return byPlayer;
+}
+
 function membersOf(v: RunView, team: TeamState): EscapeMember[] {
-  const byId = new Map(v.players.map((p) => [p.playerId, p]));
+  const byId = playersById(v);
   return team.members.map((id) => {
     const p = byId.get(id);
     return {
@@ -112,8 +142,7 @@ function membersOf(v: RunView, team: TeamState): EscapeMember[] {
   });
 }
 
-const recOf = (v: RunView, playerId: string) =>
-  v.teams.find((r) => r.team.members.includes(playerId)) ?? null;
+const recOf = (v: RunView, playerId: string) => recsByPlayer(v).get(playerId) ?? null;
 
 /** The session for one phone: its type and race, and whether it is the phone host. */
 export function playerSessionOf(v: RunView, playerId: string): EscapePlayerSession | null {
