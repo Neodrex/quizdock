@@ -124,7 +124,9 @@ export function playerSessionOf(v: RunView, playerId: string): EscapePlayerSessi
     type: s.type,
     raceFormat: s.race?.format ?? null,
     startsAt: s.race?.startsAt ?? null,
-    isPhoneHost: s.phoneHostUserId !== null && userId === s.phoneHostUserId,
+    isPhoneHost:
+      s.phoneHostUserId !== null &&
+      (userId === s.phoneHostUserId || (!!s.phoneHostPlayerId && playerId === s.phoneHostPlayerId)),
   };
 }
 

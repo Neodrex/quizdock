@@ -126,6 +126,7 @@ const sessionSchema = z.object({
     .nullable(),
   licenceUsed: z.boolean(),
   phoneHostUserId: z.string().nullable(),
+  phoneHostPlayerId: z.string().nullable().optional(),
 });
 
 export const storedShapesMatch: [

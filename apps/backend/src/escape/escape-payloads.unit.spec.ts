@@ -453,6 +453,18 @@ describe('playerSessionOf (M7 §1.4)', () => {
     expect(playerStateOf(v, 'p1').session?.isPhoneHost).toBe(true);
   });
 
+  it('marks the phone host by its player in open access, where no player has an account', () => {
+    const v = view();
+    const guests = { ...v, players: v.players.map((p) => ({ ...p, userId: null })) };
+    const open = { ...guests, session: { ...group, phoneHostPlayerId: 'p2' } };
+    expect(playerSessionOf(open, 'p2')?.isPhoneHost).toBe(true);
+    for (const id of ['p1', 'q1', 'nobody']) {
+      expect(playerSessionOf(open, id)?.isPhoneHost).toBe(false);
+    }
+    // Not yet seen: nobody is.
+    expect(playerSessionOf({ ...guests, session: group }, 'p1')?.isPhoneHost).toBe(false);
+  });
+
   it('gives a race its format and start, and nothing for a room without a session', () => {
     const race = {
       ...view(),

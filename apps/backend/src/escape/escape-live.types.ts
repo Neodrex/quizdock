@@ -76,4 +76,9 @@ export interface EscapeSession {
   licenceUsed: boolean;
   /** Group play: the creator, who also plays (owner question 1). */
   phoneHostUserId: string | null;
+  /**
+   * Group play: the creator's player, set at its sync. Open access (#57) keeps
+   * no account on any player, so the account alone cannot find the phone host.
+   */
+  phoneHostPlayerId?: string | null;
 }

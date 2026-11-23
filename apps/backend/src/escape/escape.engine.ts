@@ -372,6 +372,19 @@ export class EscapeEngine implements OnModuleDestroy {
   // ── Sync (§2 routing) ──
 
   /** The socket joins its escape rooms and gets its view: host console, phone or screen. */
+  /**
+   * Group play: the player whose signed-in socket is the creator's is the phone
+   * host. Open access (#57) keeps no account on any player, so it is kept by player.
+   */
+  private async markPhoneHost(socket: EscapeSocket, pin: string, playerId: string): Promise<void> {
+    const user = socket.data.user?.id;
+    if (!user) return;
+    const session = await this.store.session(pin);
+    if (session?.type !== 'group' || session.phoneHostUserId !== user) return;
+    if (session.phoneHostPlayerId === playerId) return;
+    await this.store.writeSession(pin, { ...session, phoneHostPlayerId: playerId });
+  }
+
   async sync(socket: EscapeSocket, pin: string): Promise<void> {
     let due = false;
     await this.mutate(pin, undefined, async (ref) => {
@@ -393,6 +406,7 @@ export class EscapeEngine implements OnModuleDestroy {
       }
       // Group play (M7 §1.8): a host console that also joined as a player gets its phone state too.
       if (me) {
+        await this.markPhoneHost(socket, pin, me.playerId);
         const v = await this.viewOf(ref);
         const race = v.session?.type === 'race';
         // M7 §1.7: in a solo race, a player's first sync gives them their own team.

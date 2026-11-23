@@ -711,6 +711,54 @@ export function phoneHostTests(ctx: EscapeContext): void {
     expect((await phone).session?.isPhoneHost).toBe(true);
   });
 
+  it('in open access (guests only, no account on any player) the signed-in creator is still the phone host, and after a reload', async () => {
+    // Two sockets of the host, signed in at their handshake: the first, then the reload.
+    const host = ctx.h.connectHost();
+    const back = ctx.h.connectHost();
+    await Promise.all(
+      [host, back].map(
+        (s) => new Promise<void>((ok) => (s.connected ? ok() : s.once('connect', () => ok()))),
+      ),
+    );
+    // Open access is for OIDC with guests allowed; the policy is read per event.
+    const env = process.env;
+    process.env = { ...env, AUTH_MODE: 'oidc', ALLOW_ANONYMOUS_PARTICIPANTS: 'true' };
+    try {
+      const { pin } = (await host.emitWithAck('escape:create', {
+        templateId: library,
+        sessionType: 'group',
+        participantAccess: 'open',
+      })) as { pin: string };
+      expect(pin).toMatch(/^\d{6}$/);
+      const joined = (await host.emitWithAck('player:join', { pin, nickname: 'Hostess' })) as {
+        playerId?: string;
+        sessionToken?: string;
+      };
+      expect(joined.playerId).toBeTruthy();
+      const mine = stateWhere(host, (s) => s.team !== null);
+      expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+      expect((await mine).session?.isPhoneHost).toBe(true);
+      // Another guest is not the phone host; the host keeps it on a broadcast state.
+      const friend = await joinAndSync(ctx.h, pin, 'Friend');
+      expect(friend.states.at(-1)?.session?.isPhoneHost).toBe(false);
+      const hostAgain = stateWhere(host, (s) => s.team !== null);
+      expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+      expect((await hostAgain).session?.isPhoneHost).toBe(true);
+
+      // A reload: the new signed-in socket comes back as the same player.
+      host.disconnect();
+      expect(
+        await back.emitWithAck('player:reconnect', { sessionToken: joined.sessionToken }),
+      ).toEqual({ ok: true });
+      const after = stateWhere(back, (s) => s.team !== null);
+      expect(await back.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+      expect((await after).session?.isPhoneHost).toBe(true);
+      expect(await back.emitWithAck('host:attach', { pin })).toEqual({ ok: true });
+    } finally {
+      process.env = env;
+    }
+  });
+
   it('host:attach from a guest socket (a reload under AUTH_MODE=none) is refused (M7 §5 item 12)', async () => {
     const { pin } = await groupRoom();
     const guest = ctx.h.connect();
