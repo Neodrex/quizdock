@@ -15,6 +15,11 @@ import type { Same, TeamState } from './escape.types';
 
 /** Parsed snapshots kept in memory, as GameService keeps quiz snapshots. */
 const SNAPSHOT_CACHE_MAX = 50;
+/**
+ * Team records parsed, by their stored JSON (M9 Task 9.4): every view reads all
+ * of a run's teams, and most did not change since the last read. A few MB at most.
+ */
+const TEAM_CACHE_MAX = 4096;
 
 const ms = z.number();
 const ids = z.array(z.string());
@@ -175,6 +180,8 @@ export interface EscapeWrite {
 @Injectable()
 export class EscapeStore {
   private readonly snapshots = new Map<GameId, EscapeSnapshot>();
+  /** Parsed team records by their JSON; records are never changed in place. */
+  private readonly parsedTeams = new Map<string, TeamRecord>();
 
   constructor(private readonly redis: RedisService) {}
 
@@ -250,16 +257,24 @@ export class EscapeStore {
   /** Every team of the run, by team id. */
   async teams(id: GameId): Promise<Map<string, TeamRecord>> {
     const raw = await this.redis.hgetall(escapeKeys.teams(id));
-    return new Map(
-      Object.entries(raw).map(([teamId, json]) => [
-        teamId,
-        teamRecordSchema.parse(JSON.parse(json)),
-      ]),
-    );
+    return new Map(Object.entries(raw).map(([teamId, json]) => [teamId, this.teamOf(json)]));
   }
 
   async team(id: GameId, teamId: string): Promise<TeamRecord | null> {
-    return parseJson(teamRecordSchema, await this.redis.hget(escapeKeys.teams(id), teamId));
+    const raw = await this.redis.hget(escapeKeys.teams(id), teamId);
+    return raw === null ? null : this.teamOf(raw);
+  }
+
+  /** A stored team record, parsed and checked once per distinct JSON. */
+  private teamOf(json: string): TeamRecord {
+    const known = this.parsedTeams.get(json);
+    if (known) return known;
+    const rec = teamRecordSchema.parse(JSON.parse(json)) as TeamRecord;
+    this.parsedTeams.set(json, rec);
+    if (this.parsedTeams.size > TEAM_CACHE_MAX) {
+      this.parsedTeams.delete(this.parsedTeams.keys().next().value as string);
+    }
+    return rec;
   }
 
   /** The team a player is in, null when in none. */

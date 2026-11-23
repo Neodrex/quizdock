@@ -118,6 +118,20 @@ describe('EscapeStore (Redis)', () => {
     expect(await store.results(id)).toBeNull();
   });
 
+  it('parses a team record once while its stored JSON is the same (M9 Task 9.4)', async () => {
+    await store.save(id, { teams: [record('t1', ['p1']), record('t2', ['p2'])] });
+    const first = await store.teams(id);
+    const again = await store.teams(id);
+    expect(again.get('t1')).toBe(first.get('t1'));
+    expect(await store.team(id, 't2')).toBe(first.get('t2'));
+    // Written again, changed: parsed again.
+    await store.save(id, { teams: [record('t1', ['p1', 'p3'])] });
+    const changed = await store.teams(id);
+    expect(changed.get('t1')).not.toBe(first.get('t1'));
+    expect(changed.get('t1')).toEqual(record('t1', ['p1', 'p3']));
+    expect(changed.get('t2')).toBe(first.get('t2'));
+  });
+
   it('refuses a record that does not have the stored shape, rather than trusting it', async () => {
     await redis.set(escapeKeys.run(id), JSON.stringify({ ...run, phase: 'dancing' }));
     await expect(store.run(id)).rejects.toThrow();
