@@ -82,11 +82,12 @@ function teamClockOf(v: RunView, rec: TeamRecord): EscapeTeamClock {
   };
 }
 
-export function formationOf(v: RunView): EscapeFormation {
+/** The formation with `recs` listed (every team by default). */
+export function formationOf(v: RunView, recs: readonly TeamRecord[] = v.teams): EscapeFormation {
   return {
     mode: v.run.formation,
     maxSize: v.run.maxSize || null,
-    teams: v.teams.map((r) => ({
+    teams: recs.map((r) => ({
       id: r.team.id,
       name: r.team.name,
       memberCount: r.team.members.length,
@@ -140,7 +141,8 @@ export function playerStateOf(v: RunView, playerId: string): EscapePlayerState {
     title: tpl.title,
     intro: tpl.intro,
     roles: tpl.roles.map((r) => ({ id: r.id, name: r.name, description: r.description })),
-    formation: formationOf(v),
+    // A race (M7 §1.7) lists the phone's own team only: 500 phones never get 500 teams each.
+    formation: viewLimits(v) ? formationOf(v, rec ? [rec] : []) : formationOf(v),
     team: rec && {
       ...teamClockOf(v, rec),
       id: rec.team.id,
@@ -187,10 +189,11 @@ const unassignedOf = (v: RunView) => v.players.filter((p) => !recOf(v, p.playerI
 
 /**
  * The lobby roster (M6 owner answer 1): while forming, every player in join
- * order by nickname, with their team or null. Nothing else of a player.
+ * order by nickname, with their team or null. Nothing else of a player. A race
+ * sends none (M7 §1.7): its count is in `session.totals.players`.
  */
 function rosterOf(v: RunView): EscapeRosterEntry[] {
-  if (v.run.phase !== 'forming') return [];
+  if (v.run.phase !== 'forming' || viewLimits(v)) return [];
   return v.players.map((p) => ({
     teamId: recOf(v, p.playerId)?.team.id ?? null,
     nickname: p.nickname,

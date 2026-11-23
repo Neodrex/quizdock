@@ -923,6 +923,28 @@ describe('race scale (M7 §1.7)', () => {
     expect(JSON.stringify(board).length).toBeLessThan(12 * 1024);
   });
 
+  it('a race phone’s state lists its own team only, and stays small with 500 teams', () => {
+    const v = soloView(500);
+    const state = playerStateOf(v, 'p7');
+    expect(state.formation.teams).toEqual([{ id: 't7', name: 'Player number 7', memberCount: 1 }]);
+    expect(JSON.stringify(state).length).toBeLessThan(4 * 1024);
+    // A phone without a team yet: none listed.
+    const free = { ...v, players: [...v.players, { ...v.players[0], playerId: 'free' }] };
+    expect(playerStateOf(free, 'free').formation.teams).toEqual([]);
+    // Other session types list every team.
+    const hosted = soloView(40, { ...raceSession, type: 'hosted', race: null });
+    expect(playerStateOf(hosted, 'p1').formation.teams).toHaveLength(40);
+  });
+
+  it('a forming race sends no roster: the count is in the totals', () => {
+    const v = soloView(500);
+    const forming = { ...v, run: { ...v.run, phase: 'forming' as const } };
+    expect(boardOf(forming).roster).toEqual([]);
+    expect(boardOf(forming).session?.totals.players).toBe(500);
+    const hosted = { ...forming, session: { ...raceSession, type: 'hosted' as const, race: null } };
+    expect(boardOf(hosted).roster).toHaveLength(500);
+  });
+
   it('other session types keep every team on the board', () => {
     const board = boardOf(soloView(40, { ...raceSession, type: 'hosted', race: null }));
     expect(board.teams).toHaveLength(40);

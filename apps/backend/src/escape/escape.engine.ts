@@ -360,10 +360,8 @@ export class EscapeEngine implements OnModuleDestroy {
         if (solo) {
           const nickname = v.players.find((p) => p.playerId === me.playerId)?.nickname ?? '';
           const { ref: next, v: added } = await this.addTeam(ref, v, soloName(nickname));
-          await this.broadcast(
-            next,
-            await this.applyMove(next, added, me.playerId, added.run.teamIds.at(-1)!),
-          );
+          const moved = await this.applyMove(next, added, me.playerId, added.run.teamIds.at(-1)!);
+          await this.broadcast(next, moved, this.formationPhones(v, moved, me.playerId));
           return;
         }
         // F5: a late joiner in auto formation goes to the smallest team (never in a race).
@@ -385,8 +383,7 @@ export class EscapeEngine implements OnModuleDestroy {
         socket.emit('escape:state', playerStateOf(v, me.playerId));
         // The host sees who is here, and so do the screens (the lobby roster, M6);
         // a finished run's board no longer changes.
-        this.toHost(ref, v);
-        if (ref.run.phase !== 'finale') this.toBoard(ref, v);
+        this.toHostAndBoard(ref, v, ref.run.phase !== 'finale');
         return;
       }
       if (hostConsole) return;
@@ -415,9 +412,7 @@ export class EscapeEngine implements OnModuleDestroy {
       // While forming, the lobby roster shows them disconnected (M6); roles move
       // only while the run plays: its ticker clears what is kept here.
       if (ref.run.phase === 'forming') {
-        const v = await this.viewOf(ref);
-        this.toHost(ref, v);
-        this.toBoard(ref, v);
+        this.toHostAndBoard(ref, await this.viewOf(ref));
         return;
       }
       if (ref.run.phase !== 'running') return;
@@ -426,9 +421,7 @@ export class EscapeEngine implements OnModuleDestroy {
       const gone = this.gone.get(ref.id) ?? new Map<string, number>();
       gone.set(playerId, Date.now());
       this.gone.set(ref.id, gone);
-      const v = await this.viewOf(ref);
-      this.toHost(ref, v);
-      this.toBoard(ref, v);
+      this.toHostAndBoard(ref, await this.viewOf(ref));
     });
   }
 
@@ -527,7 +520,8 @@ export class EscapeEngine implements OnModuleDestroy {
       const code = newCode(taken);
       const { ref: next, v: added } = await this.addTeam(ref, v, name, code);
       const teamId = added.run.teamIds.at(-1)!;
-      await this.broadcast(next, await this.applyMove(next, added, me.playerId, teamId));
+      const moved = await this.applyMove(next, added, me.playerId, teamId);
+      await this.broadcast(next, moved, this.formationPhones(v, moved, me.playerId));
       return { teamId, code };
     });
   }
@@ -557,7 +551,8 @@ export class EscapeEngine implements OnModuleDestroy {
       if (to.team.members.length >= RACE_TEAM_MAX) {
         throw new BadRequestException('escape.team_full');
       }
-      await this.broadcast(ref, await this.applyMove(ref, v, me.playerId, teamId));
+      const moved = await this.applyMove(ref, v, me.playerId, teamId);
+      await this.broadcast(ref, moved, this.formationPhones(v, moved, me.playerId));
       return { teamId };
     });
   }
@@ -1414,17 +1409,33 @@ export class EscapeEngine implements OnModuleDestroy {
     return (await this.game.getMeta(ref.pin))?.id === ref.id;
   }
 
-  /** Every phone its state (and its team room), the host its view, the screens the board. */
-  private async broadcast(ref: RunRef, v: RunView): Promise<void> {
+  /**
+   * Every phone its state (and its team room), or only those of `phones`; the
+   * host its view, the screens the board.
+   */
+  private async broadcast(ref: RunRef, v: RunView, phones?: ReadonlySet<string>): Promise<void> {
     if (!(await this.isCurrent(ref))) return;
     for (const s of await this.server.in(ref.pin).fetchSockets()) {
       const { playerId } = s.data;
       if (s.data.pin !== ref.pin || !playerId) continue;
+      if (phones && !phones.has(playerId)) continue;
       this.placeInTeamRoom(s, ref.id, v, playerId);
       s.emit('escape:state', playerStateOf(v, playerId));
     }
-    this.toHost(ref, v);
-    this.toBoard(ref, v);
+    this.toHostAndBoard(ref, v);
+  }
+
+  /**
+   * M7 §1.7: whom a race formation change concerns: the mover and the members
+   * of its team before and after. A race phone lists its own team only, so no
+   * other phone's state changed.
+   */
+  private formationPhones(before: RunView, after: RunView, playerId: string): Set<string> {
+    const out = new Set([playerId]);
+    for (const view of [before, after]) {
+      for (const id of teamOf(this.teamsOf(view), playerId)?.members ?? []) out.add(id);
+    }
+    return out;
   }
 
   /**
@@ -1471,6 +1482,19 @@ export class EscapeEngine implements OnModuleDestroy {
       return;
     }
     this.throttled(ref.pin, v, { board: false, host: true });
+  }
+
+  /**
+   * The host state and (with `board`) the board. In a race one throttled send
+   * carries both, so the board does not wait behind the host's slot (M7 §1.7).
+   */
+  private toHostAndBoard(ref: RunRef, v: RunView, board = true): void {
+    if (viewLimits(v)) {
+      this.throttled(ref.pin, v, { board, host: true });
+      return;
+    }
+    this.toHost(ref, v);
+    if (board) this.toBoard(ref, v);
   }
 
   /** The player's socket in its team's room and no other team's. */

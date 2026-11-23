@@ -186,6 +186,61 @@ export function raceSessionTests(ctx: EscapeContext): void {
     expect(codesIn(escapeFrames(hostSeen))).toEqual([]);
   });
 
+  it('a race formation change reaches the mover and its teams only, then the host and the board', async () => {
+    const { host, pin } = await raceRoom('teams');
+    const [a, b, c] = await Promise.all(
+      ['Ann', 'Ben', 'Cat'].map((n) => joinAndSync(ctx.h, pin, n)),
+    );
+    const states = (s: Socket) => {
+      const frames = record(s);
+      return () => frames.filter(([e]) => e === 'escape:state').length;
+    };
+    const [sa, sb, sc] = [a, b, c].map((p) => states(p.socket));
+    const hostSeen = record(host);
+    const owls = (await a.socket.emitWithAck('escape:new-team', { pin, name: 'Owls' })) as {
+      code: string;
+    };
+    await eventually(async () => expect(a.last().team?.name).toBe('Owls'));
+    expect(await b.socket.emitWithAck('escape:join-team', { pin, code: owls.code })).toMatchObject({
+      ok: true,
+    });
+    await eventually(async () => expect(a.last().team?.members).toHaveLength(2));
+    await settle(200);
+    expect([sa(), sb(), sc()]).toEqual([2, 1, 0]);
+    // B starts another team: B, and A (its old team), not C.
+    expect(await b.socket.emitWithAck('escape:new-team', { pin, name: 'Bats' })).toMatchObject({
+      ok: true,
+    });
+    await eventually(async () => expect(a.last().team?.members).toHaveLength(1));
+    await settle(200);
+    expect([sa(), sb(), sc()]).toEqual([3, 2, 0]);
+    // The phone lists its own team only; the host still gets every change.
+    expect(b.last().formation.teams.map((t) => t.name)).toEqual(['Bats']);
+    await eventually(async () =>
+      expect(
+        hostSeen.some(
+          ([e, s]) =>
+            e === 'escape:host' && (s as EscapeHostState).teams.some((t) => t.name === 'Bats'),
+        ),
+      ).toBe(true),
+    );
+  });
+
+  it('a solo race: a new phone’s sync sends no state to the others', async () => {
+    const { pin } = await raceRoom('solo');
+    const first = await Promise.all(['A1', 'A2', 'A3'].map((n) => joinAndSync(ctx.h, pin, n)));
+    await settle(100);
+    const counts = first.map((p) => {
+      const frames = record(p.socket);
+      return () => frames.filter(([e]) => e === 'escape:state').length;
+    });
+    const late = await joinAndSync(ctx.h, pin, 'A4');
+    expect(late.last().team?.name).toBe('A4');
+    await settle(200);
+    expect(counts.map((n) => n())).toEqual([0, 0, 0]);
+    expect(first[0].last().formation.teams).toHaveLength(1);
+  });
+
   it('escape:new-team and escape:join-team belong to team races', async () => {
     const { pin } = await raceRoom('solo');
     const p = await joinAndSync(ctx.h, pin, 'Solo');
