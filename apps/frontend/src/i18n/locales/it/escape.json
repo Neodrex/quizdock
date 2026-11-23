@@ -540,6 +540,28 @@
       "copy": "Copia link",
       "copied": "Link copiato",
       "copyByHand": "Copia questo link: {{url}}"
+    },
+    "phone": {
+      "alone": "Gareggi da solo",
+      "choose": "Come vuoi gareggiare?",
+      "late": "La gara è iniziata: scegli come gareggiare per entrare.",
+      "solo": "Gioca da solo",
+      "start": "Crea una squadra",
+      "join": "Unisciti a una squadra",
+      "soloDefault": "Gareggi da solo, a meno che tu non crei o ti unisca a una squadra.",
+      "soloGo": "Gareggia da solo ora",
+      "soloName": "Solo",
+      "teamName": "Nome della squadra",
+      "create": "Crea la squadra",
+      "codeField": "Codice squadra (4 lettere)",
+      "joinGo": "Unisciti",
+      "share": "Condividi questo codice",
+      "codeLabel": "Codice squadra: {{letters}}",
+      "failed": "Non ha funzionato. Riprova."
+    },
+    "finale": {
+      "you": "Tu: {{place}}° su {{total}}",
+      "gap": "Squadre intermedie non mostrate"
     }
   }
 }

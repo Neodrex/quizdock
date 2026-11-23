@@ -528,6 +528,28 @@
       "copy": "Bağlantıyı kopyala",
       "copied": "Bağlantı kopyalandı",
       "copyByHand": "Bu bağlantıyı kopyalayın: {{url}}"
+    },
+    "phone": {
+      "alone": "Tek başına yarışıyorsunuz",
+      "choose": "Nasıl yarışacaksınız?",
+      "late": "Yarış başladı: katılmak için nasıl yarışacağınızı seçin.",
+      "solo": "Tek başına oyna",
+      "start": "Takım kur",
+      "join": "Takıma katıl",
+      "soloDefault": "Bir takım kurmaz ya da katılmazsanız tek başına yarışırsınız.",
+      "soloGo": "Şimdi tek başına yarış",
+      "soloName": "Solo",
+      "teamName": "Takım adı",
+      "create": "Takımı kur",
+      "codeField": "Takım kodu (4 harf)",
+      "joinGo": "Katıl",
+      "share": "Bu kodu paylaşın",
+      "codeLabel": "Takım kodu: {{letters}}",
+      "failed": "Olmadı. Tekrar deneyin."
+    },
+    "finale": {
+      "you": "Siz: {{total}} takım içinde {{place}}.",
+      "gap": "Aradaki takımlar gösterilmiyor"
     }
   }
 }

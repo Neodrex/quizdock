@@ -48,6 +48,8 @@ const session = (ui: Partial<EscapeUi>): EscapeSession => ({
   submit: vi.fn(),
   askHint: vi.fn(),
   chooseTeam: vi.fn(),
+  newTeam: vi.fn(),
+  joinTeam: vi.fn(),
   resultsFromRecord: vi.fn(),
 });
 

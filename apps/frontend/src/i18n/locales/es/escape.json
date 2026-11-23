@@ -540,6 +540,28 @@
       "copy": "Copiar enlace",
       "copied": "Enlace copiado",
       "copyByHand": "Copia este enlace: {{url}}"
+    },
+    "phone": {
+      "alone": "Corres en solitario",
+      "choose": "¿Cómo quieres correr?",
+      "late": "La carrera ha empezado: elige cómo correr para unirte.",
+      "solo": "Jugar en solitario",
+      "start": "Crear un equipo",
+      "join": "Unirse a un equipo",
+      "soloDefault": "Correrás solo salvo que crees un equipo o te unas a uno.",
+      "soloGo": "Correr en solitario ahora",
+      "soloName": "Solo",
+      "teamName": "Nombre del equipo",
+      "create": "Crear el equipo",
+      "codeField": "Código del equipo (4 letras)",
+      "joinGo": "Unirse",
+      "share": "Comparte este código",
+      "codeLabel": "Código del equipo: {{letters}}",
+      "failed": "No ha funcionado. Inténtalo de nuevo."
+    },
+    "finale": {
+      "you": "Tú: puesto {{place}} de {{total}}",
+      "gap": "Equipos intermedios no mostrados"
     }
   }
 }

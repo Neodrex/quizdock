@@ -105,4 +105,33 @@ describe('EscapeFinaleView', () => {
       '/join',
     );
   });
+
+  it('a race beyond the top 20: a gap, its own row highlighted, and its place of all', () => {
+    const top = Array.from({ length: 20 }, (_, i) =>
+      row({ teamId: `t${i + 1}`, name: `Team ${i + 1}`, place: i + 1 }),
+    );
+    const race: EscapeFinale = {
+      ...finale,
+      totalTeams: 412,
+      ranking: [
+        ...top,
+        row({ teamId: 'mine', name: 'Owls', place: 37, escaped: false, scoreMs: null }),
+      ],
+      awards: { fastest: null, fewestHints: null, teamwork: null, photoFinish: null },
+    };
+    drawEn(<EscapeFinaleView finale={race} myTeamId="mine" closed={false} />);
+    const list = screen.getByRole('list', { name: 'Ranking' });
+    const items = within(list).getAllByRole('listitem');
+    expect(items).toHaveLength(22);
+    expect(items[20]).toHaveAccessibleName('Teams in between not shown');
+    expect(items[21]).toHaveTextContent('Owls');
+    expect(items[21]).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByText('You: #37 of 412')).toBeInTheDocument();
+  });
+
+  it('a whole ranking has no gap and no "of all" line', () => {
+    drawEn(<EscapeFinaleView finale={finale} myTeamId="t1" closed={false} />);
+    expect(screen.queryByRole('listitem', { name: 'Teams in between not shown' })).toBeNull();
+    expect(screen.queryByText(/^You: #/)).toBeNull();
+  });
 });

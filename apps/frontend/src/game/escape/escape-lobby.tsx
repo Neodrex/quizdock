@@ -1,34 +1,69 @@
 import type { EscapePlayerState } from '@quiz-dock/contracts';
-import { Check, Loader2, Users, WifiOff } from 'lucide-react';
+import { Check, Loader2, User, Users, WifiOff } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Avatar } from '../avatar';
+import { loadPlayerSession } from '../game-client';
+import { RaceCountdown } from './session/race-countdown';
+import { RaceTeamCode, RaceTeamPicker } from './session/race-team-picker';
 
 type Team = NonNullable<EscapePlayerState['team']>;
+
+const noTeamRace = () => Promise.reject(new Error(''));
 
 /**
  * Before the run, and whenever the phone has no team: who the player plays with.
  * Auto formation waits for the host; self formation lists the teams to pick from.
+ * A race (M7) counts down to its scheduled start; a solo race says the player races
+ * alone, and a team race offers solo, a new team or a team's code.
  */
 export function EscapeLobby({
   state,
   me,
   chooseTeam,
+  newTeam = noTeamRace,
+  joinTeam = noTeamRace,
 }: {
   state: EscapePlayerState;
   me: string | null;
   /** Rejects with the refusal's text (`escape.team_full`). */
   chooseTeam: (teamId: string) => Promise<void>;
+  /** A team race: start a team, or join one by code. Reject with the refusal's text. */
+  newTeam?: (name: string) => Promise<unknown>;
+  joinTeam?: (code: string) => Promise<unknown>;
 }) {
   const { t } = useTranslation('escape');
+  const race = state.session?.type === 'race' ? state.session : null;
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-col gap-1 text-center">
         <h1 className="text-[1.3em] font-bold">{state.title}</h1>
         {state.intro && <p className="text-muted-foreground">{state.intro}</p>}
       </div>
-      {state.team ? (
+      {race && state.phase === 'forming' && race.startsAt !== null ? (
+        <RaceCountdown startsAt={race.startsAt} className="text-center text-2xl" />
+      ) : null}
+      {race?.raceFormat === 'solo' ? (
+        <p className="flex flex-col items-center gap-2 py-4 text-center">
+          <User aria-hidden className="text-primary size-8" />
+          <span className="text-lg font-semibold">{t('race.phone.alone')}</span>
+        </p>
+      ) : race?.raceFormat === 'teams' ? (
+        state.team ? (
+          <>
+            <TeamCard team={state.team} me={me} />
+            {state.team.code ? <RaceTeamCode code={state.team.code} /> : null}
+          </>
+        ) : (
+          <RaceTeamPicker
+            running={state.phase === 'running'}
+            nickname={loadPlayerSession()?.nickname || t('race.phone.soloName')}
+            newTeam={newTeam}
+            joinTeam={joinTeam}
+          />
+        )
+      ) : state.team ? (
         <TeamCard team={state.team} me={me} />
       ) : state.formation.mode === 'self' ? (
         <TeamChoice formation={state.formation} chooseTeam={chooseTeam} />

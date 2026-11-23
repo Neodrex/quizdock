@@ -514,6 +514,28 @@
       "copy": "复制链接",
       "copied": "链接已复制",
       "copyByHand": "请复制此链接：{{url}}"
+    },
+    "phone": {
+      "alone": "你将独自参赛",
+      "choose": "你想如何参赛？",
+      "late": "竞赛已开始：选择参赛方式即可加入。",
+      "solo": "单人游戏",
+      "start": "创建队伍",
+      "join": "加入队伍",
+      "soloDefault": "除非你创建或加入队伍，否则将独自参赛。",
+      "soloGo": "立即单人参赛",
+      "soloName": "单人",
+      "teamName": "队伍名称",
+      "create": "创建队伍",
+      "codeField": "队伍代码（4 个字母）",
+      "joinGo": "加入",
+      "share": "分享此代码",
+      "codeLabel": "队伍代码：{{letters}}",
+      "failed": "操作未成功，请重试。"
+    },
+    "finale": {
+      "you": "你：第 {{place}} 名（共 {{total}} 队）",
+      "gap": "中间的队伍未显示"
     }
   }
 }

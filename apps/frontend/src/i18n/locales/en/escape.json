@@ -528,6 +528,28 @@
       "copy": "Copy link",
       "copied": "Link copied",
       "copyByHand": "Copy this link: {{url}}"
+    },
+    "phone": {
+      "alone": "You race alone",
+      "choose": "How do you race?",
+      "late": "The race has started: pick how you race to join in.",
+      "solo": "Play solo",
+      "start": "Start a team",
+      "join": "Join a team",
+      "soloDefault": "You race alone unless you start or join a team.",
+      "soloGo": "Race solo now",
+      "soloName": "Solo",
+      "teamName": "Team name",
+      "create": "Create the team",
+      "codeField": "Team code (4 letters)",
+      "joinGo": "Join",
+      "share": "Share this code",
+      "codeLabel": "Team code: {{letters}}",
+      "failed": "That did not work. Try again."
+    },
+    "finale": {
+      "you": "You: #{{place}} of {{total}}",
+      "gap": "Teams in between not shown"
     }
   }
 }

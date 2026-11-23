@@ -1,6 +1,7 @@
 import type { EscapeFinale } from '@quiz-dock/contracts';
 import { Link } from '@tanstack/react-router';
 import { Award, Trophy } from 'lucide-react';
+import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,7 @@ export function EscapeFinaleView({
   closed: boolean;
 }) {
   const { t } = useTranslation('escape');
+  const mineRow = finale.ranking.find((r) => r.teamId === myTeamId);
   const nameOf = (id: string) => finale.ranking.find((r) => r.teamId === id)?.name ?? '';
   const awards = AWARDS.flatMap((k) => {
     const v = finale.awards[k];
@@ -43,42 +45,58 @@ export function EscapeFinaleView({
         )}
       </div>
       <ol aria-label={t('finale.ranking')} className="flex flex-col gap-2">
-        {finale.ranking.map((r) => {
+        {finale.ranking.map((r, i) => {
           const mine = r.teamId === myTeamId;
+          // A race's phone gets the top teams and its own (M7 §1.7): a gap before a jump.
+          const gap = i > 0 && r.place > finale.ranking[i - 1].place + 1;
           return (
-            <li
-              key={r.teamId}
-              aria-current={mine || undefined}
-              className={cn(
-                'bg-card flex items-center gap-3 rounded-lg border px-4 py-3',
-                mine && 'border-primary ring-primary/30 ring-2',
-              )}
-            >
-              <span className="w-8 text-xl font-bold tabular-nums">{r.place}</span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate font-semibold">
-                  {r.name}
-                  {mine && (
-                    <span className="text-primary ml-2 text-xs font-medium">
-                      {t('finale.yourTeam')}
-                    </span>
-                  )}
+            <Fragment key={r.teamId}>
+              {gap ? (
+                <li
+                  aria-label={t('race.finale.gap')}
+                  className="text-muted-foreground text-center text-xl leading-none"
+                >
+                  …
+                </li>
+              ) : null}
+              <li
+                aria-current={mine || undefined}
+                className={cn(
+                  'bg-card flex items-center gap-3 rounded-lg border px-4 py-3',
+                  mine && 'border-primary ring-primary/30 ring-2',
+                )}
+              >
+                <span className="w-8 text-xl font-bold tabular-nums">{r.place}</span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate font-semibold">
+                    {r.name}
+                    {mine && (
+                      <span className="text-primary ml-2 text-xs font-medium">
+                        {t('finale.yourTeam')}
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-muted-foreground text-sm">
+                    {r.paidHints > 0
+                      ? t('finale.hintsPaid', { count: r.hintsUsed, paid: r.paidHints })
+                      : t('finale.hints', { count: r.hintsUsed })}
+                  </span>
                 </span>
-                <span className="text-muted-foreground text-sm">
-                  {r.paidHints > 0
-                    ? t('finale.hintsPaid', { count: r.hintsUsed, paid: r.paidHints })
-                    : t('finale.hints', { count: r.hintsUsed })}
+                <span className="text-right font-mono font-semibold tabular-nums">
+                  {r.escaped && r.scoreMs !== null
+                    ? formatClock(r.scoreMs)
+                    : t('finale.stages', { done: r.stagesCleared })}
                 </span>
-              </span>
-              <span className="text-right font-mono font-semibold tabular-nums">
-                {r.escaped && r.scoreMs !== null
-                  ? formatClock(r.scoreMs)
-                  : t('finale.stages', { done: r.stagesCleared })}
-              </span>
-            </li>
+              </li>
+            </Fragment>
           );
         })}
       </ol>
+      {finale.totalTeams !== undefined && mineRow ? (
+        <p className="text-center font-semibold" data-finale-you>
+          {t('race.finale.you', { place: mineRow.place, total: finale.totalTeams })}
+        </p>
+      ) : null}
       {awards.length > 0 && (
         <ul aria-label={t('finale.awards')} className="flex flex-col gap-2">
           {awards.map((a) => (

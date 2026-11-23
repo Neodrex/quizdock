@@ -556,6 +556,28 @@
       "copy": "Kopiuj link",
       "copied": "Skopiowano link",
       "copyByHand": "Skopiuj ten link: {{url}}"
+    },
+    "phone": {
+      "alone": "Ścigasz się sam",
+      "choose": "Jak chcesz się ścigać?",
+      "late": "Wyścig już trwa: wybierz, jak chcesz dołączyć.",
+      "solo": "Graj solo",
+      "start": "Załóż drużynę",
+      "join": "Dołącz do drużyny",
+      "soloDefault": "Ścigasz się sam, chyba że założysz drużynę lub do niej dołączysz.",
+      "soloGo": "Ścigaj się solo teraz",
+      "soloName": "Solo",
+      "teamName": "Nazwa drużyny",
+      "create": "Utwórz drużynę",
+      "codeField": "Kod drużyny (4 litery)",
+      "joinGo": "Dołącz",
+      "share": "Udostępnij ten kod",
+      "codeLabel": "Kod drużyny: {{letters}}",
+      "failed": "Nie udało się. Spróbuj ponownie."
+    },
+    "finale": {
+      "you": "Ty: miejsce {{place}} z {{total}}",
+      "gap": "Drużyny pomiędzy nie są pokazane"
     }
   }
 }

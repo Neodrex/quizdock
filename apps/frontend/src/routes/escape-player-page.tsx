@@ -85,7 +85,15 @@ export function EscapePlayer({
   } else if (!state) {
     screen = <Waiting text={t('end.loading')} />;
   } else if (state.phase === 'forming' || !team) {
-    screen = <EscapeLobby state={state} me={me} chooseTeam={escape.chooseTeam} />;
+    screen = (
+      <EscapeLobby
+        state={state}
+        me={me}
+        chooseTeam={escape.chooseTeam}
+        newTeam={escape.newTeam}
+        joinTeam={escape.joinTeam}
+      />
+    );
   } else if (team.escaped) {
     screen = (
       <EscapedView

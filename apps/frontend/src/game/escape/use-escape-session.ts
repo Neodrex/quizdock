@@ -194,6 +194,17 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
     await emitWithAckOrError(await socket(), 'escape:choose-team', { pin, teamId });
   };
 
+  /** A team race (M7): starts a team; rejects with the refusal's code. */
+  const newTeam = async (name: string) =>
+    emitWithAckOrError<{ teamId: string; code: string }>(await socket(), 'escape:new-team', {
+      pin,
+      name,
+    });
+
+  /** A team race: joins a team by its code (`escape.team_code_unknown`, `escape.team_full`). */
+  const joinTeam = async (code: string) =>
+    emitWithAckOrError<{ teamId: string }>(await socket(), 'escape:join-team', { pin, code });
+
   /** After a reload into an ended room: the finale by the record's token, or null (record cleared). */
   const resultsFromRecord = async (): Promise<EscapeFinale | null> => {
     const record = loadEscapeRecord(pin);
@@ -244,6 +255,8 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
     submit,
     askHint,
     chooseTeam,
+    newTeam,
+    joinTeam,
     resultsFromRecord,
   };
 }

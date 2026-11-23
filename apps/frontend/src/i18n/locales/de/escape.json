@@ -528,6 +528,28 @@
       "copy": "Link kopieren",
       "copied": "Link kopiert",
       "copyByHand": "Kopiere diesen Link: {{url}}"
+    },
+    "phone": {
+      "alone": "Du spielst allein",
+      "choose": "Wie spielst du?",
+      "late": "Das Rennen läuft: Wähle, wie du mitspielst.",
+      "solo": "Solo spielen",
+      "start": "Team gründen",
+      "join": "Team beitreten",
+      "soloDefault": "Du spielst allein, außer du gründest ein Team oder trittst einem bei.",
+      "soloGo": "Jetzt solo starten",
+      "soloName": "Solo",
+      "teamName": "Teamname",
+      "create": "Team erstellen",
+      "codeField": "Teamcode (4 Buchstaben)",
+      "joinGo": "Beitreten",
+      "share": "Teile diesen Code",
+      "codeLabel": "Teamcode: {{letters}}",
+      "failed": "Das hat nicht geklappt. Versuche es erneut."
+    },
+    "finale": {
+      "you": "Du: Platz {{place}} von {{total}}",
+      "gap": "Teams dazwischen nicht gezeigt"
     }
   }
 }
