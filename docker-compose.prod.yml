@@ -242,7 +242,7 @@ services:
       OIDC_NAME_CLAIM: ${OIDC_NAME_CLAIM:-}
       # Proxies allowed to speak for the client (X-Forwarded-For/-Proto); empty = private addresses.
       TRUST_PROXY: ${TRUST_PROXY:-}
-      # Escape rooms: guests join a room with the PIN and a nickname alone under OIDC only when true.
+      # Guests join with the PIN and a nickname alone under OIDC only when true (needed for escape rooms).
       ALLOW_ANONYMOUS_PARTICIPANTS: ${ALLOW_ANONYMOUS_PARTICIPANTS:-false}
       # Escape rooms: where hosted events find their licences (none | static | site).
       ESCAPE_LICENCE_SOURCE: ${ESCAPE_LICENCE_SOURCE:-none}
