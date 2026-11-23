@@ -507,6 +507,7 @@
     "hostBar": {
       "label": "Controles del anfitrión",
       "start": "Empezar",
+      "waitingTeam": "Esperando a un jugador en un equipo",
       "openConsole": "Abrir la consola",
       "pause": "Pausa",
       "resume": "Reanudar",

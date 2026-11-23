@@ -493,6 +493,7 @@
     "hostBar": {
       "label": "Host controls",
       "start": "Start",
+      "waitingTeam": "Waiting for a player in a team",
       "openConsole": "Open console",
       "pause": "Pause",
       "resume": "Resume",

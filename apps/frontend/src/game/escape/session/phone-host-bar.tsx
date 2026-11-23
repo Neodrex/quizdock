@@ -1,7 +1,7 @@
 import type { EscapePlayerState } from '@quiz-dock/contracts';
 import { Link } from '@tanstack/react-router';
 import { Flag, Lightbulb, MonitorCog, Pause, Play, Trophy } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -38,6 +38,7 @@ export function PhoneHostBar({
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState<'hint' | 'end' | null>(null);
   const busyRef = useRef(false);
+  const waitingId = useId();
 
   const run = async (go: () => Promise<unknown>) => {
     if (busyRef.current) return;
@@ -61,19 +62,27 @@ export function PhoneHostBar({
 
   let controls: React.ReactNode;
   if (state.phase === 'forming') {
+    // Start waits for a player in a team: the hint says why it is greyed out.
+    const waiting = !room?.ready;
     controls = (
       <>
         <Button
           type="button"
           variant="main-action"
           className={TAP}
-          disabled={busy || !room?.ready}
+          disabled={busy || waiting}
           aria-busy={busy}
+          aria-describedby={waiting ? waitingId : undefined}
           onClick={() => void run(() => send('escape:start', { pin }))}
         >
           <Play className="size-4" aria-hidden />
           {t('session.hostBar.start')}
         </Button>
+        {waiting ? (
+          <span id={waitingId} className="text-muted-foreground text-sm">
+            {t('session.hostBar.waitingTeam')}
+          </span>
+        ) : null}
         {room ? (
           <span
             className="text-sm font-medium tabular-nums"

@@ -479,6 +479,7 @@
     "hostBar": {
       "label": "主持人控制",
       "start": "开始",
+      "waitingTeam": "正在等待有玩家加入队伍",
       "openConsole": "打开控制台",
       "pause": "暂停",
       "resume": "继续",

@@ -53,7 +53,15 @@ describe('PhoneHostBar', () => {
 
   it('lobby: Start waits until someone is in a team', () => {
     bar(lobby(), { joined: 2, cap: 6, ready: false });
-    expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled();
+    const start = screen.getByRole('button', { name: 'Start' });
+    expect(start).toBeDisabled();
+    expect(start).toHaveAccessibleDescription('Waiting for a player in a team');
+  });
+
+  it('lobby: no waiting hint once Start can go', () => {
+    bar(lobby());
+    expect(screen.getByRole('button', { name: 'Start' })).not.toHaveAttribute('aria-describedby');
+    expect(screen.queryByText('Waiting for a player in a team')).toBeNull();
   });
 
   it('running: Pause, then Resume when paused', () => {

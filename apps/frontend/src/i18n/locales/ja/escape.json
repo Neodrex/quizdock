@@ -479,6 +479,7 @@
     "hostBar": {
       "label": "ホスト操作",
       "start": "開始",
+      "waitingTeam": "チームに入るプレイヤーを待っています",
       "openConsole": "コンソールを開く",
       "pause": "一時停止",
       "resume": "再開",

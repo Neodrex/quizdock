@@ -507,6 +507,7 @@
     "hostBar": {
       "label": "Comandi dell’host",
       "start": "Avvia",
+      "waitingTeam": "In attesa di un giocatore in una squadra",
       "openConsole": "Apri la console",
       "pause": "Pausa",
       "resume": "Riprendi",

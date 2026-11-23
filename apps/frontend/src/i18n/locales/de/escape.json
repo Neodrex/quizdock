@@ -493,6 +493,7 @@
     "hostBar": {
       "label": "Spielleitung",
       "start": "Starten",
+      "waitingTeam": "Warten auf einen Spieler in einem Team",
       "openConsole": "Konsole öffnen",
       "pause": "Pause",
       "resume": "Fortsetzen",

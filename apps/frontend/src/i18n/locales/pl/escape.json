@@ -521,6 +521,7 @@
     "hostBar": {
       "label": "Sterowanie gospodarza",
       "start": "Start",
+      "waitingTeam": "Czekamy na gracza w drużynie",
       "openConsole": "Otwórz konsolę",
       "pause": "Pauza",
       "resume": "Wznów",

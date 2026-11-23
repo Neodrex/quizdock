@@ -493,6 +493,7 @@
     "hostBar": {
       "label": "Ev sahibi kontrolleri",
       "start": "Başlat",
+      "waitingTeam": "Bir takımda oyuncu bekleniyor",
       "openConsole": "Konsolu aç",
       "pause": "Duraklat",
       "resume": "Devam et",
