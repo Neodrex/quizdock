@@ -397,6 +397,10 @@ export class EscapeEngine implements OnModuleDestroy {
         // M7 §1.8: group play forms one team of everyone by default, so the phone host
         // can start without the console: in the lobby (auto formation), a phone's sync
         // deals it into the smallest team, the first one making "Team 1".
+        // Accepted (plan §5): the deal runs on every sync of an unassigned phone, so a
+        // host's move of a player to no team is undone on that phone's next sync (a
+        // reconnect, a reload); and when every team is full (`maxSize`), no team is
+        // added here: the phone stays unassigned until the host makes room or a team.
         const grouped =
           v.session?.type === 'group' &&
           ref.run.phase === 'forming' &&
