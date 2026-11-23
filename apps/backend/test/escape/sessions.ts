@@ -682,9 +682,10 @@ export function phoneHostTests(ctx: EscapeContext): void {
   /**
    * M8 Task 8.11: under OIDC the reloaded page opens a new socket that the
    * session cookie signs in. The harness's user handshake stands in for the
-   * cookie: the new socket gets both roles back in the M7 order, and Start works.
+   * cookie. Unlike the test above (gone past the grace, while running), this
+   * one comes back within the grace, still forming, and Start still works.
    */
-  it('a reloaded phone host, signed in again, gets both roles back and starts the run', async () => {
+  it('a phone host back within the grace on a new signed-in socket (OIDC reload) gets both roles back, then starts the run', async () => {
     const { host, pin, playerId, sessionToken, other, teamId } = await groupRoom();
     const left = nextEvent<{ playerId: string }>(other.socket, 'player:left', {
       where: (l) => l.playerId === playerId,
@@ -706,14 +707,12 @@ export function phoneHostTests(ctx: EscapeContext): void {
     expect((await phone).session?.isPhoneHost).toBe(true);
   });
 
-  it('a reloaded guest socket still cannot attach as the host (the `none` limit, M7 §5 item 12)', async () => {
+  it('host:attach from a guest socket (a reload under AUTH_MODE=none) is refused (M7 §5 item 12)', async () => {
     const { pin } = await groupRoom();
     const guest = ctx.h.connect();
-    const answer = await Promise.race([
-      new Promise<{ code: string }>((resolve) => guest.on('error', resolve)),
-      guest.emitWithAck('host:attach', { pin }).then(() => ({ code: 'accepted' as const })),
-    ]);
-    expect(answer.code).not.toBe('accepted');
+    const answer: unknown = await guest.emitWithAck('host:attach', { pin });
+    expect(answer).toEqual({ ok: false, error: { code: expect.any(String) } });
+    expect(await inRoom(escapeRooms.host(pin), guest.id)).toBe(false);
   });
 
   it('while the phone host is away, the run still times out to a finale', async () => {

@@ -404,19 +404,32 @@ export function raceSessionTests(ctx: EscapeContext): void {
     });
 
     it('a restart before startsAt arms it again (recover), and it starts', async () => {
-      const { pin } = await scheduled(1_500);
+      // A wide margin, so a loaded machine never reaches startsAt before the disarm.
+      const { pin, startsAt } = await scheduled(10_000);
       const a = await joinAndSync(ctx.h, pin, 'Ann');
       const meta = await metaOf(pin);
-      // What a restart loses: the timer.
+      type Tasks = { fire: () => Promise<void> };
       const inner = engine() as unknown as {
-        scheduler: { disarm(pin: string): void };
+        scheduler: { disarm(pin: string): void; arm(pin: string, at: number, t: Tasks): void };
         recover(): Promise<void>;
       };
+      // What a restart loses: the timer.
       inner.scheduler.disarm(pin);
       expect(engine().inProcess(meta.id, pin).scheduled).toBe(false);
-      await inner.recover();
-      expect(engine().inProcess(meta.id, pin).scheduled).toBe(true);
-      await stateWhere(a.socket, (s) => s.phase === 'running', 5_000);
+      const arm = jest.spyOn(inner.scheduler, 'arm');
+      try {
+        await inner.recover();
+        expect(engine().inProcess(meta.id, pin).scheduled).toBe(true);
+        const call = arm.mock.calls.find(([p]) => p === pin);
+        expect(call?.[1]).toBe(startsAt);
+        // Fire what recover armed now rather than wait the 10 s.
+        const running = stateWhere(a.socket, (s) => s.phase === 'running', 5_000);
+        await call![2].fire();
+        await running;
+      } finally {
+        arm.mockRestore();
+        inner.scheduler.disarm(pin);
+      }
     });
 
     it('the room keeps its TTL while it waits; a closed room leaves no timer', async () => {
