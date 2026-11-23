@@ -14,7 +14,17 @@ import { serverNow } from '../../clock';
 export interface SessionChoice {
   sessionType: EscapeSessionType;
   licenceId?: string;
-  race?: { format: 'solo' | 'teams'; startsAt?: number };
+  race?: { format: 'solo' | 'teams'; startsAt?: number; siteRaceId?: string };
+}
+
+/**
+ * A race scheduled on the Site (M8), from the `/escape?siteRace=` link. Its title
+ * and start are for display only: the server claims the race and uses the Site's.
+ */
+export interface SiteRaceLink {
+  id: string;
+  title?: string;
+  startsAt?: number;
 }
 
 /** The dialog's rule for a scheduled race; the server's (`escape.race_start_out_of_range`) wins. */
@@ -53,18 +63,22 @@ export function licenceLine(
 export function CreateSessionDialog({
   open,
   template,
+  siteRace,
   onCreate,
   onCancel,
 }: {
   open: boolean;
   template: { title: string; mode: 'roles' | 'parallel' | null };
+  /** Opened from a Site race's link: Race is preselected and the Site sets the rest. */
+  siteRace?: SiteRaceLink;
   /** Rejects with the refusal's text. */
   onCreate: (choice: SessionChoice) => Promise<void>;
   onCancel: () => void;
 }) {
   const { t, i18n } = useTranslation('escape');
   const rolesOnly = template.mode === 'roles';
-  const [type, setType] = useState<EscapeSessionType>(rolesOnly ? 'hosted' : 'group');
+  const initialType: EscapeSessionType = rolesOnly ? 'hosted' : siteRace ? 'race' : 'group';
+  const [type, setType] = useState<EscapeSessionType>(initialType);
   const [licenceId, setLicenceId] = useState('');
   const [format, setFormat] = useState<'solo' | 'teams'>('solo');
   const [scheduled, setScheduled] = useState(false);
@@ -76,13 +90,13 @@ export function CreateSessionDialog({
   // Each opening starts over.
   useEffect(() => {
     if (!open) return;
-    setType(rolesOnly ? 'hosted' : 'group');
+    setType(initialType);
     setLicenceId('');
     setFormat('solo');
     setScheduled(false);
     setMinutes('10');
     setError(null);
-  }, [open, rolesOnly]);
+  }, [open, initialType]);
 
   const list = useEscapeLicencesControllerList({ query: { enabled: open } });
   // An admin hosts races without a licence (M8 §1.2); a licensed event needs a seat.
@@ -93,7 +107,9 @@ export function CreateSessionDialog({
 
   const lead = Number(minutes);
   const leadOk = Number.isInteger(lead) && lead >= RACE_LEAD_MIN && lead <= RACE_LEAD_MAX;
-  const ready = type === 'hosted' ? chosen !== '' : type === 'race' ? !scheduled || leadOk : true;
+  const fromSite = type === 'race' && siteRace !== undefined;
+  const ready =
+    type === 'hosted' ? chosen !== '' : type === 'race' ? fromSite || !scheduled || leadOk : true;
 
   const submit = async () => {
     if (busyRef.current || !ready) return;
@@ -103,12 +119,15 @@ export function CreateSessionDialog({
     const choice: SessionChoice =
       type === 'hosted'
         ? { sessionType: 'hosted', licenceId: chosen }
-        : type === 'race'
-          ? {
-              sessionType: 'race',
-              race: { format, ...(scheduled ? { startsAt: serverNow() + lead * 60_000 } : {}) },
-            }
-          : { sessionType: 'group' };
+        : type === 'race' && siteRace
+          ? // The Site's format and start win on the server; `format` is only required.
+            { sessionType: 'race', race: { format: 'solo', siteRaceId: siteRace.id } }
+          : type === 'race'
+            ? {
+                sessionType: 'race',
+                race: { format, ...(scheduled ? { startsAt: serverNow() + lead * 60_000 } : {}) },
+              }
+            : { sessionType: 'group' };
     try {
       await onCreate(choice);
     } catch (e) {
@@ -212,7 +231,28 @@ export function CreateSessionDialog({
           </label>
         ))}
 
-      {type === 'race' && (
+      {type === 'race' && siteRace && (
+        <div className="bg-primary/5 flex flex-col gap-1 rounded-lg border p-3 text-sm">
+          <span className="font-medium">
+            {siteRace.title
+              ? t('session.create.siteRace', { title: siteRace.title })
+              : t('session.create.siteRaceNoTitle')}
+          </span>
+          <span className="text-muted-foreground">
+            {siteRace.startsAt !== undefined
+              ? t('session.create.siteRaceStarts', {
+                  when: new Intl.DateTimeFormat(i18n.language, {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  }).format(new Date(siteRace.startsAt)),
+                })
+              : t('session.create.siteRaceStartBySite')}
+          </span>
+          <span className="text-muted-foreground">{t('session.create.siteRaceHint')}</span>
+        </div>
+      )}
+
+      {type === 'race' && !fromSite && (
         <>
           <div
             role="radiogroup"

@@ -99,10 +99,20 @@ export const liveRoute = createRoute({
   component: LivePage,
 });
 
+type EscapeRoomsSearch = { siteRace?: string; title?: string; startsAt?: number };
+
 /** The host's escape templates, and a room opened from one (M5). */
 export const escapeRoomsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/escape',
+  // M8: `?siteRace=<id>&title=&startsAt=` opens a Site race (display values only).
+  validateSearch: (s: Record<string, unknown>): EscapeRoomsSearch => ({
+    ...(typeof s.siteRace === 'string' && s.siteRace ? { siteRace: s.siteRace } : {}),
+    ...(typeof s.title === 'string' ? { title: s.title } : {}),
+    ...(Number.isFinite(Number(s.startsAt)) && s.startsAt !== '' && s.startsAt !== undefined
+      ? { startsAt: Number(s.startsAt) }
+      : {}),
+  }),
   beforeLoad: requireAuth,
   component: lazyRouteComponent(() => import('./routes/escape-rooms-page'), 'EscapeRoomsPage'),
 });

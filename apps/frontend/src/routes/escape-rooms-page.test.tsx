@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { configureAnonymousParticipants } from '../config';
 import { mockApi, renderApp } from '../test/harness';
+import { refusalError } from '../game/game-client';
 import type { EscapeTemplateListItemDto } from '../api/generated/model';
 import { openIfLaunchable } from './escape-rooms-page';
 
@@ -313,6 +314,51 @@ describe('/escape', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/join/482913'));
     // The server knows the phone host (`isPhoneHost`): no query needed.
     expect(router.state.location.searchStr).toBe('');
+  });
+
+  // ── M8 Task 8.17: opened from a Site race's link ──
+
+  it('a Site race link: the page says so, the dialog preselects it, and the create claims it', async () => {
+    signedIn();
+    createEscapeRoom.mockResolvedValue({ pin: '482913' });
+    mockApi([
+      { path: '/escape-templates', body: [library] },
+      { path: '/escape-licences', body: [] },
+    ]);
+    const { router } = renderApp('/escape?siteRace=r1&title=Friday&startsAt=1900000000000');
+    expect(
+      await screen.findByText(/Ouverture de la course du Site « Friday »/),
+    ).toBeInTheDocument();
+    await screen.findByRole('article', { name: 'Lost Library' });
+    fireEvent.click(within(card('Lost Library')).getByRole('button', { name: 'Créer la salle' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Course du Site : Friday')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    await waitFor(() =>
+      expect(createEscapeRoom).toHaveBeenCalledWith('e4', {
+        sessionType: 'race',
+        race: { format: 'solo', siteRaceId: 'r1' },
+      }),
+    );
+    await waitFor(() => expect(router.state.location.pathname).toBe('/session/482913/console'));
+  });
+
+  it('a refused Site race (escape.race_not_open) shows its text in the dialog', async () => {
+    signedIn();
+    createEscapeRoom.mockRejectedValue(refusalError({ code: 'escape.race_not_open' }));
+    mockApi([
+      { path: '/escape-templates', body: [library] },
+      { path: '/escape-licences', body: [] },
+    ]);
+    renderApp('/escape?siteRace=r1');
+    await screen.findByRole('article', { name: 'Lost Library' });
+    fireEvent.click(within(card('Lost Library')).getByRole('button', { name: 'Créer la salle' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Heure de départ fixée par le Site')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Cette course ne peut pas être ouverte maintenant',
+    );
   });
 
   it('a race goes to the console', async () => {

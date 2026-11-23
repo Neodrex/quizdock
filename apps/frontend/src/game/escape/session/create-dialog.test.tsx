@@ -202,4 +202,73 @@ describe('CreateSessionDialog', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('This licence has expired.');
     expect(create()).toBeEnabled();
   });
+
+  // ── Opened from a Site race (M8 Task 8.17) ──
+
+  const fromSite = (
+    siteRace: { id: string; title?: string; startsAt?: number },
+    template: { title: string; mode: 'roles' | 'parallel' } = parallel,
+    onCreate = vi.fn<(c: SessionChoice) => Promise<void>>().mockResolvedValue(),
+  ) => {
+    mockApi([{ path: '/escape-licences', body: [] }]);
+    draw(
+      <CreateSessionDialog
+        open
+        template={template}
+        siteRace={siteRace}
+        onCreate={onCreate}
+        onCancel={vi.fn()}
+      />,
+    );
+    return onCreate;
+  };
+
+  it('a Site race preselects Race and shows its title and start; no format or start to pick', () => {
+    fromSite({ id: 'r1', title: 'Friday race', startsAt: DEC_31 });
+    expect(screen.getByRole('radio', { name: /Race/ })).toBeChecked();
+    expect(screen.getByText('Site race: Friday race')).toBeInTheDocument();
+    const when = new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(
+      new Date(DEC_31),
+    );
+    expect(screen.getByText(`Starts ${when}`)).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'Race format' })).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: 'Start' })).toBeNull();
+  });
+
+  it('the payload carries the Site race id, not the shown start', async () => {
+    const onCreate = fromSite({ id: 'r1', title: 'Friday race', startsAt: DEC_31 });
+    fireEvent.click(create());
+    await waitFor(() =>
+      expect(onCreate).toHaveBeenCalledWith({
+        sessionType: 'race',
+        race: { format: 'solo', siteRaceId: 'r1' },
+      }),
+    );
+  });
+
+  it('without startsAt the start is set by the Site; without a title it still says Site race', () => {
+    fromSite({ id: 'r1' });
+    expect(screen.getByText('Site race')).toBeInTheDocument();
+    expect(screen.getByText('Start time set by the Site')).toBeInTheDocument();
+  });
+
+  it('a refused Site race shows its text', async () => {
+    const onCreate = vi.fn<(c: SessionChoice) => Promise<void>>().mockRejectedValue(
+      Object.assign(new Error(en.t('errors:escape.race_not_open')), {
+        code: 'escape.race_not_open',
+      }),
+    );
+    fromSite({ id: 'r1', title: 'Friday race' }, parallel, onCreate);
+    fireEvent.click(create());
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This race cannot be opened now: it is not in its opening window, or another room already opened it.',
+    );
+  });
+
+  it('another type chosen drops the Site race from the payload', async () => {
+    const onCreate = fromSite({ id: 'r1', title: 'Friday race' });
+    fireEvent.click(screen.getByRole('radio', { name: /Group play/ }));
+    fireEvent.click(create());
+    await waitFor(() => expect(onCreate).toHaveBeenCalledWith({ sessionType: 'group' }));
+  });
 });

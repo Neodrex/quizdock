@@ -1,6 +1,6 @@
 import type { ParticipantAccess } from '@quiz-dock/contracts';
 import { useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { DoorOpen, Play, Send, Sparkles } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +22,11 @@ import { allowsAnonymousParticipants } from '../config';
 import { type EscapeRoomOptions, createEscapeRoom } from '../game/escape/host/host-client';
 import { addSampleRooms, canLaunch, publishRoom } from '../game/escape/host/host-templates';
 import { LaunchAccessDialog } from '../game/launch-access-dialog';
-import { CreateSessionDialog, type SessionChoice } from '../game/escape/session/create-dialog';
+import {
+  CreateSessionDialog,
+  type SessionChoice,
+  type SiteRaceLink,
+} from '../game/escape/session/create-dialog';
 
 /**
  * Opens a room and goes to its console (group play: to the host's own phone join).
@@ -31,7 +35,7 @@ import { CreateSessionDialog, type SessionChoice } from '../game/escape/session/
  * Under OIDC with open access offered, it asks how players get in first, unless the
  * host remembered a choice (as `useLaunchSession`); then the session type (M7).
  */
-function useOpenRoom(rooms: EscapeTemplateListItemDto[]) {
+function useOpenRoom(rooms: EscapeTemplateListItemDto[], siteRace?: SiteRaceLink) {
   const navigate = useNavigate();
   const busyRef = useRef(false);
   const [opening, setOpening] = useState<string | null>(null);
@@ -96,6 +100,7 @@ function useOpenRoom(rooms: EscapeTemplateListItemDto[]) {
       <CreateSessionDialog
         open={choosing !== null}
         template={{ title: template?.title ?? '', mode: template?.mode ?? null }}
+        siteRace={siteRace}
         onCreate={create}
         onCancel={() => {
           setChoosing(null);
@@ -129,7 +134,12 @@ export function EscapeRoomsPage() {
   // The list only: no content, so no answers (owner question 1).
   const list = useEscapeTemplatesControllerList();
   const rooms = list.data?.data ?? [];
-  const room = useOpenRoom(rooms);
+  // M8: opened from a Site race's "Open on Live" link.
+  const search = useSearch({ from: '/escape' });
+  const siteRace: SiteRaceLink | undefined = search.siteRace
+    ? { id: search.siteRace, title: search.title, startsAt: search.startsAt }
+    : undefined;
+  const room = useOpenRoom(rooms, siteRace);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [publishing, setPublishing] = useState<string | null>(null);
@@ -171,6 +181,13 @@ export function EscapeRoomsPage() {
       <header className="flex flex-col gap-1">
         <PageTitle>{t('host.nav')}</PageTitle>
         <p className="text-muted-foreground">{t('host.rooms.intro')}</p>
+        {siteRace && (
+          <p className="bg-primary/5 rounded-lg border p-3 text-sm font-medium">
+            {siteRace.title
+              ? t('host.rooms.siteRace', { title: siteRace.title })
+              : t('host.rooms.siteRaceNoTitle')}
+          </p>
+        )}
       </header>
       {room.dialog}
 
