@@ -273,19 +273,28 @@ export class EscapeEngine implements OnModuleDestroy {
     for (const key of await this.redis.scanKeys(gameKeys.room('*'))) {
       if (!ROOM_HASH_KEY.test(key)) continue;
       const pin = key.slice('room:'.length);
-      const meta = await this.game.getMeta(pin);
-      if (meta?.kind !== 'escape') continue;
-      const run = await this.store.run(meta.id);
-      if (run?.phase === 'forming') {
-        const race = (await this.store.session(pin))?.race;
-        if (race?.startsAt && !race.started) this.armRace(pin, race.startsAt);
-        continue;
+      // One room that cannot be read (a corrupt record) must not stop the others.
+      try {
+        await this.recoverRoom(pin);
+      } catch (err) {
+        this.log.warn(`recover ${pin}: ${(err as Error).message}`);
       }
-      if (run?.phase !== 'running') continue;
-      // R4: every member counts as gone since boot until they sync again.
-      this.gone.set(meta.id, new Map());
-      this.startTicker(pin, meta.id);
     }
+  }
+
+  private async recoverRoom(pin: string): Promise<void> {
+    const meta = await this.game.getMeta(pin);
+    if (meta?.kind !== 'escape') return;
+    const run = await this.store.run(meta.id);
+    if (run?.phase === 'forming') {
+      const race = (await this.store.session(pin))?.race;
+      if (race?.startsAt && !race.started) this.armRace(pin, race.startsAt);
+      return;
+    }
+    if (run?.phase !== 'running') return;
+    // R4: every member counts as gone since boot until they sync again.
+    this.gone.set(meta.id, new Map());
+    this.startTicker(pin, meta.id);
   }
 
   // ── Open (O1–O4) ──

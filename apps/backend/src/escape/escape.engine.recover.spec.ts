@@ -106,4 +106,52 @@ describe('EscapeEngine.recover (bindServer)', () => {
     expect(arm.mock.calls.map(([pin, when]) => [pin, when])).toEqual([['111111', at]]);
     engine.onModuleDestroy();
   });
+
+  it('one room it cannot read does not stop the others (a warning, then on)', async () => {
+    const at = Date.now() + 60_000;
+    const good: EscapeSession = {
+      type: 'race',
+      cap: 500,
+      race: { format: 'solo', startsAt: at, started: false },
+      licence: null,
+      licenceUsed: false,
+      phoneHostUserId: null,
+    };
+    const metas: Record<string, { id: string; kind: 'escape' }> = {
+      '111111': { id: 'g1', kind: 'escape' },
+      '222222': { id: 'g2', kind: 'escape' },
+    };
+    const redis = { scanKeys: jest.fn(async () => Object.keys(metas).map((p) => `room:${p}`)) };
+    const game = { getMeta: jest.fn(async (pin: string) => metas[pin] ?? null) };
+    const store = {
+      run: jest.fn(async () => run('forming')),
+      session: jest.fn(async (pin: string) => {
+        if (pin === '111111') throw new SyntaxError('Unexpected token');
+        return good;
+      }),
+    };
+    const engine = new EscapeEngine(
+      game as unknown as GameService,
+      store as unknown as EscapeStore,
+      {} as EscapeTemplatesService,
+      new EscapeTimings(),
+      redis as unknown as RedisService,
+      {} as EscapeAttempts,
+      { get: () => ({}) } as unknown as ModuleRef,
+      new NoLicences(),
+    );
+    const internals = engine as unknown as {
+      scheduler: { arm: (...a: unknown[]) => void };
+      log: { warn: (m: string) => void; error: (m: string) => void };
+    };
+    const arm = jest.spyOn(internals.scheduler, 'arm').mockImplementation(() => undefined);
+    const warn = jest.spyOn(internals.log, 'warn').mockImplementation(() => undefined);
+    const error = jest.spyOn(internals.log, 'error').mockImplementation(() => undefined);
+    engine.bindServer({} as never);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(arm.mock.calls.map(([pin]) => pin)).toEqual(['222222']);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('111111'));
+    expect(error).not.toHaveBeenCalled();
+    engine.onModuleDestroy();
+  });
 });
