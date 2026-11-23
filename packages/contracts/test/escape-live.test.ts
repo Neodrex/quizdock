@@ -122,6 +122,11 @@ describe('session types (M7 §1.1)', () => {
 
   it('takes a licence id and refuses an unknown type', () => {
     expect(create({ sessionType: 'hosted', licenceId: 'lic-1' }).success).toBe(true);
+    expect(create({ licenceId: 'lic-1' }).success).toBe(true);
+    expect(create({ sessionType: 'group', licenceId: 'lic-1' }).success).toBe(false);
+    expect(
+      create({ sessionType: 'race', race: { format: 'solo' }, licenceId: 'lic-1' }).success,
+    ).toBe(false);
     expect(create({ sessionType: 'party' }).success).toBe(false);
     expect(create({ licenceId: '' }).success).toBe(false);
   });

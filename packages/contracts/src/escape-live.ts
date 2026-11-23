@@ -80,7 +80,11 @@ export const escapeCreateSchema = z
   .refine((d) => (d.sessionType === 'race') === (d.race !== undefined), {
     message: 'race data goes with a race, and only with one',
     path: ['race'],
-  });
+  })
+  .refine(
+    (d) => d.licenceId === undefined || d.sessionType === undefined || d.sessionType === 'hosted',
+    { message: 'a licence goes with a hosted event only', path: ['licenceId'] },
+  );
 export const escapeOpenSchema = z.object({
   pin,
   templateId: id,
