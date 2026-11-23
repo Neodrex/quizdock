@@ -55,7 +55,8 @@ function useOpenRoom(rooms: EscapeTemplateListItemDto[]) {
     setChoosing(null);
     release();
     // Group play: the creating phone joins its own room as a player, on the same socket.
-    if (choice.sessionType === 'group') await navigate({ href: `/join/${pin}?host=1` });
+    // The server tells it that it hosts (`isPhoneHost`), so no query goes along.
+    if (choice.sessionType === 'group') await navigate({ to: '/join/$pin', params: { pin } });
     else await navigate({ to: '/session/$pin/console', params: { pin } });
   };
 

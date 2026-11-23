@@ -311,7 +311,8 @@ describe('/escape', () => {
       expect(createEscapeRoom).toHaveBeenCalledWith('e4', { sessionType: 'group' }),
     );
     await waitFor(() => expect(router.state.location.pathname).toBe('/join/482913'));
-    expect(router.state.location.searchStr).toBe('?host=1');
+    // The server knows the phone host (`isPhoneHost`): no query needed.
+    expect(router.state.location.searchStr).toBe('');
   });
 
   it('a race goes to the console', async () => {
