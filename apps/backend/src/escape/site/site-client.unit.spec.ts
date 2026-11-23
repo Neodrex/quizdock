@@ -147,6 +147,32 @@ describe('siteAccessOf (the boot check of ESCAPE_SITE_URL and ESCAPE_SITE_TOKEN)
     expect(() => siteAccessOf('https://site.example', token)).toThrow(/ESCAPE_SITE_TOKEN/);
   });
 
+  describe('in production', () => {
+    const env = process.env;
+    const was = env.NODE_ENV;
+    afterEach(() => {
+      if (was === undefined) delete env.NODE_ENV;
+      else env.NODE_ENV = was;
+    });
+
+    it('refuses http: (the token would travel in clear), except to localhost or 127.0.0.1', () => {
+      env.NODE_ENV = 'production';
+      expect(() => siteAccessOf('http://site.example', TOKEN)).toThrow(/ESCAPE_SITE_URL.*https/);
+      expect(() => siteAccessOf('http://10.0.0.5:5173', TOKEN)).toThrow(/ESCAPE_SITE_URL/);
+      expect(() => siteAccessOf('http://localhost.evil.example', TOKEN)).toThrow(/ESCAPE_SITE_URL/);
+      expect(siteAccessOf('https://site.example', TOKEN).url).toBe('https://site.example');
+      expect(siteAccessOf('http://localhost:5173', TOKEN).url).toBe('http://localhost:5173');
+      expect(siteAccessOf('http://127.0.0.1:5173', TOKEN).url).toBe('http://127.0.0.1:5173');
+    });
+
+    it('takes http: to any host outside production', () => {
+      env.NODE_ENV = 'test';
+      expect(siteAccessOf('http://site.example', TOKEN).url).toBe('http://site.example');
+      delete env.NODE_ENV;
+      expect(siteAccessOf('http://site.example', TOKEN).url).toBe('http://site.example');
+    });
+  });
+
   it('never puts the token in its error', () => {
     try {
       siteAccessOf('nope', TOKEN);

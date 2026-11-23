@@ -5,6 +5,7 @@
  */
 import type { Logger } from '@nestjs/common';
 import type { z } from 'zod';
+import { envSource } from '../../admin/settings/settings.service';
 import type { LicenceHost } from '../licences/licence.port';
 
 /** Where the Site is (ESCAPE_SITE_URL) and the token it expects (ESCAPE_SITE_TOKEN). */
@@ -25,9 +26,15 @@ export const SITE_TIMEOUT_MS = 3000;
 /** The host as the Site matches it: by OIDC subject (its user id) only; the email for its logs. */
 export const siteHostOf = (host: LicenceHost) => ({ subject: host.oidcSubject, email: host.email });
 
+/** NODE_ENV, set by the images (a deployment variable), read through the settings module. */
+const inProduction = () => envSource.read('NODE_ENV') === 'production';
+const LOOPBACK = new Set(['localhost', '127.0.0.1']);
+
 /**
  * The settings checked at boot: an http(s) URL and a token that is not blank.
- * Throws (failing the boot) otherwise, never with the token in the message.
+ * In production the URL must be https (the token travels with every call),
+ * except to localhost or 127.0.0.1. Throws (failing the boot) otherwise,
+ * never with the token in the message.
  */
 export function siteAccessOf(rawUrl: string, rawToken: string): SiteAccess {
   const url = rawUrl.trim();
@@ -39,6 +46,11 @@ export function siteAccessOf(rawUrl: string, rawToken: string): SiteAccess {
   }
   if (!parsed || !['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname) {
     throw new Error('ESCAPE_SITE_URL is not an http(s) URL.');
+  }
+  if (parsed.protocol === 'http:' && inProduction() && !LOOPBACK.has(parsed.hostname)) {
+    throw new Error(
+      'ESCAPE_SITE_URL must be https in production (http only to localhost or 127.0.0.1).',
+    );
   }
   if (!rawToken.trim()) {
     throw new Error('ESCAPE_SITE_TOKEN is empty or blank (32 characters or more).');

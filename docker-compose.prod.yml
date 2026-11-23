@@ -247,7 +247,7 @@ services:
       # Escape rooms: where hosted events find their licences (none | static | site).
       ESCAPE_LICENCE_SOURCE: ${ESCAPE_LICENCE_SOURCE:-none}
       ESCAPE_STATIC_LICENCES: ${ESCAPE_STATIC_LICENCES:-}
-      # The Site's internal API (ESCAPE_LICENCE_SOURCE=site); the token is the Site's LIVE_API_TOKEN.
+      # The Site's internal API: setting ESCAPE_SITE_URL alone turns on Site races; Site licences also need ESCAPE_LICENCE_SOURCE=site. The token is the Site's LIVE_API_TOKEN; https in production.
       ESCAPE_SITE_URL: ${ESCAPE_SITE_URL:-}
       ESCAPE_SITE_TOKEN: ${ESCAPE_SITE_TOKEN:-}
     depends_on:
