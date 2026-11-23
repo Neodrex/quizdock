@@ -309,7 +309,12 @@ export function lobbyTests(ctx: EscapeContext): void {
     await nextEvent<EscapeBoard>(screen, 'escape:board', { where: (b) => b.phase === 'running' });
     expect(phoneLeaks(seen.flat())).toEqual([]);
     // Screens and phones never get the host's events.
-    const hostOnly = new Set(['escape:outline', 'escape:host', 'escape:host-team']);
+    const hostOnly = new Set([
+      'escape:outline',
+      'escape:host',
+      'escape:host-team',
+      'escape:host-batch',
+    ]);
     expect(seen.flat().filter(([e]) => hostOnly.has(e))).toEqual([]);
 
     expect(await host.emitWithAck('escape:start', { pin })).toMatchObject({

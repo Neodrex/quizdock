@@ -390,7 +390,7 @@ async function main() {
   await keepText(b);
 
   // ── 10. No secrets in the phones' frames or text ──
-  const hostOnly = ['escape:outline', 'escape:host', 'escape:host-team'];
+  const hostOnly = ['escape:outline', 'escape:host', 'escape:host-team', 'escape:host-batch'];
   const keys = ['"answer"', '"answers"', '"correct"', '"order"', '"parts"'];
   for (const p of phones) {
     const frames = p.frames.join('\n');

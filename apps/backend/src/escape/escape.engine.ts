@@ -117,6 +117,32 @@ export type EscapeSocket = Socket<
   Record<string, never>,
   GameSocketData
 >;
+/**
+ * Task 9.3: what a race's host room waits for, of one run: the teams that changed
+ * and their updates, oldest first. It goes out with the board, as one frame.
+ */
+interface HostNews {
+  id: GameId;
+  teams: Set<string>;
+  updates: EscapeTeamUpdate[];
+}
+
+/** What a throttled send carries. */
+interface Held {
+  board: boolean;
+  host: boolean;
+  news?: HostNews | null;
+}
+
+/** Both runs' news together; news of an older run is dropped. */
+function mergeNews(a: HostNews | null | undefined, b: HostNews | null | undefined) {
+  if (!b) return a ?? null;
+  if (!a || a.id !== b.id) return { id: b.id, teams: new Set(b.teams), updates: [...b.updates] };
+  for (const t of b.teams) a.teams.add(t);
+  a.updates.push(...b.updates);
+  return a;
+}
+
 /** A socket as `fetchSockets` gives it: what both kinds share. */
 type AnySocket = Pick<EscapeSocket, 'data' | 'rooms' | 'join' | 'leave' | 'emit'>;
 
@@ -209,12 +235,13 @@ export class EscapeEngine implements OnModuleDestroy {
   private readonly scheduler = new EscapeScheduler(this.log);
   /**
    * Board throttle per room: present while a board went out less than
-   * `boardEveryMs` ago; `pending` when another was asked for meanwhile. An
-   * entry removes itself once idle, so nothing stays behind a room.
+   * `boardEveryMs` ago; `pending` when another was asked for meanwhile, `news`
+   * what a race's host room waits for. An entry removes itself once idle, so
+   * nothing stays behind a room.
    */
   private readonly boards = new Map<
     string,
-    { pending: boolean; host: boolean; timer: NodeJS.Timeout }
+    { pending: boolean; host: boolean; news: HostNews | null; timer: NodeJS.Timeout }
   >();
   /**
    * R1/R2: when each player of a run lost their last socket (epoch ms), by
@@ -1296,11 +1323,20 @@ export class EscapeEngine implements OnModuleDestroy {
       }
     }
     await this.broadcast(next, final);
-    // Teams the finale found past their deadline: their time-up first.
+    // Teams the finale found past their deadline: their time-up first (in a race,
+    // to the host in one frame, Task 9.3).
+    const race = !!viewLimits(final);
     for (const rec of late) {
+      const team = escapeRooms.team(ref.id, rec.team.id);
       this.server
-        .to([escapeRooms.team(ref.id, rec.team.id), escapeRooms.host(ref.pin)])
+        .to(race ? team : [team, escapeRooms.host(ref.pin)])
         .emit('escape:team-update', timeUpOf(rec.team.id));
+    }
+    if (race && late.length) {
+      this.server.to(escapeRooms.host(ref.pin)).emit('escape:host-batch', {
+        updates: late.map((rec) => timeUpOf(rec.team.id)),
+        teams: [],
+      });
     }
     await this.sendFinale(ref, finale, final);
     this.reportRace(ref.pin, final.session, finale);
@@ -1702,6 +1738,9 @@ export class EscapeEngine implements OnModuleDestroy {
    * U5: one team changed. With updates, its phones get their new state, the
    * team room and the host the updates, and the board is scheduled; the host
    * always gets the team's detail. `announce` banners the screens and the host.
+   * In a race (Task 9.3) the phones still get theirs at once, but the host's
+   * updates and team detail wait for the board, in one `escape:host-batch`, and
+   * the console, which ignores banners, gets none.
    */
   private async teamChanged(
     ref: RunRef,
@@ -1713,6 +1752,7 @@ export class EscapeEngine implements OnModuleDestroy {
     const rec = v.teams.find((r) => r.team.id === teamId);
     if (!rec || !(await this.isCurrent(ref))) return;
     const host = escapeRooms.host(ref.pin);
+    const race = !!viewLimits(v);
     if (updates.length) {
       for (const s of await this.server.in(ref.pin).fetchSockets()) {
         const { playerId } = s.data;
@@ -1720,16 +1760,20 @@ export class EscapeEngine implements OnModuleDestroy {
         this.placeInTeamRoom(s, ref.id, v, playerId);
         s.emit('escape:state', playerStateOf(v, playerId));
       }
-      const to = this.server.to([escapeRooms.team(ref.id, teamId), host]);
+      const team = escapeRooms.team(ref.id, teamId);
+      const to = this.server.to(race ? team : [team, host]);
       for (const u of updates) to.emit('escape:team-update', u);
     }
-    this.server.to(host).emit('escape:host-team', hostTeamOf(v, rec));
+    if (!race) this.server.to(host).emit('escape:host-team', hostTeamOf(v, rec));
     for (const kind of announce) {
       this.server
-        .to([escapeRooms.board(ref.pin), host])
+        .to(race ? escapeRooms.board(ref.pin) : [escapeRooms.board(ref.pin), host])
         .emit('escape:announce', announceOf(kind, rec.team));
     }
-    if (updates.length) this.toBoard(ref, v);
+    if (race) {
+      const news = { id: ref.id, teams: new Set([teamId]), updates };
+      this.throttled(ref.pin, v, { board: updates.length > 0, host: false, news });
+    } else if (updates.length) this.toBoard(ref, v);
   }
 
   /**
@@ -1772,12 +1816,16 @@ export class EscapeEngine implements OnModuleDestroy {
     this.throttled(ref.pin, v, { board: true, host: false });
   }
 
-  /** The throttle of the board (and, in a race, of the host state): now, or with the next. */
-  private throttled(pin: string, v: RunView, what: { board: boolean; host: boolean }): void {
+  /**
+   * The throttle of the board (and, in a race, of the host state and the host's
+   * news): now, or with the next.
+   */
+  private throttled(pin: string, v: RunView, what: Held): void {
     const held = this.boards.get(pin);
     if (held) {
       held.pending ||= what.board;
       held.host ||= what.host;
+      held.news = mergeNews(held.news, what.news);
       return;
     }
     this.emitHeld(pin, v, what);
@@ -1794,10 +1842,11 @@ export class EscapeEngine implements OnModuleDestroy {
     const held = {
       pending: false,
       host: false,
+      news: null as HostNews | null,
       timer: setTimeout(() => {
         if (this.boards.get(pin) === held) this.boards.delete(pin);
-        if (!held.pending && !held.host) return;
-        const what = { board: held.pending, host: held.host };
+        if (!held.pending && !held.host && !held.news) return;
+        const what = { board: held.pending, host: held.host, news: held.news };
         void this.boardNow(pin, what).catch((err: Error) =>
           this.log.warn(`board ${pin}: ${err.message}`),
         );
@@ -1808,7 +1857,7 @@ export class EscapeEngine implements OnModuleDestroy {
   }
 
   /** What the throttle held back; nothing when the room or its run is gone meanwhile. */
-  private async boardNow(pin: string, what: { board: boolean; host: boolean }): Promise<void> {
+  private async boardNow(pin: string, what: Held): Promise<void> {
     const meta = await this.game.getMeta(pin);
     if (meta?.kind !== 'escape') return;
     const [snap, run] = await Promise.all([this.store.snapshot(meta.id), this.store.run(meta.id)]);
@@ -1817,8 +1866,20 @@ export class EscapeEngine implements OnModuleDestroy {
     this.throttled(pin, v, what);
   }
 
-  private emitHeld(pin: string, v: RunView, what: { board: boolean; host: boolean }): void {
+  /** The board, the host's news (of this run only), then the host state, which has every team. */
+  private emitHeld(pin: string, v: RunView, what: Held): void {
     if (what.board) this.emitBoard(pin, v);
+    const news = what.news?.id === v.id ? what.news : null;
+    if (news) {
+      const teams = what.host
+        ? []
+        : v.teams.filter((r) => news.teams.has(r.team.id)).map((r) => hostTeamOf(v, r));
+      if (news.updates.length || teams.length) {
+        this.server
+          .to(escapeRooms.host(pin))
+          .emit('escape:host-batch', { updates: news.updates, teams });
+      }
+    }
     if (what.host) this.server.to(escapeRooms.host(pin)).emit('escape:host', hostStateOf(v));
   }
 

@@ -1,6 +1,8 @@
 import {
   type EscapeFinale,
+  type EscapeHostBatch,
   type EscapeHostState,
+  type EscapeHostTeam,
   type EscapeScreenFinale,
   GameState,
 } from '@quiz-dock/contracts';
@@ -565,6 +567,68 @@ export function raceSessionTests(ctx: EscapeContext): void {
     expect(count(screenSeen, 'escape:board')).toBeLessThanOrEqual(4);
     expect(count(hostSeen, 'escape:host')).toBeGreaterThanOrEqual(1);
     expect(count(screenSeen, 'escape:board')).toBeGreaterThanOrEqual(1);
+  });
+
+  it('the host gets a race’s team changes with the board, one batch a period, the last change kept (M9 Task 9.3)', async () => {
+    const { host, pin } = await raceRoom('solo');
+    const players: SyncedPlayer[] = [];
+    for (let i = 0; i < 10; i++) players.push(await joinAndSync(ctx.h, pin, `B${i}`));
+    await start(host, pin, players);
+    await settle(1_100); // the start's frames are out of the window
+    const hostSeen = record(host);
+    const t0 = Date.now();
+    // 10 teams, 20 changes within one board period: a wrong code each, then the drawer.
+    const wrong = players.map((p) =>
+      p.socket.emitWithAck('escape:submit', { pin, lockId: 'catalogue', input: '00' }),
+    );
+    await Promise.all(wrong);
+    const right = players.map((p) =>
+      p.socket.emitWithAck('escape:submit', { pin, lockId: 'catalogue', input: '42' }),
+    );
+    expect(await Promise.all(right)).toEqual(
+      players.map(() => ({ ok: true, outcome: 'lock-solved' })),
+    );
+    await settle(Math.max(0, 2_200 - (Date.now() - t0)));
+    const of = (e: string) => hostSeen.filter(([n]) => n === e).map(([, p]) => p);
+    // Nothing one team at a time: no host-team, team-update or banner.
+    expect(of('escape:host-team')).toEqual([]);
+    expect(of('escape:team-update')).toEqual([]);
+    expect(of('escape:announce')).toEqual([]);
+    const batches = of('escape:host-batch') as EscapeHostBatch[];
+    // One batch a period (2.2 s: the first at once, then at most two held ones).
+    expect(batches.length).toBeGreaterThanOrEqual(1);
+    expect(batches.length).toBeLessThanOrEqual(3);
+    for (const b of batches) expect(new Set(b.teams.map((t) => t.id)).size).toBe(b.teams.length);
+    // Every host frame: at most 3 a second.
+    expect(hostSeen.length).toBeLessThanOrEqual(3 * 3);
+    // Every update arrives once, in order.
+    const updates = batches.flatMap((b) => b.updates);
+    const latest = new Map<string, EscapeHostTeam>();
+    for (const [e, p] of hostSeen) {
+      if (e === 'escape:host-batch')
+        for (const t of (p as EscapeHostBatch).teams) latest.set(t.id, t);
+      if (e === 'escape:host') for (const t of (p as EscapeHostState).teams) latest.set(t.id, t);
+    }
+    for (const p of players) {
+      const id = p.last().team!.id;
+      expect(updates.filter((u) => u.teamId === id).map((u) => u.kind)).toEqual([
+        'wrong',
+        'lock-solved',
+      ]);
+      // The last change arrived: the drawer solved, one wrong code.
+      expect(latest.get(id)).toMatchObject({
+        wrong: 1,
+        solved: expect.arrayContaining(['catalogue']),
+      });
+    }
+    // Nothing stays behind the room.
+    const meta = (await ctx.h.app.get(GameService).getMeta(pin))!;
+    const ended = nextEvent(host, 'game:ended');
+    host.emit('host:end', { pin });
+    await ended;
+    await eventually(async () =>
+      expect(ctx.h.app.get(EscapeEngine).inProcess(meta.id, pin).board).toBe(false),
+    );
   });
 
   it('escape:results in a race: a phone gets the top teams and its own row, the host all', async () => {

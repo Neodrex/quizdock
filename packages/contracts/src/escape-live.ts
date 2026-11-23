@@ -430,6 +430,18 @@ export interface EscapeHostState {
   templateVersion: number;
 }
 
+/**
+ * In a race (M9 Task 9.3), what the host room would otherwise get one frame at a
+ * time, sent once per board period: the team updates in order, then each changed
+ * team's detail as of the send.
+ */
+export interface EscapeHostBatch {
+  /** Oldest first, as `escape:team-update` gives them outside races. */
+  updates: EscapeTeamUpdate[];
+  /** Each changed team once; empty when an `escape:host` (every team) follows. */
+  teams: EscapeHostTeam[];
+}
+
 type EscapeStageContent = EscapeTemplateContent['stages'][number];
 
 /**
@@ -636,16 +648,18 @@ export interface EscapeClientToServerEvents {
 export interface EscapeServerToClientEvents {
   /** To one phone. */
   'escape:state': (p: EscapePlayerState) => void;
-  /** To the team room and the host room. */
+  /** To the team room and (outside races) the host room. */
   'escape:team-update': (p: EscapeTeamUpdate) => void;
   /** To the board room and the host room, throttled. */
   'escape:board': (p: EscapeBoard) => void;
-  /** To the board room and the host room. */
+  /** To the board room and (outside races) the host room. */
   'escape:announce': (p: EscapeAnnounce) => void;
   /** To the host room, on sync and structural changes. */
   'escape:host': (p: EscapeHostState) => void;
-  /** To the host room, when one team changed. */
+  /** To the host room, when one team changed (outside races). */
   'escape:host-team': (p: EscapeHostTeam) => void;
+  /** To the host room in a race, with the board, at most once per board period. */
+  'escape:host-batch': (p: EscapeHostBatch) => void;
   /** To the host room only, on sync: the run's template, without its answers. */
   'escape:outline': (p: EscapeHostOutline) => void;
   /** To the phones and the host console of the PIN room. */

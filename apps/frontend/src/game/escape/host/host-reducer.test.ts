@@ -70,6 +70,28 @@ describe('escapeHostReducer: state', () => {
     expect(stranger).toBe(ui);
   });
 
+  it('hostBatch (a race, M9 Task 9.3): the updates in order, then each team', () => {
+    const ui = ready();
+    const solved = hostTeamOf({ wrong: 2, solved: ['lobby-door'] });
+    const out = run(ui, {
+      type: 'hostBatch',
+      batch: {
+        updates: [
+          { teamId: 't1', kind: 'wrong', by: 'p1' },
+          { teamId: 't1', kind: 'time-up' },
+        ],
+        teams: [solved],
+      },
+      now: NOW,
+    });
+    // The team's detail as sent, after the updates (its true wrong count wins).
+    expect(out.host!.teams[0]).toBe(solved);
+    expect(out.host!.teams[1]).toBe(ui.host!.teams[1]);
+    expect(out.feed.at(-1)?.key).toBe('host.feed.timeUp');
+    // An empty batch changes nothing.
+    expect(run(ui, { type: 'hostBatch', batch: { updates: [], teams: [] }, now: NOW })).toBe(ui);
+  });
+
   it('board moves the clock and the summaries, and keeps solved, parts and members', () => {
     const ui = ready(
       hostStateOf({

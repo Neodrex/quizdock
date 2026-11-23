@@ -609,7 +609,7 @@ const keyHits = keys.filter((k) => frames.includes(k));
 check(!keyHits.length, `console: no answer fields in frames (${keyHits.join(' ') || 'none'})`);
 const shown = leaksIn(consoleTexts.join('\n'), answers);
 check(!shown.length, `console: no answer in page text (${shown.join(', ') || 'none'})`);
-const hostOnly = ['escape:outline', 'escape:host', 'escape:host-team'];
+const hostOnly = ['escape:outline', 'escape:host', 'escape:host-team', 'escape:host-batch'];
 for (const p of phonesAll) {
   const all = p.frames.join('\n');
   check(p.frames.length > 10, `${p.name}: ${p.frames.length} frames recorded`);

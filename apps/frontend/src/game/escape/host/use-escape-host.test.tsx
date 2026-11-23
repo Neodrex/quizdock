@@ -76,6 +76,7 @@ const HOST_EVENTS = [
   'escape:outline',
   'escape:host',
   'escape:host-team',
+  'escape:host-batch',
   'escape:board',
   'escape:team-update',
   'escape:announce',
@@ -227,8 +228,9 @@ describe('useEscapeHost', () => {
     fire('escape:host', hostStateOf());
     fire('escape:host-team', hostTeamOf({ wrong: 4 }));
     fire('escape:team-update', { teamId: 't1', kind: 'time-up' });
+    fire('escape:host-batch', { updates: [], teams: [hostTeamOf({ wrong: 5 })] });
     fire('escape:finale', finale);
-    expect(result.current.ui.host!.teams[0].wrong).toBe(4);
+    expect(result.current.ui.host!.teams[0].wrong).toBe(5);
     expect(result.current.ui.feed.at(-1)?.key).toBe('host.feed.timeUp');
     expect(result.current.ui.finale).toBe(finale);
   });

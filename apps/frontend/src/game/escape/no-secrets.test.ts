@@ -11,6 +11,8 @@ const FORBIDDEN = [
   'escape:outline',
   'escape:host',
   'EscapeHostTeam',
+  'escape:host-batch',
+  'EscapeHostBatch',
   'EscapeHostState',
   'escape:board',
   'EscapeBoard',

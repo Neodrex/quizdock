@@ -3,6 +3,7 @@ import type {
   EscapeBoard,
   EscapeClock,
   EscapeFinale,
+  EscapeHostBatch,
   EscapeHostLock,
   EscapeHostOutline,
   EscapeHostStage,
@@ -71,6 +72,7 @@ export type EscapeHostAction =
   | { type: 'outline'; outline: EscapeHostOutline }
   | { type: 'host'; state: EscapeHostState; now: number }
   | { type: 'hostTeam'; team: EscapeHostTeam; now: number }
+  | { type: 'hostBatch'; batch: EscapeHostBatch; now: number }
   | { type: 'board'; board: EscapeBoard }
   | { type: 'teamUpdate'; update: EscapeTeamUpdate; now: number }
   | { type: 'announce'; announce: EscapeAnnounce }
@@ -295,6 +297,13 @@ export function escapeHostReducer(ui: EscapeHostUi, a: EscapeHostAction): Escape
       return onHost(ui, a.state, a.now);
     case 'hostTeam':
       return onHostTeam(ui, a.team, a.now);
+    case 'hostBatch': {
+      // A race's period (M9 Task 9.3): as if each had come alone, the updates first.
+      let out = ui;
+      for (const u of a.batch.updates) out = onTeamUpdate(out, u, a.now);
+      for (const t of a.batch.teams) out = onHostTeam(out, t, a.now);
+      return out;
+    }
     case 'board':
       return onBoard(ui, a.board);
     case 'teamUpdate':

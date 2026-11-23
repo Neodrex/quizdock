@@ -473,6 +473,7 @@ describe('useEscapeSession', () => {
       'escape:outline',
       'escape:host',
       'escape:host-team',
+      'escape:host-batch',
       'escape:board',
       'escape:announce',
     ]) {

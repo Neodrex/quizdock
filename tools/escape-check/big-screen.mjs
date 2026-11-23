@@ -857,6 +857,7 @@ const forbidden = [
   'escape:team-update',
   'escape:host',
   'escape:host-team',
+  'escape:host-batch',
   'escape:outline',
   'escape:finale',
 ];

@@ -135,6 +135,7 @@ const NOT_FOR_SCREENS = new Set([
   'escape:team-update',
   'escape:host',
   'escape:host-team',
+  'escape:host-batch',
   'escape:outline',
   'escape:finale',
 ]);

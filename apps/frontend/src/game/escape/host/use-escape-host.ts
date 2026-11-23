@@ -2,6 +2,7 @@ import type {
   EscapeAnnounce,
   EscapeBoard,
   EscapeFinale,
+  EscapeHostBatch,
   EscapeHostOutline,
   EscapeHostState,
   EscapeHostTeam,
@@ -98,6 +99,8 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
       act({ type: 'host', state, now: serverNow() });
     };
     const onHostTeam = (team: EscapeHostTeam) => act({ type: 'hostTeam', team, now: serverNow() });
+    const onHostBatch = (batch: EscapeHostBatch) =>
+      act({ type: 'hostBatch', batch, now: serverNow() });
     const onBoard = (board: EscapeBoard) => act({ type: 'board', board });
     const onUpdate = (update: EscapeTeamUpdate) =>
       act({ type: 'teamUpdate', update, now: serverNow() });
@@ -110,6 +113,7 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
       ['escape:outline', onOutline as Listener],
       ['escape:host', onHost as Listener],
       ['escape:host-team', onHostTeam as Listener],
+      ['escape:host-batch', onHostBatch as Listener],
       ['escape:board', onBoard as Listener],
       ['escape:team-update', onUpdate as Listener],
       ['escape:announce', onAnnounce as Listener],
