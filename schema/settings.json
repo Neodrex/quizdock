@@ -172,6 +172,42 @@
           "accepts": "a dotted path",
           "applies": "live",
           "administration": true
+        },
+        {
+          "key": "ESCAPE_LICENCE_SOURCE",
+          "default": "`none`",
+          "level": "C2",
+          "description": "Where hosted escape events find their licences: `none` = no hosted events (group play and races still work); `static` = the licences listed in `ESCAPE_STATIC_LICENCES`; `site` = the escape-room Site, at `ESCAPE_SITE_URL` with `ESCAPE_SITE_TOKEN`. Read once at start-up: `site` without both stops it.",
+          "accepts": "`none` · `static` · `site`",
+          "applies": "restart",
+          "administration": false
+        },
+        {
+          "key": "ESCAPE_STATIC_LICENCES",
+          "default": "—",
+          "level": "C2",
+          "description": "The licences of `ESCAPE_LICENCE_SOURCE=static`, for development and pre-Site events; uses are counted in memory, so a restart forgets them. A JSON array of licences, each with the `hosts` who may use it: user ids or emails, a lone star for anyone. Read once at start-up: an invalid value stops it.",
+          "accepts": "a JSON array of licences",
+          "applies": "restart",
+          "administration": false
+        },
+        {
+          "key": "ESCAPE_SITE_URL",
+          "default": "—",
+          "level": "C2",
+          "description": "The escape-room Site that `ESCAPE_LICENCE_SOURCE=site` asks for licences and races (its internal API, under `/api/live/`). Unreachable or refusing: hosted events and Site races are refused, nothing else is.",
+          "accepts": "an `http(s)://` URL",
+          "applies": "restart",
+          "administration": false
+        },
+        {
+          "key": "ESCAPE_SITE_TOKEN",
+          "default": "—",
+          "level": "C1",
+          "description": "The bearer token Live sends to the Site's internal API (`ESCAPE_SITE_URL`), the same as the Site's `LIVE_API_TOKEN`. At least 32 characters; changing it means changing both and restarting.",
+          "accepts": "text, 32 characters or more",
+          "applies": "restart",
+          "administration": false
         }
       ]
     },

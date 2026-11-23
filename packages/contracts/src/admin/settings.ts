@@ -904,32 +904,57 @@ export const SETTINGS = {
     internal: true,
   }),
 
-  // Escape rooms (M7): who owns the licences of hosted events.
+  // Escape rooms (M7, M8): who owns the licences of hosted events.
   ESCAPE_LICENCE_SOURCE: define({
     key: 'ESCAPE_LICENCE_SOURCE',
     description:
-      'Where hosted escape events find their licences: `none` = no hosted events (group play and races still work); `static` = the licences listed in `ESCAPE_STATIC_LICENCES`, for development and the tests.',
-    category: 'internal',
+      'Where hosted escape events find their licences: `none` = no hosted events (group play and races still work); `static` = the licences listed in `ESCAPE_STATIC_LICENCES`; `site` = the escape-room Site, at `ESCAPE_SITE_URL` with `ESCAPE_SITE_TOKEN`. Read once at start-up: `site` without both stops it.',
+    category: 'access',
     criticality: 'C2',
-    schema: oneOf(['none', 'static'] as const),
-    accepts: '`none` · `static`',
-    default: 'none' as 'none' | 'static',
+    schema: oneOf(['none', 'static', 'site'] as const),
+    accepts: '`none` · `static` · `site`',
+    default: 'none' as 'none' | 'static' | 'site',
     applies: 'restart',
     overridable: false,
-    internal: true,
   }),
   ESCAPE_STATIC_LICENCES: define({
     key: 'ESCAPE_STATIC_LICENCES',
     description:
-      'The licences of `ESCAPE_LICENCE_SOURCE=static`: a JSON array of licences, each with the `hosts` (user ids, emails or `*`) who may use it. Read once at start-up: an invalid value stops it.',
-    category: 'internal',
+      'The licences of `ESCAPE_LICENCE_SOURCE=static`, for development and pre-Site events; uses are counted in memory, so a restart forgets them. A JSON array of licences, each with the `hosts` who may use it: user ids or emails, a lone star for anyone. Read once at start-up: an invalid value stops it.',
+    category: 'access',
     criticality: 'C2',
     schema: text(),
     accepts: 'a JSON array of licences',
     default: '',
     applies: 'restart',
     overridable: false,
-    internal: true,
+  }),
+  ESCAPE_SITE_URL: define({
+    key: 'ESCAPE_SITE_URL',
+    description:
+      'The escape-room Site that `ESCAPE_LICENCE_SOURCE=site` asks for licences and races (its internal API, under `/api/live/`). Unreachable or refusing: hosted events and Site races are refused, nothing else is.',
+    category: 'access',
+    criticality: 'C2',
+    schema: text(),
+    bounds: z.string().refine((v) => isUrl(v.trim()), 'not an http(s) URL'),
+    accepts: 'an `http(s)://` URL',
+    default: '',
+    applies: 'restart',
+    overridable: false,
+    example: 'https://escape.example.org',
+  }),
+  ESCAPE_SITE_TOKEN: define({
+    key: 'ESCAPE_SITE_TOKEN',
+    description:
+      "The bearer token Live sends to the Site's internal API (`ESCAPE_SITE_URL`), the same as the Site's `LIVE_API_TOKEN`. At least 32 characters; changing it means changing both and restarting.",
+    category: 'access',
+    criticality: 'C1',
+    schema: z.string().min(32, 'shorter than 32 characters'),
+    accepts: 'text, 32 characters or more',
+    default: '',
+    applies: 'restart',
+    overridable: false,
+    secret: true,
   }),
 
   // Administration
