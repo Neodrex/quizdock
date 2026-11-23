@@ -46,7 +46,13 @@ import type {
   FrozenLicence,
   TeamRecord,
 } from './escape-live.types';
-import { RACE_MAX_LEAD_MIN, capOf, modeAllowed, toolAllowed } from './escape-session';
+import {
+  RACE_MAX_LEAD_MIN,
+  SESSION_RULES,
+  capOf,
+  modeAllowed,
+  toolAllowed,
+} from './escape-session';
 import {
   announceOf,
   boardOf,
@@ -433,6 +439,14 @@ export class EscapeEngine implements OnModuleDestroy {
       await this.requireTool(ref, 'teams');
       if (ref.run.phase !== 'forming') throw new BadRequestException('escape.wrong_phase');
       const v = await this.viewOf(ref);
+      // M7 §1.1: the session type bounds the formation (group play: 3 teams of 6).
+      const bounds = v.session ? SESSION_RULES[v.session.type].formation : null;
+      if (
+        (bounds?.maxTeams && dto.count > bounds.maxTeams) ||
+        (bounds?.maxSize && (dto.maxSize ?? 0) > bounds.maxSize)
+      ) {
+        throw new BadRequestException('escape.not_in_session');
+      }
       const tpl = ref.snap.template;
       let teams = makeTeams(dto.count, dto.names).map((s) => newTeam(tpl, s.id, s.name, []));
       if (dto.mode === 'auto') {
@@ -471,6 +485,10 @@ export class EscapeEngine implements OnModuleDestroy {
         throw new BadRequestException('escape.wrong_phase');
       }
       const v = await this.viewOf(ref);
+      // M7 §1.1: group play moves a player while forming only.
+      if (v.session?.type === 'group' && phase !== 'forming') {
+        throw new BadRequestException('escape.wrong_phase');
+      }
       if (!v.players.some((p) => p.playerId === dto.playerId)) {
         throw new NotFoundException('escape.player_not_found');
       }

@@ -265,6 +265,40 @@ export function sessionTests(ctx: EscapeContext): void {
     expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
   });
 
+  it.each([
+    ['4 teams', { count: 4 }],
+    ['teams of 7', { count: 1, maxSize: 7 }],
+  ])('group play refuses %s (at most 3 teams of 6)', async (_, over) => {
+    const host = ctx.h.connectHost();
+    const { pin } = await createAs(host, library, 'group');
+    await syncedHost(host, pin!);
+    expect(await host.emitWithAck('escape:teams', { pin, mode: 'self', ...over })).toMatchObject(
+      refused('escape.not_in_session'),
+    );
+    expect(
+      await host.emitWithAck('escape:teams', { pin, mode: 'self', count: 3, maxSize: 6 }),
+    ).toEqual({ ok: true });
+  });
+
+  it('group play moves a player while forming only', async () => {
+    const host = ctx.h.connectHost();
+    const { pin } = await createAs(host, library, 'group');
+    await syncedHost(host, pin!);
+    const p = await joinAndSync(ctx.h, pin!, 'P0');
+    expect(await host.emitWithAck('escape:teams', { pin, mode: 'self', count: 2 })).toEqual({
+      ok: true,
+    });
+    expect(
+      await host.emitWithAck('escape:move', { pin, playerId: p.playerId, teamId: 't1' }),
+    ).toEqual({ ok: true });
+    const running = stateWhere(p.socket, (s) => s.phase === 'running');
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    await running;
+    expect(
+      await host.emitWithAck('escape:move', { pin, playerId: p.playerId, teamId: 't2' }),
+    ).toMatchObject(refused('escape.wrong_phase'));
+  });
+
   it('a race refuses teams, moves, a hint or time for one team; not the same for all', async () => {
     const host = ctx.h.connectHost();
     const { pin } = await createAs(host, library, 'race', { race: { format: 'solo' } });
