@@ -10,6 +10,7 @@ import {
   seedTemplate,
   useLicences,
 } from './escape-harness';
+import { nextEvent } from '../game-harness';
 
 const MIN = 60_000;
 const UNBRANDED: EscapeLook = { theme: null, brand: null };
@@ -85,5 +86,24 @@ export function brandTests(ctx: EscapeContext): void {
     expect(await looksOfSync(phone, r)).toEqual([UNBRANDED]);
     const { follow } = await extraScreens(ctx.h, r, race);
     expect(await looksOfSync(follow, r)).toEqual([UNBRANDED]);
+  });
+
+  it('a quiz room opened as a hosted event sends its look to everyone in it, no sync needed', async () => {
+    const host = ctx.h.connectHost();
+    const quiz = await ctx.h.seedQuiz();
+    const pin = await ctx.h.createGame(host, quiz.id);
+    const { socket: phone } = await ctx.h.join(pin, 'Ann');
+    const follow = ctx.h.connect();
+    expect(await follow.emitWithAck('spectator:join', { pin, follow: true })).toMatchObject({
+      ok: true,
+    });
+    const looks = [host, phone, follow].map((s) => nextEvent<EscapeLook>(s, 'escape:look'));
+    expect(
+      await host.emitWithAck('escape:open', { pin, templateId: library, licenceId: 'acme' }),
+    ).toEqual({ ok: true });
+    for (const look of await Promise.all(looks)) {
+      expect(look.brand?.name).toBe('Acme');
+      expect(look.theme?.accent).toBe('#c2410c');
+    }
   });
 }

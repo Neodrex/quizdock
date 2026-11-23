@@ -337,6 +337,9 @@ export class EscapeEngine implements OnModuleDestroy {
       this.server
         .to(pin)
         .emit('game:state', { state: GameState.Lobby, questionIndex: -1, totalQuestions: 0 });
+      // A quiz room turned hosted: its clients follow the new run without a sync,
+      // so the look goes to the whole room now (M7 §1.9).
+      if (session) this.server.to(pin).emit('escape:look', lookOf(session));
       const ref = await this.requireRun(pin);
       await this.broadcast(ref, await this.viewOf(ref));
     });
