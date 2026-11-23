@@ -50,6 +50,7 @@ import {
   RACE_MAX_LEAD_MIN,
   SESSION_RULES,
   capOf,
+  limitsOf,
   modeAllowed,
   toolAllowed,
 } from './escape-session';
@@ -1073,33 +1074,37 @@ export class EscapeEngine implements OnModuleDestroy {
    */
   async results(socket: EscapeSocket, dto: EscapeResults): Promise<EscapeFinale> {
     const id = dto.gameId as GameId;
-    const [pin, finale] = await Promise.all([this.store.roomOf(id), this.store.results(id)]);
-    if (!pin || !finale) throw new NotFoundException('escape.not_found');
-    if (!(await this.wasInRun(socket, dto.sessionToken, id, pin))) {
-      throw new ForbiddenException('escape.not_in_room');
-    }
-    return finale;
+    const [pin, stored] = await Promise.all([this.store.roomOf(id), this.store.resultsOf(id)]);
+    if (!pin || !stored) throw new NotFoundException('escape.not_found');
+    const who = await this.wasInRun(socket, dto.sessionToken, id, pin);
+    if (!who) throw new ForbiddenException('escape.not_in_room');
+    // M7 §1.7: a race's phone gets the top teams and its own row, as at the finale.
+    if (who === 'host' || !stored.race) return stored.finale;
+    return finaleFor(stored.finale, who.teamId, limitsOf('race'));
   }
 
+  /** How the socket was in the run: a phone of a team, the host, or not at all (null). */
   private async wasInRun(
     socket: EscapeSocket,
     sessionToken: string | undefined,
     id: GameId,
     pin: string,
-  ): Promise<boolean> {
+  ): Promise<{ teamId: string } | 'host' | null> {
     const session = sessionToken ? await this.game.resolveSession(sessionToken) : null;
     if (session) {
-      return session.pin === pin && (await this.store.teamOfPlayer(id, session.playerId)) !== null;
+      const teamId =
+        session.pin === pin ? await this.store.teamOfPlayer(id, session.playerId) : null;
+      return teamId === null ? null : { teamId };
     }
-    if (socket.data.playerId) return false;
+    if (socket.data.playerId) return null;
     // Never a screen (spectator:join sets `projection`), even one signed in as the
     // host: a screen gets the screen finale from escape:sync instead (M6 §1.4).
-    if (socket.data.projection !== undefined) return false;
+    if (socket.data.projection !== undefined) return null;
     // The run's host, signed in, live room or not (M5 §1.5: a console back after the room closed).
     const user = socket.data.user?.id;
-    if (user && user === (await this.store.hostOf(id))) return true;
-    if (socket.data.pin !== pin) return false;
-    return (await this.game.getMeta(pin))?.id === id;
+    if (user && user === (await this.store.hostOf(id))) return 'host';
+    if (socket.data.pin !== pin) return null;
+    return (await this.game.getMeta(pin))?.id === id ? 'host' : null;
   }
 
   /**
@@ -1131,7 +1136,7 @@ export class EscapeEngine implements OnModuleDestroy {
     const final = { ...v, run, teams };
     const finale = finaleOf(final, ref.id);
     await this.store.save(ref.id, { run, teams: late });
-    await this.store.saveResults(ref.id, finale);
+    await this.store.saveResults(ref.id, finale, viewLimits(final) !== null);
     this.forget(ref.id);
     if (!closed) {
       // Atomic: an ended room stays ended; without its host, PODIUM waits in prevState.

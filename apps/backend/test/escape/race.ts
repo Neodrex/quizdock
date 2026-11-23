@@ -458,6 +458,30 @@ export function raceSessionTests(ctx: EscapeContext): void {
     expect(count(screenSeen, 'escape:board')).toBeGreaterThanOrEqual(1);
   });
 
+  it('escape:results in a race: a phone gets the top teams and its own row, the host all', async () => {
+    const { host, pin } = await raceRoom('solo');
+    const players: SyncedPlayer[] = [];
+    for (let i = 0; i < 22; i++) players.push(await joinAndSync(ctx.h, pin, `Q${i}`));
+    await start(host, pin, players);
+    const ended = nextEvent<EscapeFinale>(host, 'escape:finale');
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    const { gameId, ranking } = await ended;
+    // The phone that placed last.
+    const last = players.find((p) => p.last().team?.id === ranking.at(-1)!.teamId)!;
+    const mine = (await last.socket.emitWithAck('escape:results', {
+      gameId,
+      sessionToken: last.sessionToken,
+    })) as { ok: true; finale: EscapeFinale };
+    expect(mine.finale.totalTeams).toBe(22);
+    expect(mine.finale.ranking).toHaveLength(21);
+    expect(mine.finale.ranking.at(-1)?.teamId).toBe(last.last().team?.id);
+    const full = (await host.emitWithAck('escape:results', { gameId })) as {
+      finale: EscapeFinale;
+    };
+    expect(full.finale.ranking).toHaveLength(22);
+    expect(full.finale.totalTeams).toBeUndefined();
+  });
+
   it('a race finale: phones and the screen get the top teams and the total; the host all of them', async () => {
     const { host, pin } = await raceRoom('solo');
     const players: SyncedPlayer[] = [];

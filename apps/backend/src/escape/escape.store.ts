@@ -97,6 +97,9 @@ const finaleSchema = z.object({
   }),
 });
 
+/** The race flag stored beside a finale's fields (finaleSchema drops it). */
+const raceFlagSchema = z.object({ race: z.boolean().optional() });
+
 const sessionSchema = z.object({
   type: z.enum(ESCAPE_SESSION_TYPES),
   cap: z.number().int().min(1),
@@ -333,11 +336,23 @@ export class EscapeStore {
 
   /** The final ranking and awards (null until the finale). */
   async results(id: GameId): Promise<EscapeFinale | null> {
-    return parseJson(finaleSchema, await this.redis.get(escapeKeys.results(id)));
+    return (await this.resultsOf(id))?.finale ?? null;
   }
 
-  async saveResults(id: GameId, finale: EscapeFinale): Promise<void> {
-    await this.redis.set(escapeKeys.results(id), JSON.stringify(finale), 'EX', ESCAPE_TTL_S);
+  /**
+   * The finale and whether it was a race's (M7 §1.7: a phone reading it later
+   * gets the top teams only), kept with it since the room's session may be gone.
+   */
+  async resultsOf(id: GameId): Promise<{ finale: EscapeFinale; race: boolean } | null> {
+    const raw = await this.redis.get(escapeKeys.results(id));
+    const finale = parseJson(finaleSchema, raw);
+    if (!finale) return null;
+    return { finale, race: parseJson(raceFlagSchema, raw)?.race ?? false };
+  }
+
+  async saveResults(id: GameId, finale: EscapeFinale, race = false): Promise<void> {
+    const stored = race ? { ...finale, race: true } : finale;
+    await this.redis.set(escapeKeys.results(id), JSON.stringify(stored), 'EX', ESCAPE_TTL_S);
   }
 
   /** Keeps a run's snapshot parsed, the least recently kept going first. */
