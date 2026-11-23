@@ -1,0 +1,243 @@
+{
+  "setup": {
+    "startedAt": "2026-11-23T22:19:24.639Z",
+    "machine": {
+      "host": "Macmini",
+      "platform": "darwin 25.6.0 arm64",
+      "cpu": "Apple M1 × 8",
+      "memGb": 8,
+      "node": "v24.22.3",
+      "commit": "3758df4",
+      "backendCommit": "3758df4"
+    },
+    "cpuCap": "none (native, M1 8 cores)",
+    "scenario": "race-teams",
+    "options": {
+      "url": "http://localhost:3000",
+      "scenario": "race-teams",
+      "players": "500",
+      "server-pid": "54739",
+      "redis": "redis://localhost:16379",
+      "cpu-cap": "none (native, M1 8 cores)",
+      "criteria": "local",
+      "out": "/Volumes/Crucial X9/Projects/claude-escape-room/.tmp/escape-load/after-burst-race-teams.json",
+      "backend-commit": "3758df4",
+      "burst": true,
+      "join-rate": "10",
+      "think": "10-40",
+      "duration-min": "12",
+      "teams": "100",
+      "sustain": false,
+      "seed": "1"
+    },
+    "template": "Lost Library"
+  },
+  "summary": {
+    "race": true,
+    "sustain": false,
+    "players": 500,
+    "joined": 500,
+    "joinRefused": 0,
+    "joinS": 5.2,
+    "runS": 150,
+    "joinAckMs": {
+      "n": 500,
+      "p50": 114,
+      "p95": 267,
+      "p99": 287,
+      "max": 295
+    },
+    "syncAckMs": {
+      "n": 500,
+      "p50": 159,
+      "p95": 367,
+      "p99": 378,
+      "max": 386
+    },
+    "submits": 1291,
+    "submitAckMs": {
+      "n": 1291,
+      "p50": 9,
+      "p95": 30,
+      "p99": 81,
+      "max": 145
+    },
+    "submitAckByOutcomeMs": {
+      "lock-solved": {
+        "n": 668,
+        "p50": 9,
+        "p95": 31,
+        "p99": 89,
+        "max": 145
+      },
+      "stage-cleared": {
+        "n": 334,
+        "p50": 9,
+        "p95": 29,
+        "p99": 75,
+        "max": 128
+      },
+      "wrong": {
+        "n": 120,
+        "p50": 9,
+        "p95": 45,
+        "p99": 70,
+        "max": 79
+      },
+      "escaped": {
+        "n": 169,
+        "p50": 8,
+        "p95": 27,
+        "p99": 71,
+        "max": 139
+      }
+    },
+    "hintAckMs": {
+      "n": 88,
+      "p50": 8,
+      "p95": 53,
+      "p99": 87,
+      "max": 87
+    },
+    "lostAcks": 0,
+    "acks": {
+      "ok": 1377,
+      "expected": {
+        "right:escaped": 2
+      },
+      "unexpected": {}
+    },
+    "unexpected": 0,
+    "teamUpdateFanoutMs": {
+      "n": 2570,
+      "p50": 9,
+      "p95": 29,
+      "p99": 79,
+      "max": 145
+    },
+    "reconnectMs": {
+      "n": 63,
+      "p50": 27,
+      "p95": 98,
+      "p99": 180,
+      "max": 180
+    },
+    "reconnectFailed": 0,
+    "startSpreadMs": {
+      "n": 500,
+      "p50": 18,
+      "p95": 30,
+      "p99": 32,
+      "max": 32
+    },
+    "phonesStarted": 500,
+    "finaleSpreadMs": {
+      "n": 500,
+      "p50": 16,
+      "p95": 34,
+      "p99": 35,
+      "max": 38
+    },
+    "phonesFinale": 500,
+    "boardIntervalMs": {
+      "n": 87,
+      "p50": 1007,
+      "p95": 1020,
+      "p99": 10332,
+      "max": 10332
+    },
+    "hostFramesPerS": 2.64,
+    "hostKbPerS": 68.8,
+    "hostPerEvent": {
+      "escape:board": {
+        "frames": 109,
+        "bytes": 899007,
+        "perS": 0.73,
+        "kbPerS": 5.8
+      },
+      "escape:host": {
+        "frames": 52,
+        "bytes": 8986829,
+        "perS": 0.35,
+        "kbPerS": 58.4
+      },
+      "escape:host-batch": {
+        "frames": 107,
+        "bytes": 645142,
+        "perS": 0.71,
+        "kbPerS": 4.2
+      },
+      "player:left": {
+        "frames": 63,
+        "bytes": 4221,
+        "perS": 0.42,
+        "kbPerS": 0
+      },
+      "player:joined": {
+        "frames": 63,
+        "bytes": 7709,
+        "perS": 0.42,
+        "kbPerS": 0.1
+      },
+      "game:state": {
+        "frames": 1,
+        "bytes": 58,
+        "perS": 0.01,
+        "kbPerS": 0
+      },
+      "escape:finale": {
+        "frames": 1,
+        "bytes": 41256,
+        "perS": 0.01,
+        "kbPerS": 0.3
+      }
+    },
+    "readyMs": {
+      "n": 226,
+      "p50": 3,
+      "p95": 12,
+      "p99": 83,
+      "max": 236
+    },
+    "readyFailed": 0,
+    "cpuPct": {
+      "n": 226,
+      "p50": 1,
+      "p95": 19,
+      "p99": 90,
+      "max": 111
+    },
+    "rssMb": {
+      "start": 235,
+      "max": 373
+    },
+    "redisCommandsPerSubmit": 23,
+    "redisCommandsPerSubmitWithJoins": 49,
+    "redisTopCommands": {
+      "hgetall": 13645,
+      "get": 6450,
+      "hget": 2885,
+      "expire": 1898,
+      "hset": 1504,
+      "exec": 1501,
+      "multi": 1501,
+      "ping": 165,
+      "eval": 127,
+      "set": 122
+    },
+    "sustainSyncAckMs": {
+      "n": 0,
+      "p50": null,
+      "p95": null,
+      "p99": null,
+      "max": null
+    },
+    "restart": null,
+    "finaleAtRunS": 129,
+    "errors": []
+  },
+  "criteria": {
+    "where": "local",
+    "failed": []
+  }
+}

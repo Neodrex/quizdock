@@ -200,3 +200,179 @@ backend's start to its stop, 88 % idle; the profile stays in `.tmp/escape-load/`
 Inclusive: the throttled board and host state (`boardNow` → `emitHeld`, with
 `boardOf`, `teamSummaryOf`, `placesOf`, `hostStateOf`, `hostTeamOf`) about 2.6 s;
 `viewOf` reads (teams, players, sockets) about 2.2 s; joins (`playerJoin`) 1.2 s.
+
+### After Task 9.3: the host console in races (2026-11-23)
+
+Same set-up as the baseline (native backend, no CPU cap, restarted for each
+run; load tool `6a79bec`), backend `faa1176`. In a race the host room now gets
+its team updates and changed teams as one `escape:host-batch` per board period
+(1 s); `escape:host-team`, `escape:team-update` and `escape:announce` no longer
+reach it one by one (phones still get theirs at once; group play and hosted
+events are unchanged).
+
+| | race-teams | race-solo | hosted |
+|---|--:|--:|--:|
+| Submit ack p50 / p95 / p99 (ms) | 15 / 31 / 51 | 14 / **49** / 81 | 13 / 37 / 45 |
+| Host frames/s, KB/s | **2.57**, 66.3 | **2.83**, 135.0 | 20.6, 230.1 (unchanged) |
+| of which `escape:*` | 1.72 | 1.81 | 19.85 |
+| Backend CPU p50 / p95 | 14 / 25 | 17 / 36 | 17 / 33 |
+| Local criteria | PASS | PASS | PASS |
+
+The host frames left in a race are `escape:board` (0.7/s), `escape:host-batch`
+(0.7/s), `escape:host` (0.35/s) and upstream's `player:joined` and
+`player:left` (0.4–0.5/s each, the bots' reconnect churn). race-solo's submit
+p95 fell from 109 to 49 ms with the host's frames.
+
+### Task 9.4: measured hot spots
+
+A `race-solo` profile after 9.3 (`node --cpu-prof`, 497 s sampled, 70.7 s
+busy) ranked the candidates by share of the backend's busy CPU:
+
+| Candidate | Busy CPU | Decision |
+|---|--:|---|
+| **A/B** `membersOf` + `recOf` (teams × players in every host state and board) | 16 % self (11.6 s) | fixed: `perf(escape): payloads index a view's players and teams once` (`cc0faaa`) |
+| **B** `EscapeStore.teams` (`JSON.parse` + zod of every team, per `viewOf`) | 24 % incl. (17.3 s) | fixed: `perf(escape): team records parsed once per stored JSON` (`3758df4`) |
+| **B** `GameService.players` (`HGETALL` + `JSON.parse`, per `viewOf`) | 6 % incl. (4.5 s) | under 10 %, upstream file: left |
+| **C** `fetchSockets` of the PIN room (in-memory adapter) | 6 % incl. (4.6 s) | under 10 %: left (a team-room version was written, then dropped) |
+| **D** the tick's team parse | inside B's figure; B's cache serves it too | — |
+| **E** upstream join fan-out (`playerJoin` 1.4 s, 2 %) | 2 % | not hot: no upstream edit, nothing to ask |
+
+Neither fix was needed for a §1.2 criterion at the default pace after 9.3;
+both exceeded 10 % of the busy CPU. Each A/B ran `race-solo` at the stress pace
+(`--think 2-8`, 3919 submits in 85 s), alternating A B, B A, A B on a freshly
+started backend (as upstream's `bench.sh ab`):
+
+**Payload index** (A `faa1176`, B `cc0faaa`):
+
+| Run | Submit ack p50 / p95 / p99 (ms) | CPU p50 / p95 | `/health/ready` p95 |
+|---|---|---|--:|
+| 1 A | 9 / 42 / 67 | 20 / 52 | 13 |
+| 2 B | 13 / 55 / 95 | 18 / 63 | 12 |
+| 3 B | 14 / 71 / 125 | 17 / 66 | 7 |
+| 4 A | 16 / 110 / 208 | 19 / 71 | 18 |
+| 5 A | 11 / 60 / 85 | 19 / 64 | 20 |
+| 6 B | 11 / 35 / 76 | 18 / 56 | 9 |
+| mean A / B | 12 / 71 / 120 vs 13 / 54 / 99 | 19.3 / 62 vs 17.7 / 62 | 17 vs 9 |
+
+The end-to-end figures are within this machine's noise; the payloads
+themselves, timed alone on a 500-team solo race view
+(`.tmp/escape-load/bench/host-state.cjs`, 50 calls each): `hostStateOf` 28 ms →
+0.5 ms, `boardOf` 9 ms → 0.16 ms, each a block of the event loop.
+
+**Team parse cache** (A `cc0faaa`, B `3758df4`):
+
+| Run | Submit ack p50 / p95 / p99 (ms) | CPU p50 / p95 | `/health/ready` p95 |
+|---|---|---|--:|
+| 1 A | 11 / 39 / 65 | 18 / 61 | 12 |
+| 2 B | 10 / 32 / 44 | 17 / 48 | 7 |
+| 3 B | 9 / 29 / 50 | 16 / 47 | 20 |
+| 4 A | 10 / 48 / 128 | 18 / 54 | 16 |
+| 5 A | 10 / 42 / 75 | 19 / 54 | 8 |
+| 6 B | 7 / 21 / 39 | 16 / 37 | 8 |
+| mean A / B | 10 / 43 / 89 vs 9 / 27 / 44 | 18.3 / 56 vs 16.3 / 44 | 12 vs 12 |
+
+### After the fixes (Task 9.5, 2026-11-23)
+
+Backend `3758df4`; load tool `2a748f1` for the restart run, `0b3e2e7` for its
+control, `6a79bec` for the others (same measures); same machine and set-up,
+native and uncapped.
+macOS's `mediaanalysisd` (up to 1.9 cores) and another session's `ffmpeg`
+(5 cores) ran during part of the evening: the hosted, stress race-teams and
+restart runs that overlapped `ffmpeg` were discarded and run again once it had
+stopped; `mediaanalysisd` came and went and could not be stopped.
+
+**Default pace** (think 10–40 s, joins 10/s):
+
+| | race-teams | race-solo | hosted |
+|---|--:|--:|--:|
+| Teams | 167 | 500 | 100 |
+| Run (start to finale), s | 150 | 418 | 187 |
+| Submits | 1291 | 3919 | 1094 |
+| Join ack p95 (ms) | 22 | 23 | 47 |
+| Submit ack p50 / p95 / p99 (ms) | 15 / 27 / 36 | 8 / **17** / 67 | 15 / 27 / 106 |
+| Lost acks, unexpected refusals | 0, 0 | 0, 0 | 0, 0 |
+| Team-update fan-out p95 (ms) | 27 | — (solo) | 27 |
+| Hint ack p95 (ms) | 23 | 17 | 26 |
+| Reconnect p95 (ms) | 48 | 36 | 48 |
+| Start spread p95 (ms) | 17 | 22 | 22 |
+| Finale spread p95 (ms) | 19 | 46 | 54 |
+| Board interval p50 / p95 (ms) | 1012 / 1021 | 1008 / 1016 | 110 / 244 |
+| Host frames/s, KB/s (all; `escape:*`) | **2.65** (1.80), 72.4 | **2.96** (1.93), 157.2 | 20.7, 228.7 |
+| `/health/ready` p95 (ms) | 7 | 8 | 9 |
+| Backend CPU p50 / p95 (% of one core) | 12 / 24 | 7 / 18 | 11 / 22 |
+| RSS start → max (MB) | 296 → 518 | 300 → 461 | 308 → 466 |
+| Redis commands per submit (play; with joins) | 23; 49 | 23; 31 | 27; 50 |
+| Local criteria | PASS | PASS | PASS |
+
+**Stress pace** (think 2–8 s) and the **burst join** (50 at once):
+
+| | race-teams stress | race-solo stress | hosted stress | race-teams burst |
+|---|--:|--:|--:|--:|
+| Run, s; submits | 31; 1296 | 85; 3919 | 36; 1097 | 150; 1291 |
+| Join ack p95 (ms) | 31 | 31 | 30 | **267** |
+| Submit ack p50 / p95 / p99 (ms) | 7 / 21 / 99 | 11 / 67 / 223 | 12 / 62 / 93 | 9 / 30 / 81 |
+| Lost acks, unexpected refusals | 0, 0 | 0, 0 | 0, 0 | 0, 0 |
+| Reconnect p95 (ms) | 35 | 139 | 126 | 98 |
+| Start / finale spread p95 (ms) | 13 / 13 | 63 / 20 | 28 / 111 | 30 / 34 |
+| Board interval p50 / p95 (ms) | 1005 / 2456 (n 18) | 1007 / 1012 | 104 / 113 | 1007 / 1020 |
+| Host frames/s (all; `escape:*`), KB/s | 6.45 (2.3), 113.8 | 7.38 (2.35), 216.7 | 91.6 (87.9), 799.3 | 2.64 (1.8), 68.8 |
+| `/health/ready` p95 (ms) | 12 | 9 | 14 | 12 |
+| Backend CPU p50 / p95 | 15 / 30 | 12 / 54 | 12 / 49 | 1 / 19 |
+| RSS max (MB) | 445 | 457 | 335 | 373 |
+| Local criteria | FAIL: board p95, host frames | FAIL: host frames | PASS | PASS |
+
+**Restart during a race** (`race-teams`, `--sustain`, think 200–400 s so that
+teams stay on their stages, 15 minutes; `.tmp/escape-load/restart.sh` killed the
+backend with `SIGKILL` 300 s into the run and listening again 5 s later):
+
+| | |
+|---|---|
+| Phones dropped, back | 500, 500 (none failed) |
+| Time back per phone p50 / p95 / max | 7.7 / 11.0 / 12.7 s |
+| Full recovery (first drop to last phone back) | **12.8 s** (criterion 30 s) |
+| Host, screen, board back | 8.6, 9.9, 6.0 s |
+| Teams whose progress went back (stage, locks, out) | 0 |
+| Timer hints after the restart | 48 (the tickers came back) |
+| Finale | at time-up, 901 s into the run, to all 500 phones (spread p95 16 ms) |
+| Submit ack p50 / p95 / p99 (ms) | before the kill 9 / 18 / 39 (220); the minute after 9 / 29 / 467 (133); later 12 / 32 / 111 (708); no lost ack |
+| `/health/ready` p95 (ms) | 7 (6 failures while the backend was down) |
+| The same run without the restart (control) | submit ack 15 / 32 / 160, `/health/ready` p95 7, finale at 901 s |
+
+The board interval criterion fails in these two runs by design of the pace:
+with 200–400 s think time the board often has nothing new for seconds, and an
+unchanged board is not sent. An earlier restart run (discarded, kept in
+`.tmp/escape-load/discarded/`) gave the same recovery (500/500 in 11.6 s, no
+progress lost, 51 timer hints) but a submit p95 of 226 ms over the whole run,
+while `mediaanalysisd` was busy; the run above, with the acks split around the
+drop, shows the restart itself adds only a short tail in the following minute.
+
+**Reading**
+
+- **Every §1.2 local criterion passes at the default pace in all three
+  scenarios**, and the host console of a race gets 2.65–2.96 frames a second,
+  1.8–1.9 of them escape frames (24–26 before).
+- **The burst join** (50 at once) passes: join ack p95 267 ms.
+- **A restart costs the room about 12 seconds**: every phone, the console, the
+  screen and the board came back with their session tokens, no team lost a
+  lock, the tickers resumed (timed hints), and the run ended at time-up with
+  its finale.
+- **At the stress pace, a race's host gets 6.5–7.4 frames a second, of which
+  only 2.3 are escape frames**: the rest are upstream's `player:joined` and
+  `player:left` (2–2.5/s each), one per reconnect, which the 5 % drop rate makes
+  frequent at a fifth of the think time. Coalescing them needs an edit to
+  upstream's `game.gateway.ts` (outside §1.3): an owner decision. At the
+  default pace they are 0.8–1.0/s and the total stays under 3.
+- **The stress race-teams board interval p95 (2.4 s) is the start**: 18
+  intervals in a 31 s run, the longest being the first, before any bot's first
+  move (as in the baseline). The board criterion is meant for a run of some
+  length; at the default pace it is 1.02 s.
+- **Hosted events are unchanged by design**: their console gets 20.7 frames a
+  second at the default pace and 92 (800 KB/s) at the stress pace, with the
+  board every 100 ms (4–6/s). No criterion covers it; it is a candidate for
+  the same coalescing if hosted events grow.
+- The first hosted run of this series stalled during its joins (24 joins and
+  the host's `escape:teams` lost, then 500 sockets dropped) while another
+  process held five cores and the machine swapped; the bots' retry each second
+  then made a storm of `player:reconnect` (each fanned out to every socket as
+  `player:joined`, RSS 1.5 GB). The bots now back off as socket.io-client does
+  (`0b3e2e7`), the run was discarded, and its rerun passes (above).
