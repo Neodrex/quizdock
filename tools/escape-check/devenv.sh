@@ -45,10 +45,12 @@ if [ "${LICENCES:-dev}" = site ]; then
   unset ESCAPE_STATIC_LICENCES
 fi
 # Sign-in (M8 §6): `AUTH=site source devenv.sh` signs Live in with the Site's
-# Supabase (OAuth 2.1 server, the `live_roles` claim from its access token hook).
-# Needs the Site's stack (`pnpm db:start` in app/) and `pnpm seed`, which writes
-# the client id and secret to .tmp/live-oidc.env. The frontend runs on 5174, the
-# redirect the seed registers. The default stays AUTH_MODE=none (live/.env).
+# Supabase (OAuth 2.1 server). No role rides in a token: the escape module polls
+# the Site's /api/live/hosts (needs ESCAPE_SITE_URL and the token, set here too)
+# and grants `host` to its admins and facilitators (site-hosts.ts).
+# Needs the Site's stack (`pnpm db:start` in app/), `pnpm dev` and `pnpm seed`,
+# which writes the client id and secret to .tmp/live-oidc.env. The frontend runs
+# on 5174, the redirect the seed registers. The default stays AUTH_MODE=none.
 # Never run `pnpm test` after sourcing this: it would inherit these variables.
 if [ "${AUTH:-none}" = site ]; then
   if [ ! -f "$TMPDIR/live-oidc.env" ]; then
@@ -58,7 +60,19 @@ if [ "${AUTH:-none}" = site ]; then
   export AUTH_MODE=oidc
   export OIDC_ISSUER=http://127.0.0.1:54321/auth/v1
   unset OIDC_INTERNAL_URL
-  export OIDC_ROLES_CLAIM=live_roles OIDC_AUDIENCE=
+  # The default roles claim (`roles`) is in neither token: nothing is read from the
+  # access token (the fallback quizdock 1.0 removes).
+  unset OIDC_ROLES_CLAIM
+  export OIDC_AUDIENCE=
+  if [ -z "${ESCAPE_SITE_TOKEN:-}" ]; then
+    ESCAPE_SITE_TOKEN="$(sed -n 's/^LIVE_API_TOKEN=//p' ../app/.env 2>/dev/null)"
+    if [ -z "$ESCAPE_SITE_TOKEN" ]; then
+      echo "devenv: LIVE_API_TOKEN is missing from app/.env" >&2
+      return 1
+    fi
+    export ESCAPE_SITE_TOKEN
+  fi
+  export ESCAPE_SITE_URL="${ESCAPE_SITE_URL:-http://localhost:5173}"
   # Guests join with the PIN and a nickname alone.
   export ALLOW_ANONYMOUS_PARTICIPANTS=true
   set -a; source "$TMPDIR/live-oidc.env"; set +a

@@ -10,10 +10,11 @@ import { EscapeStore } from './escape.store';
 import { EscapeLicencesController } from './licences/escape-licences.controller';
 import { LicencesModule } from './licences/licences.module';
 import { RacesModule } from './races/races.module';
+import { SiteHostsModule } from './site/site-hosts.module';
 
 /** Live escape rooms: their templates (M2) and the live run over the `/game` namespace (M3). */
 @Module({
-  imports: [GameStateModule, LicencesModule, RacesModule],
+  imports: [GameStateModule, LicencesModule, RacesModule, SiteHostsModule],
   controllers: [EscapeTemplatesController, EscapeLicencesController],
   providers: [
     EscapeTemplatesService,

@@ -5,9 +5,10 @@ import { AuthDeprecations } from '../../auth/oidc/deprecations';
 
 /**
  * Live signs in with the Site (M8 §6): Supabase's OAuth server is the OIDC
- * provider and `live_roles` comes from its custom access token hook. The
- * spike found the claim in the access token only, so the roles reach the
- * principal through the deprecated access-token fallback (removed at 1.0).
+ * provider. Its ID token has a fixed set of claims, so no role rides in any
+ * token: `host` comes from the Site host sync (`site-hosts.ts`). The tokens
+ * carry no `roles` claim (Live's default OIDC_ROLES_CLAIM), so the deprecated
+ * access-token fallback (removed at 1.0) is never taken.
  */
 const ISSUER = 'http://127.0.0.1:54321/auth/v1';
 const SUB = 'fd2429c6-5b0e-4b4c-9a51-2f5ad3a1c0de';
@@ -41,15 +42,23 @@ const idClaims = (): JWTPayload => ({
   client_id: CLIENT,
 });
 
-const accessToken = (liveRoles: string[]) =>
+/** The access token as Supabase issues it now: no hook, no roles claim. */
+const accessToken = () =>
   sign(
-    { role: 'authenticated', client_id: CLIENT, email: 'dev@example.com', live_roles: liveRoles },
+    {
+      role: 'authenticated',
+      client_id: CLIENT,
+      email: 'dev@example.com',
+      app_metadata: { provider: 'email', providers: ['email'] },
+      user_metadata: {},
+    },
     'authenticated',
   );
 
 describe('Supabase as the OIDC provider (M8 Task 8.11)', () => {
   const env = process.env;
   const was = env.OIDC_ROLES_CLAIM;
+  // OIDC_ROLES_CLAIM stays unset (default `roles`), as in devenv.sh and DEPLOY.md.
   let warn: jest.SpyInstance;
   let provider: OidcProvider;
 
@@ -58,7 +67,7 @@ describe('Supabase as the OIDC provider (M8 Task 8.11)', () => {
   });
 
   beforeEach(() => {
-    env.OIDC_ROLES_CLAIM = 'live_roles';
+    delete env.OIDC_ROLES_CLAIM;
     warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
     const deprecations = new AuthDeprecations({ set: jest.fn().mockResolvedValue('OK') } as never);
     provider = new OidcProvider({} as never, {} as never, deprecations);
@@ -70,25 +79,18 @@ describe('Supabase as the OIDC provider (M8 Task 8.11)', () => {
     else env.OIDC_ROLES_CLAIM = was;
   });
 
-  it('a Site host: the role from the access token, the verified email, the warning logged', async () => {
-    expect(provider.sessionPrincipal(idClaims(), await accessToken(['host']))).toEqual({
+  it('a signed-in Site user: the verified email, no role from the tokens, no deprecation warning', async () => {
+    expect(provider.sessionPrincipal(idClaims(), await accessToken())).toEqual({
       sub: SUB,
       displayName: 'Dev',
       email: 'dev@example.com',
-      roles: ['host'],
-    });
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Roles read from the access token'));
-  });
-
-  it('a Site member: no role', async () => {
-    expect(provider.sessionPrincipal(idClaims(), await accessToken([]))).toMatchObject({
-      sub: SUB,
       roles: [],
     });
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('the subject is the Supabase user id, a UUID the Site matches facilitators on', async () => {
-    const principal = provider.sessionPrincipal(idClaims(), await accessToken(['host']));
+    const principal = provider.sessionPrincipal(idClaims(), await accessToken());
     expect(principal?.sub).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     );

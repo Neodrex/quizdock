@@ -22,7 +22,8 @@
  * http://localhost:5173), OUT, HEADED=1.
  *
  * 1. Sign-in: Live's login goes to the Site, the dev user signs in there, the
- *    consent goes straight through, and /me has the host role.
+ *    consent goes straight through, and /me has the host role (from the Site
+ *    host sync, M8 §5 item 2) with no "roles in the access token" warning.
  * 2. Hosted Acme event: the dialog lists the Site licence with its name and no
  *    logo (local Supabase is http), 8 players in and a 9th refused, the start
  *    records a use on the Site, and the count holds after a backend restart.
@@ -92,6 +93,9 @@ async function up() {
     .catch(() => false);
 }
 
+/** Everything the backends of this run printed (checked for the deprecation warning). */
+let backendText = '';
+
 async function startBackend(extra = {}) {
   if (await up()) throw new Error(`port ${PORT} is taken: stop the backend there first`);
   backendLog.write(`\n── start ${new Date().toISOString()} ${JSON.stringify(extra)} ──\n`);
@@ -102,6 +106,7 @@ async function startBackend(extra = {}) {
   });
   backend.stdout.pipe(backendLog, { end: false });
   backend.stderr.pipe(backendLog, { end: false });
+  for (const out of [backend.stdout, backend.stderr]) out.on('data', (d) => (backendText += d));
   const ok = await until(up, 240_000, 1000);
   if (!ok) throw new Error(`the backend did not come up on ${PORT} (see ${OUT}/site-backend.log)`);
   log(`backend up on ${PORT}`);
@@ -280,6 +285,11 @@ async function signIn() {
   me = await hostApi('GET', '/me');
   check(me?.email === EMAIL, `sign-in: /me is ${me?.email}`);
   check(me?.roles?.includes('host'), `sign-in: roles ${JSON.stringify(me?.roles)} include host`);
+  // The role comes from the Site host sync, never from the access token (gone at quizdock 1.0).
+  check(
+    !backendText.includes('Roles read from the access token'),
+    'sign-in: no "roles in the access token" deprecation warning',
+  );
   await shot(page, 'signed-in');
 }
 

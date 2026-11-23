@@ -283,6 +283,17 @@ model EscapeTemplate {
   @@map("escape_templates")
 }
 
+/// The `host` grants the escape module made because the Site lists the account
+/// (a Site admin or licence facilitator, M8 §5 item 2). Its sync takes back only
+/// these, never a grant from an operator (`qd users.set-role`). By OIDC subject,
+/// without a relation: the row may come before the account's first sign-in.
+model EscapeSiteHost {
+  oidcSubject String   @id @map("oidc_subject")
+  grantedAt   DateTime @default(now()) @map("granted_at") @db.Timestamptz(6)
+
+  @@map("escape_site_hosts")
+}
+
 /// §2.3 — question.
 model Question {
   id                 String          @id @default(ulid()) @db.Char(26)
