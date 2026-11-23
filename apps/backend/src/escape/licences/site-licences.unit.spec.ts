@@ -96,9 +96,30 @@ describe('SiteLicences', () => {
     expect(log.warn).toHaveBeenCalledTimes(1);
   });
 
-  it('brands go through licenceBrandSchema: an unknown theme is an unavailable answer', async () => {
-    const { port } = fakeSite({ raw: [{ ...licence, brand: { ...brand, baseTheme: 'neon' } }] });
-    await expect(port.usableBy(host, NOW)).rejects.toThrow('escape.licence_unavailable');
+  it('brands go through licenceBrandSchema: a licence with an unknown theme is dropped, with a warning', async () => {
+    const { port, log } = fakeSite({
+      raw: [{ ...licence, id: 'bad', brand: { ...brand, baseTheme: 'neon' } }, licence],
+    });
+    expect(await port.usableBy(host, NOW)).toEqual([licence]);
+    expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('#0'));
+  });
+
+  it('one bad licence never fails the list; an answer that is not a list is unavailable', async () => {
+    const { port, log } = fakeSite({ raw: [{ id: 'x' }, licence, 'nope'] });
+    expect(await port.usableBy(host, NOW)).toEqual([licence]);
+    expect(log.warn).toHaveBeenCalledTimes(2);
+    const notList = fakeSite({ raw: { licences: [licence] } });
+    await expect(notList.port.usableBy(host, NOW)).rejects.toThrow('escape.licence_unavailable');
+  });
+
+  it('usableBy evicts expired hosts when it keeps a new answer', async () => {
+    const { port } = fakeSite({ raw: [licence] });
+    const kept = (port as unknown as { usable: Map<string, unknown> }).usable;
+    await port.usableBy(host, NOW);
+    await port.usableBy({ ...host, oidcSubject: 'sub-2' }, NOW + 1);
+    expect(kept.size).toBe(2);
+    await port.usableBy({ ...host, oidcSubject: 'sub-3' }, NOW + USABLE_CACHE_MS);
+    expect([...kept.keys()]).toEqual(['sub-2', 'sub-3']);
   });
 
   it('check posts host and licenceId, never cached, and passes refusals on', async () => {
@@ -138,11 +159,14 @@ describe('SiteLicences', () => {
     ]);
   });
 
-  it('recordUse retries once after a network error (idempotent by useKey)', async () => {
-    const { port, post } = fakeSite(down('network'), { raw: { ok: true } });
-    expect(await port.recordUse('lic-1', use)).toEqual({ ok: true });
-    expect(post).toHaveBeenCalledTimes(2);
-  });
+  it.each(['network', 'timeout'] as const)(
+    'recordUse retries once after a %s failure (idempotent by useKey)',
+    async (cause) => {
+      const { port, post } = fakeSite(down(cause), { raw: { ok: true } });
+      expect(await port.recordUse('lic-1', use)).toEqual({ ok: true });
+      expect(post).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it('recordUse gives up after the retry, and does not retry other failures', async () => {
     const twice = fakeSite(down('network'));

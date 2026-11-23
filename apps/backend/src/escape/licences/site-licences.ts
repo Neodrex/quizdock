@@ -69,11 +69,24 @@ export class SiteLicences implements LicencePort {
     const res = await this.site.post(
       '/api/live/licences/usable',
       { host: siteHostOf(host) },
-      z.array(this.licence),
+      z.array(z.unknown()),
     );
     if (!res.ok) throw new ServiceUnavailableException(LICENCE_UNAVAILABLE);
-    this.usable.set(key, { at: now, list: res.value });
-    return res.value;
+    // One by one: a licence the Site got wrong is dropped, never the whole list.
+    const list: Licence[] = [];
+    res.value.forEach((raw, i) => {
+      const parsed = this.licence.safeParse(raw);
+      if (parsed.success) list.push(parsed.data);
+      else {
+        const paths = parsed.error.issues.map((e) => e.path.join('.') || '(root)');
+        this.log.warn(`site licences: licence #${i} dropped (unexpected ${paths.join(', ')})`);
+      }
+    });
+    for (const [k, v] of this.usable) {
+      if (!(now - v.at >= 0 && now - v.at < USABLE_CACHE_MS)) this.usable.delete(k);
+    }
+    this.usable.set(key, { at: now, list });
+    return list;
   }
 
   async check(host: LicenceHost, licenceId: string): Promise<LicenceCheck> {
@@ -85,7 +98,7 @@ export class SiteLicences implements LicencePort {
     return res.ok ? res.value : { ok: false, reason: 'unavailable' };
   }
 
-  /** Idempotent by `useKey` on the Site, so a network error is retried once. */
+  /** Idempotent by `useKey` on the Site, so a network error or a timeout is retried once. */
   async recordUse(
     licenceId: string,
     use: LicenceUse,
@@ -96,7 +109,7 @@ export class SiteLicences implements LicencePort {
     ]);
     const body = { licenceId, use };
     let res = await this.site.post('/api/live/licences/use', body, answer);
-    if (!res.ok && res.cause === 'network') {
+    if (!res.ok && (res.cause === 'network' || res.cause === 'timeout')) {
       res = await this.site.post('/api/live/licences/use', body, answer);
     }
     if (!res.ok) return { ok: false, reason: 'unavailable' };
