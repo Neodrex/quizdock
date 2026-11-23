@@ -1060,12 +1060,14 @@ export class EscapeEngine implements OnModuleDestroy {
       return { ...base, type, cap: capOf(type), phoneHostUserId: host.userId };
     }
     if (type === 'race') {
-      const startsAt = dto.race?.startsAt ?? null;
+      // escapeCreateSchema gives every race its race data.
+      if (!dto.race) throw new BadRequestException('validation');
+      const { format } = dto.race;
+      const startsAt = dto.race.startsAt ?? null;
       const lead = startsAt === null ? null : startsAt - Date.now();
       if (lead !== null && (lead < RACE_MIN_LEAD_MS || lead > RACE_MAX_LEAD_MIN * 60_000)) {
         throw new BadRequestException('escape.race_start_out_of_range');
       }
-      const format = dto.race?.format ?? 'solo';
       return { ...base, type, cap: capOf(type), race: { format, startsAt, started: false } };
     }
     const licence = await this.licenceFor(host, dto.licenceId);
