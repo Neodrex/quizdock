@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import type { GameSocket } from '../../game-client';
 import { BackToLobbyButton } from '../../room-components';
 import { formatDelta } from '../escape-reducer';
+import { can, type ToolSet } from '../session/session-tools';
 import { type EscapeHostUi, type HostLockView, nextHintOf } from './host-reducer';
 
 /**
@@ -32,6 +33,8 @@ export interface HostCommands {
   unlock: (teamId: string, lockId: string) => Promise<unknown>;
   pause: (paused: boolean) => Promise<unknown>;
   end: () => Promise<unknown>;
+  /** What the session type allows (M7): a tool it lacks is not shown. Absent: every tool. */
+  tools?: ToolSet;
 }
 
 /** The time steps, in minutes. */
@@ -89,7 +92,7 @@ export function GiveHintButton({
 }: {
   outline: EscapeHostOutline;
   team: EscapeHostTeam;
-  commands: Pick<HostCommands, 'hint' | 'pending'>;
+  commands: Pick<HostCommands, 'hint' | 'pending' | 'tools'>;
   /** The stuck badge's quick button: smaller, still tap-sized. */
   compact?: boolean;
 }) {
@@ -111,6 +114,7 @@ export function GiveHintButton({
     const released = await run(() => commands.hint(team.id, hintId));
     if (released === 0) setNote(t('host.actions.hintNone'));
   };
+  if (!can(commands.tools, 'hint-team')) return null;
   return (
     <div className="flex flex-col gap-1">
       <Button
@@ -144,7 +148,11 @@ export function GiveHintButton({
 }
 
 /** The next hint to every team still playing; the answer says how many got one. */
-function HintAllButton({ commands }: { commands: Pick<HostCommands, 'hint' | 'pending'> }) {
+function HintAllButton({
+  commands,
+}: {
+  commands: Pick<HostCommands, 'hint' | 'pending' | 'tools'>;
+}) {
   const { t } = useTranslation('escape');
   const { error, run } = useRun();
   const [asking, setAsking] = useState(false);
@@ -156,6 +164,7 @@ function HintAllButton({ commands }: { commands: Pick<HostCommands, 'hint' | 'pe
     const released = await run(() => commands.hint());
     if (released !== undefined) setNote(t('host.actions.hintAllDone', { count: released }));
   };
+  if (!can(commands.tools, 'hint-all')) return null;
   return (
     <div className="flex flex-col gap-1">
       <Button
@@ -294,12 +303,13 @@ export function UnlockButton({
 }: {
   team: Pick<EscapeHostTeam, 'id' | 'name' | 'escaped' | 'timedOut'>;
   lock: Pick<HostLockView, 'id' | 'label'>;
-  commands: Pick<HostCommands, 'unlock' | 'pending'>;
+  commands: Pick<HostCommands, 'unlock' | 'pending' | 'tools'>;
 }) {
   const { t } = useTranslation('escape');
   const { error, run } = useRun();
   const [asking, setAsking] = useState(false);
   const busy = !!commands.pending.unlock;
+  if (!can(commands.tools, 'unlock')) return null;
   return (
     <div className="flex flex-col gap-1">
       <Button
@@ -444,13 +454,13 @@ export function RunBar({
       className="flex flex-col gap-3 rounded-lg border p-3 md:p-4"
     >
       <div className="flex flex-wrap items-start gap-2">
-        <PauseToggle paused={paused} commands={commands} />
+        {can(commands.tools, 'pause') ? <PauseToggle paused={paused} commands={commands} /> : null}
         <HintAllButton commands={commands} />
-        <EndButton commands={commands} />
+        {can(commands.tools, 'end') ? <EndButton commands={commands} /> : null}
         <BackToLobbyButton pin={pin} socket={socket} mode="stop" offerArchive={false} />
         {extra}
       </div>
-      <TimeControls commands={commands} />
+      {can(commands.tools, 'adjust-all') ? <TimeControls commands={commands} /> : null}
     </section>
   );
 }
@@ -466,13 +476,15 @@ export function TeamActions({
   commands: HostCommands;
 }) {
   const { t } = useTranslation('escape');
+  const time = can(commands.tools, 'adjust-team');
+  if (!time && !can(commands.tools, 'hint-team')) return null;
   return (
     <section
       aria-label={t('host.actions.team', { team: team.name })}
       className="flex flex-col gap-3"
     >
       <GiveHintButton outline={outline} team={team} commands={commands} />
-      <TimeControls team={team} commands={commands} disabled={!playing(team)} />
+      {time ? <TimeControls team={team} commands={commands} disabled={!playing(team)} /> : null}
     </section>
   );
 }

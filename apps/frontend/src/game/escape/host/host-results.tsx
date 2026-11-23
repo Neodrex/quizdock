@@ -109,6 +109,7 @@ export function HostResults({
   stageCount,
   commands,
   lost = false,
+  csv = true,
 }: {
   finale: EscapeFinale;
   /** The room has closed (`ended: 'final'`): read-only. */
@@ -120,6 +121,8 @@ export function HostResults({
   /** The template's stage count: a column per stage in the CSV. */
   stageCount: number;
   commands: ResultsCommands;
+  /** The session type offers the CSV (M7: not in group play). */
+  csv?: boolean;
 }) {
   const { t } = useTranslation('escape');
   const labels = useCsvLabels();
@@ -147,10 +150,12 @@ export function HostResults({
       <EscapeFinaleView finale={finale} myTeamId={null} closed={false} />
       <HostColumns finale={finale} />
       <div className="flex flex-wrap items-start gap-2">
-        <Button type="button" variant="outline" className="min-h-12" onClick={download}>
-          <Download className="size-4" aria-hidden />
-          {t('host.results.download')}
-        </Button>
+        {csv ? (
+          <Button type="button" variant="outline" className="min-h-12" onClick={download}>
+            <Download className="size-4" aria-hidden />
+            {t('host.results.download')}
+          </Button>
+        ) : null}
         {closed ? null : (
           <fieldset disabled={lost} className="contents">
             <Button

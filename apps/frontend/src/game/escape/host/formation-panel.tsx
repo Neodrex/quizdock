@@ -46,11 +46,14 @@ export function FormationPanel({
   host,
   onTeams,
   busy,
+  maxTeams = MAX_TEAMS,
 }: {
   outline: Pick<EscapeHostOutline, 'mode' | 'roles'>;
   host: EscapeHostState;
   onTeams: (p: Omit<EscapeTeams, 'pin'>) => Promise<unknown>;
   busy: boolean;
+  /** The session type's ceiling (group play: 3). */
+  maxTeams?: number;
 }) {
   const { t } = useTranslation('escape');
   const id = useId();
@@ -65,17 +68,17 @@ export function FormationPanel({
   const players = playersIn(host);
   const roleCount = outline.mode === 'roles' ? outline.roles.length : 0;
   // Until the host types a count, it follows the room.
-  const shownCount = count ?? String(suggestedCount(players, roleCount));
+  const shownCount = count ?? String(Math.min(maxTeams, suggestedCount(players, roleCount)));
   const n = Number(shownCount);
   const cap = maxSize.trim() === '' ? undefined : Number(maxSize);
-  const countOk = Number.isInteger(n) && n >= 1 && n <= MAX_TEAMS;
+  const countOk = Number.isInteger(n) && n >= 1 && n <= maxTeams;
   const capOk = cap === undefined || (Number.isInteger(cap) && cap >= 1 && cap <= 50);
   const selfOpen = host.formation.mode === 'self' && host.formation.teams.length > 0;
 
   const submit = async () => {
     if (busy || !countOk || !capOk) return;
     setError(null);
-    const list = namesOf(names);
+    const list = namesOf(names).slice(0, maxTeams);
     try {
       await onTeams({
         mode,
@@ -123,7 +126,7 @@ export function FormationPanel({
               type="number"
               inputMode="numeric"
               min={1}
-              max={MAX_TEAMS}
+              max={maxTeams}
               value={shownCount}
               onChange={(e) => setCount(e.target.value)}
               aria-invalid={!countOk}

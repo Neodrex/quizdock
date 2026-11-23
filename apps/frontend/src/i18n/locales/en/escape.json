@@ -483,6 +483,35 @@
       "submit": "Create",
       "creating": "Creating…",
       "failed": "The room could not be opened. Try again."
+    },
+    "console": {
+      "seats": "{{joined}} / {{cap}}",
+      "seatsFull": "{{joined}} / {{cap}} · full",
+      "seatsLabel": "Players in the room: {{joined}} of {{cap}}",
+      "licence": "{{name}} · until {{date}}"
+    }
+  },
+  "race": {
+    "countdown": {
+      "startsIn": "Starts in {{time}}",
+      "starting": "Starting…"
+    },
+    "console": {
+      "title": "Race",
+      "solo": "Solo race: everyone plays alone.",
+      "teams": "Team race: teams of up to 3 form on the phones by code; solo allowed.",
+      "counts": "Teams: {{teams}} · Players: {{players}}",
+      "byHost": "You start this race.",
+      "startNow": "Start now",
+      "startTitle": "Start the race now?",
+      "startDescription": "Players without a team play solo.",
+      "startScheduled": "The scheduled start is cancelled.",
+      "startConfirm": "Start now",
+      "board": "Public race board",
+      "boardHint": "Anyone with this link can watch the race.",
+      "copy": "Copy link",
+      "copied": "Link copied",
+      "copyByHand": "Copy this link: {{url}}"
     }
   }
 }

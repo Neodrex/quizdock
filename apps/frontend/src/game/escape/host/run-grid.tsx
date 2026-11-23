@@ -151,7 +151,7 @@ function Status({
   team: EscapeHostTeam;
   /** Its time on the stage now (`timeOnStageAt`). */
   onStageMs: number;
-  commands: Pick<HostCommands, 'hint' | 'pending'>;
+  commands: Pick<HostCommands, 'hint' | 'pending' | 'tools'>;
 }) {
   const { t } = useTranslation('escape');
   if (team.escaped) {
@@ -220,7 +220,7 @@ export function RunGrid({
   host: EscapeHostState;
   selected: string | null;
   onSelect: (teamId: string) => void;
-  commands: Pick<HostCommands, 'hint' | 'pending'>;
+  commands: Pick<HostCommands, 'hint' | 'pending' | 'tools'>;
   /** When each team's payload came (`EscapeHostUi.heardAt`): its time on stage runs on. */
   heardAt?: Record<string, number>;
 }) {

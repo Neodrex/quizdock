@@ -469,6 +469,35 @@
       "submit": "作成",
       "creating": "作成中…",
       "failed": "ルームを開けませんでした。もう一度お試しください。"
+    },
+    "console": {
+      "seats": "{{joined}} / {{cap}}",
+      "seatsFull": "{{joined}} / {{cap}} · 満員",
+      "seatsLabel": "ルームのプレイヤー：{{cap}}人中{{joined}}人",
+      "licence": "{{name}} · {{date}}まで"
+    }
+  },
+  "race": {
+    "countdown": {
+      "startsIn": "開始まで {{time}}",
+      "starting": "まもなく開始…"
+    },
+    "console": {
+      "title": "レース",
+      "solo": "ソロレース：全員が1人でプレイします。",
+      "teams": "チームレース：スマホでコードを使い最大3人のチームを作ります。ソロも可。",
+      "counts": "チーム：{{teams}} · プレイヤー：{{players}}",
+      "byHost": "このレースはあなたが開始します。",
+      "startNow": "今すぐ開始",
+      "startTitle": "今すぐレースを開始しますか？",
+      "startDescription": "チームのないプレイヤーはソロでプレイします。",
+      "startScheduled": "予定の開始は取り消されます。",
+      "startConfirm": "開始",
+      "board": "公開レースボード",
+      "boardHint": "このリンクを知っている人は誰でもレースを観戦できます。",
+      "copy": "リンクをコピー",
+      "copied": "リンクをコピーしました",
+      "copyByHand": "このリンクをコピーしてください：{{url}}"
     }
   }
 }

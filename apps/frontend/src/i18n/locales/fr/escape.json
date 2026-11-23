@@ -495,6 +495,35 @@
       "submit": "Créer",
       "creating": "Création…",
       "failed": "Impossible d’ouvrir la salle. Réessayez."
+    },
+    "console": {
+      "seats": "{{joined}} / {{cap}}",
+      "seatsFull": "{{joined}} / {{cap}} · complet",
+      "seatsLabel": "Joueurs dans la salle : {{joined}} sur {{cap}}",
+      "licence": "{{name}} · jusqu’au {{date}}"
+    }
+  },
+  "race": {
+    "countdown": {
+      "startsIn": "Départ dans {{time}}",
+      "starting": "Départ…"
+    },
+    "console": {
+      "title": "Course",
+      "solo": "Course en solo : chacun joue seul.",
+      "teams": "Course en équipes : des équipes de 3 au plus se forment sur les téléphones avec un code ; solo possible.",
+      "counts": "Équipes : {{teams}} · Joueurs : {{players}}",
+      "byHost": "Vous lancez cette course.",
+      "startNow": "Démarrer maintenant",
+      "startTitle": "Démarrer la course maintenant ?",
+      "startDescription": "Les joueurs sans équipe jouent en solo.",
+      "startScheduled": "Le départ programmé est annulé.",
+      "startConfirm": "Démarrer",
+      "board": "Tableau public de la course",
+      "boardHint": "Toute personne ayant ce lien peut suivre la course.",
+      "copy": "Copier le lien",
+      "copied": "Lien copié",
+      "copyByHand": "Copiez ce lien : {{url}}"
     }
   }
 }

@@ -511,6 +511,35 @@
       "submit": "Utwórz",
       "creating": "Tworzenie…",
       "failed": "Nie udało się otworzyć pokoju. Spróbuj ponownie."
+    },
+    "console": {
+      "seats": "{{joined}} / {{cap}}",
+      "seatsFull": "{{joined}} / {{cap}} · pełny",
+      "seatsLabel": "Gracze w pokoju: {{joined}} z {{cap}}",
+      "licence": "{{name}} · do {{date}}"
+    }
+  },
+  "race": {
+    "countdown": {
+      "startsIn": "Start za {{time}}",
+      "starting": "Startujemy…"
+    },
+    "console": {
+      "title": "Wyścig",
+      "solo": "Wyścig solo: każdy gra sam.",
+      "teams": "Wyścig drużyn: drużyny do 3 osób tworzą się na telefonach kodem; solo też można.",
+      "counts": "Drużyny: {{teams}} · Gracze: {{players}}",
+      "byHost": "Ten wyścig uruchamiasz ty.",
+      "startNow": "Zacznij teraz",
+      "startTitle": "Rozpocząć wyścig teraz?",
+      "startDescription": "Gracze bez drużyny grają solo.",
+      "startScheduled": "Zaplanowany start zostanie anulowany.",
+      "startConfirm": "Zacznij",
+      "board": "Publiczna tablica wyścigu",
+      "boardHint": "Każdy z tym linkiem może oglądać wyścig.",
+      "copy": "Kopiuj link",
+      "copied": "Skopiowano link",
+      "copyByHand": "Skopiuj ten link: {{url}}"
     }
   }
 }

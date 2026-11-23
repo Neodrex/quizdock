@@ -1,4 +1,9 @@
-import type { EscapeBoard, EscapeHostOutline, EscapePhase } from '@quiz-dock/contracts';
+import type {
+  EscapeBoard,
+  EscapeHostOutline,
+  EscapeHostSession,
+  EscapePhase,
+} from '@quiz-dock/contracts';
 import { Link } from '@tanstack/react-router';
 import { DoorOpen } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -17,6 +22,8 @@ import { RunGrid, useTeamSelection } from '../game/escape/host/run-grid';
 import { ScreenPanel } from '../game/escape/host/screen-panel';
 import { TeamBoard } from '../game/escape/host/team-board';
 import { TeamDetailPanel } from '../game/escape/host/team-detail';
+import { RaceBoardLink, RaceHostPanel } from '../game/escape/host/race-host-panel';
+import { can, maxTeamsFor, seatsOf, toolsFor } from '../game/escape/session/session-tools';
 import type { EscapeHost } from '../game/escape/host/use-escape-host';
 import { useNow } from '../game/escape/use-now';
 import { formatClock } from '../game/escape/team-timer';
@@ -51,18 +58,59 @@ function RunClock({ board }: { board: EscapeBoard }) {
   );
 }
 
+/**
+ * The room's session in the header (M7 Task 7.15): its type, the seats taken of the
+ * cap ("6 / 6 · full" in red at the cap) and, for a hosted event, the licence's
+ * organisation and expiry. Nothing for a room opened before session types.
+ */
+function SessionBadges({ room }: { room: EscapeHostSession | null }) {
+  const { t, i18n } = useTranslation('escape');
+  if (!room) return null;
+  const seats = seatsOf(room);
+  const until = room.licence
+    ? new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }).format(
+        new Date(room.licence.expiresAt),
+      )
+    : null;
+  return (
+    <>
+      <Badge variant="muted">{t(`session.create.${room.type}.label`)}</Badge>
+      <Badge
+        variant={seats.full ? 'destructive' : 'muted'}
+        className="tabular-nums"
+        aria-label={t('session.console.seatsLabel', { joined: seats.joined, cap: seats.cap })}
+      >
+        {t(seats.full ? 'session.console.seatsFull' : 'session.console.seats', {
+          joined: seats.joined,
+          cap: seats.cap,
+        })}
+      </Badge>
+      {room.licence ? (
+        <span className="text-muted-foreground text-sm">
+          {t('session.console.licence', {
+            name: room.licence.organisationName ?? t('session.create.unnamed'),
+            date: until,
+          })}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 function Header({
   pin,
   outline,
   board,
   phase,
   session,
+  room,
 }: {
   pin: string;
   outline: EscapeHostOutline | null;
   board: EscapeBoard | null;
   phase: EscapePhase | null;
   session: ReturnType<typeof useGameSession>;
+  room: EscapeHostSession | null;
 }) {
   const { t } = useTranslation('escape');
   const title = outline?.title ?? board?.title ?? t('host.console');
@@ -77,6 +125,7 @@ function Header({
         {board && phase === 'running' && board.clock.paused ? (
           <Badge variant="warning">{t('host.header.paused')}</Badge>
         ) : null}
+        <SessionBadges room={room} />
       </div>
       <div className="flex flex-wrap items-center gap-3">
         {board && phase !== 'forming' ? <RunClock board={board} /> : null}
@@ -114,6 +163,9 @@ export function EscapeConsole({
   const socket = session.socket;
   const closed = ui.ended === 'final';
   const phase: EscapePhase | null = closed ? 'finale' : (board?.phase ?? null);
+  // The room's session (M7): what its type allows; none, a hosted room of M5.
+  const room = host?.session ?? null;
+  const tools = toolsFor(room);
 
   const commands: HostCommands = {
     pending: ui.pending,
@@ -122,6 +174,7 @@ export function EscapeConsole({
     unlock: escape.unlock,
     pause: escape.pause,
     end: escape.end,
+    tools,
   };
   const results: ResultsCommands = {
     pending: ui.pending,
@@ -144,6 +197,7 @@ export function EscapeConsole({
         stageCount={stageCount}
         commands={results}
         lost={lost}
+        csv={can(tools, 'csv')}
       />
     );
   } else if (!outline || !host || !phase || phase === 'finale') {
@@ -151,6 +205,24 @@ export function EscapeConsole({
       <p role="status" className="text-muted-foreground">
         {t('host.header.loading')}
       </p>
+    );
+  } else if (phase === 'forming' && room?.type === 'race') {
+    body = (
+      <div className="grid gap-4 md:grid-cols-2">
+        <InvitePanel
+          pin={pin}
+          view={session.view}
+          onJoinUrl={(baseUrl) => socket?.emit('host:join-url', { pin, baseUrl })}
+        />
+        <RaceHostPanel
+          pin={pin}
+          session={room}
+          host={host}
+          view={session.view}
+          onStart={escape.start}
+          starting={!!ui.pending.start}
+        />
+      </div>
     );
   } else if (phase === 'forming') {
     body = (
@@ -166,6 +238,7 @@ export function EscapeConsole({
             host={host}
             onTeams={escape.teams}
             busy={!!ui.pending.teams}
+            maxTeams={maxTeamsFor(room)}
           />
         </div>
         <TeamBoard
@@ -183,6 +256,7 @@ export function EscapeConsole({
       <>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
           <div className="flex min-w-0 flex-1 flex-col gap-4">
+            {room?.type === 'race' ? <RaceBoardLink pin={pin} view={session.view} /> : null}
             <RunGrid
               outline={outline}
               host={host}
@@ -223,7 +297,14 @@ export function EscapeConsole({
 
   return (
     <section className={SECTION} data-escape-phase={phase ?? 'none'}>
-      <Header pin={pin} outline={outline} board={board} phase={phase} session={session} />
+      <Header
+        pin={pin}
+        outline={outline}
+        board={board}
+        phase={phase}
+        session={session}
+        room={room}
+      />
       {/* Down, every action would be refused: all are off, and the view stays. The
           results disable their own commands, so the CSV (made locally) still downloads. */}
       <fieldset disabled={lost && !showResults} className="contents">

@@ -483,6 +483,35 @@
       "submit": "Erstellen",
       "creating": "Wird erstellt…",
       "failed": "Der Raum ließ sich nicht öffnen. Versuche es erneut."
+    },
+    "console": {
+      "seats": "{{joined}} / {{cap}}",
+      "seatsFull": "{{joined}} / {{cap}} · voll",
+      "seatsLabel": "Spieler im Raum: {{joined}} von {{cap}}",
+      "licence": "{{name}} · bis {{date}}"
+    }
+  },
+  "race": {
+    "countdown": {
+      "startsIn": "Start in {{time}}",
+      "starting": "Startet…"
+    },
+    "console": {
+      "title": "Rennen",
+      "solo": "Solo-Rennen: Jeder spielt allein.",
+      "teams": "Team-Rennen: Teams bis 3 bilden sich per Code auf den Handys; solo erlaubt.",
+      "counts": "Teams: {{teams}} · Spieler: {{players}}",
+      "byHost": "Du startest dieses Rennen.",
+      "startNow": "Jetzt starten",
+      "startTitle": "Rennen jetzt starten?",
+      "startDescription": "Spieler ohne Team spielen solo.",
+      "startScheduled": "Der geplante Start entfällt.",
+      "startConfirm": "Starten",
+      "board": "Öffentliche Renntafel",
+      "boardHint": "Jeder mit diesem Link kann das Rennen verfolgen.",
+      "copy": "Link kopieren",
+      "copied": "Link kopiert",
+      "copyByHand": "Kopiere diesen Link: {{url}}"
     }
   }
 }

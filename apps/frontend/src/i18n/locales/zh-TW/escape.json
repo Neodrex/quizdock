@@ -469,6 +469,35 @@
       "submit": "建立",
       "creating": "正在建立…",
       "failed": "無法開啟房間，請重試。"
+    },
+    "console": {
+      "seats": "{{joined}} / {{cap}}",
+      "seatsFull": "{{joined}} / {{cap}} · 已滿",
+      "seatsLabel": "房間內玩家：{{joined}} / {{cap}}",
+      "licence": "{{name}} · 至 {{date}}"
+    }
+  },
+  "race": {
+    "countdown": {
+      "startsIn": "{{time}} 後開始",
+      "starting": "即將開始…"
+    },
+    "console": {
+      "title": "競賽",
+      "solo": "單人競賽：每個人獨自遊戲。",
+      "teams": "組隊競賽：玩家在手機上憑代碼組成最多 3 人的隊伍；也可單人。",
+      "counts": "隊伍：{{teams}} · 玩家：{{players}}",
+      "byHost": "由你開始這場競賽。",
+      "startNow": "立即開始",
+      "startTitle": "現在開始競賽？",
+      "startDescription": "沒有隊伍的玩家將單人遊戲。",
+      "startScheduled": "預定的開始將被取消。",
+      "startConfirm": "開始",
+      "board": "公開競賽排行榜",
+      "boardHint": "任何擁有此連結的人都可以觀看競賽。",
+      "copy": "複製連結",
+      "copied": "連結已複製",
+      "copyByHand": "請複製此連結：{{url}}"
     }
   }
 }

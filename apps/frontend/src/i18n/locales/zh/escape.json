@@ -469,6 +469,35 @@
       "submit": "创建",
       "creating": "正在创建…",
       "failed": "无法打开房间，请重试。"
+    },
+    "console": {
+      "seats": "{{joined}} / {{cap}}",
+      "seatsFull": "{{joined}} / {{cap}} · 已满",
+      "seatsLabel": "房间内玩家：{{joined}} / {{cap}}",
+      "licence": "{{name}} · 至 {{date}}"
+    }
+  },
+  "race": {
+    "countdown": {
+      "startsIn": "{{time}} 后开始",
+      "starting": "即将开始…"
+    },
+    "console": {
+      "title": "竞赛",
+      "solo": "单人竞赛：每个人独自游戏。",
+      "teams": "组队竞赛：玩家在手机上凭代码组成最多 3 人的队伍；也可单人。",
+      "counts": "队伍：{{teams}} · 玩家：{{players}}",
+      "byHost": "由你开始这场竞赛。",
+      "startNow": "立即开始",
+      "startTitle": "现在开始竞赛？",
+      "startDescription": "没有队伍的玩家将单人游戏。",
+      "startScheduled": "预定的开始将被取消。",
+      "startConfirm": "开始",
+      "board": "公开竞赛排行榜",
+      "boardHint": "任何拥有此链接的人都可以观看竞赛。",
+      "copy": "复制链接",
+      "copied": "链接已复制",
+      "copyByHand": "请复制此链接：{{url}}"
     }
   }
 }

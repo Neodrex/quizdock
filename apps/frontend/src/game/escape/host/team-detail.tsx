@@ -46,7 +46,7 @@ function LockRow({
   lock: HostLockView;
   team: EscapeHostTeam;
   roleName: (id: string) => string;
-  commands: Pick<HostCommands, 'unlock' | 'pending'>;
+  commands: Pick<HostCommands, 'unlock' | 'pending' | 'tools'>;
 }) {
   const { t } = useTranslation('escape');
   const Icon = KIND_ICON[lock.kind];

@@ -483,6 +483,35 @@
       "submit": "Oluştur",
       "creating": "Oluşturuluyor…",
       "failed": "Oda açılamadı. Tekrar deneyin."
+    },
+    "console": {
+      "seats": "{{joined}} / {{cap}}",
+      "seatsFull": "{{joined}} / {{cap}} · dolu",
+      "seatsLabel": "Odadaki oyuncular: {{cap}} kişiden {{joined}}",
+      "licence": "{{name}} · {{date}} tarihine kadar"
+    }
+  },
+  "race": {
+    "countdown": {
+      "startsIn": "{{time}} sonra başlıyor",
+      "starting": "Başlıyor…"
+    },
+    "console": {
+      "title": "Yarış",
+      "solo": "Tek kişilik yarış: herkes tek başına oynar.",
+      "teams": "Takım yarışı: telefonlarda kodla en fazla 3 kişilik takımlar kurulur; tek başına da olur.",
+      "counts": "Takımlar: {{teams}} · Oyuncular: {{players}}",
+      "byHost": "Bu yarışı siz başlatırsınız.",
+      "startNow": "Şimdi başlat",
+      "startTitle": "Yarış şimdi başlatılsın mı?",
+      "startDescription": "Takımı olmayan oyuncular tek başına oynar.",
+      "startScheduled": "Planlanan başlangıç iptal edilir.",
+      "startConfirm": "Başlat",
+      "board": "Herkese açık yarış tablosu",
+      "boardHint": "Bu bağlantıya sahip herkes yarışı izleyebilir.",
+      "copy": "Bağlantıyı kopyala",
+      "copied": "Bağlantı kopyalandı",
+      "copyByHand": "Bu bağlantıyı kopyalayın: {{url}}"
     }
   }
 }

@@ -495,6 +495,35 @@
       "submit": "Crea",
       "creating": "Creazione…",
       "failed": "Impossibile aprire la sala. Riprova."
+    },
+    "console": {
+      "seats": "{{joined}} / {{cap}}",
+      "seatsFull": "{{joined}} / {{cap}} · al completo",
+      "seatsLabel": "Giocatori nella sala: {{joined}} su {{cap}}",
+      "licence": "{{name}} · fino al {{date}}"
+    }
+  },
+  "race": {
+    "countdown": {
+      "startsIn": "Parte tra {{time}}",
+      "starting": "Si parte…"
+    },
+    "console": {
+      "title": "Gara",
+      "solo": "Gara in solitaria: ognuno gioca da solo.",
+      "teams": "Gara a squadre: squadre fino a 3 si formano sui telefoni con un codice; anche da soli.",
+      "counts": "Squadre: {{teams}} · Giocatori: {{players}}",
+      "byHost": "Questa gara la fai partire tu.",
+      "startNow": "Avvia ora",
+      "startTitle": "Avviare la gara ora?",
+      "startDescription": "Chi non ha una squadra gioca da solo.",
+      "startScheduled": "La partenza programmata viene annullata.",
+      "startConfirm": "Avvia",
+      "board": "Classifica pubblica della gara",
+      "boardHint": "Chiunque abbia questo link può seguire la gara.",
+      "copy": "Copia link",
+      "copied": "Link copiato",
+      "copyByHand": "Copia questo link: {{url}}"
     }
   }
 }

@@ -495,6 +495,35 @@
       "submit": "Crear",
       "creating": "Creando…",
       "failed": "No se pudo abrir la sala. Inténtalo de nuevo."
+    },
+    "console": {
+      "seats": "{{joined}} / {{cap}}",
+      "seatsFull": "{{joined}} / {{cap}} · completo",
+      "seatsLabel": "Jugadores en la sala: {{joined}} de {{cap}}",
+      "licence": "{{name}} · hasta el {{date}}"
+    }
+  },
+  "race": {
+    "countdown": {
+      "startsIn": "Empieza en {{time}}",
+      "starting": "Empezando…"
+    },
+    "console": {
+      "title": "Carrera",
+      "solo": "Carrera en solitario: cada uno juega solo.",
+      "teams": "Carrera por equipos: equipos de hasta 3 se forman en los teléfonos con un código; también en solitario.",
+      "counts": "Equipos: {{teams}} · Jugadores: {{players}}",
+      "byHost": "Tú empiezas esta carrera.",
+      "startNow": "Empezar ahora",
+      "startTitle": "¿Empezar la carrera ahora?",
+      "startDescription": "Los jugadores sin equipo juegan en solitario.",
+      "startScheduled": "Se cancela el inicio programado.",
+      "startConfirm": "Empezar",
+      "board": "Marcador público de la carrera",
+      "boardHint": "Cualquiera con este enlace puede ver la carrera.",
+      "copy": "Copiar enlace",
+      "copied": "Enlace copiado",
+      "copyByHand": "Copia este enlace: {{url}}"
     }
   }
 }
