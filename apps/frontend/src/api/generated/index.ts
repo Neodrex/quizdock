@@ -1,6 +1,7 @@
 export * from './admin/admin';
 export * from './auth/auth';
 export * from './community-store/community-store';
+export * from './escape-licences/escape-licences';
 export * from './escape-templates/escape-templates';
 export * from './games/games';
 export * from './health/health';

@@ -2246,6 +2246,35 @@
         ]
       }
     },
+    "/api/v1/escape-licences": {
+      "get": {
+        "operationId": "EscapeLicencesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EscapeLicenceSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "escape-licences"
+        ]
+      }
+    },
     "/api/v1/selections": {
       "get": {
         "operationId": "SelectionsController_list",
@@ -9675,6 +9704,54 @@
           "updatedAt",
           "createdAt",
           "content"
+        ]
+      },
+      "EscapeLicenceSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "organisationName": {
+            "type": "string",
+            "nullable": true
+          },
+          "package": {
+            "type": "string",
+            "enum": [
+              "single",
+              "bundle",
+              "annual"
+            ]
+          },
+          "participantCap": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "eventsLeft": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "nullable": true
+          },
+          "hasBrand": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "organisationName",
+          "package",
+          "participantCap",
+          "expiresAt",
+          "eventsLeft",
+          "hasBrand"
         ]
       },
       "SelectionDto": {

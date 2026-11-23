@@ -96,6 +96,8 @@ export * from './createThemeDtoOverridesSlots';
 export * from './createThemeDtoOverridesSounds';
 export * from './createThemeDtoParent';
 export * from './duplicateThemeDto';
+export * from './escapeLicenceSummaryDto';
+export * from './escapeLicenceSummaryDtoPackage';
 export * from './escapeTemplateContentDto';
 export * from './escapeTemplateContentDtoDifficulty';
 export * from './escapeTemplateContentDtoMode';
