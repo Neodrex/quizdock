@@ -23,4 +23,8 @@ export class EscapeTimings {
   boardEveryMs = ANSWER_COUNT_EVERY_MS;
   /** A running run's keys (and its room's) get their TTL again at most this often, from the ticker. */
   touchEveryMs = 300_000;
+  /** A scheduled race starts at least this far ahead of its create (M7 §1.7). */
+  raceMinLeadMs = 60_000;
+  /** While a scheduled race waits, its room's keys get their TTL again this often. */
+  raceTouchEveryMs = 300_000;
 }

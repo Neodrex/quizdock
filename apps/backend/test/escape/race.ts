@@ -1,7 +1,12 @@
-import type { EscapeHostState } from '@quiz-dock/contracts';
+import { type EscapeHostState, GameState } from '@quiz-dock/contracts';
+import { EscapeEngine } from '../../src/escape/escape.engine';
+import { EscapeTimings } from '../../src/escape/escape-timings';
+import { GameService } from '../../src/game/game.service';
+import { gameKeys } from '../../src/game/game.keys';
+import { RedisService } from '../../src/redis/redis.service';
 import type { Socket } from 'socket.io-client';
 import { lostLibrary } from '../../src/escape/samples';
-import { nextEvent } from '../game-harness';
+import { nextEvent, settle } from '../game-harness';
 import {
   type EscapeContext,
   type SyncedPlayer,
@@ -194,5 +199,111 @@ export function raceSessionTests(ctx: EscapeContext): void {
     expect(await p.socket.emitWithAck('escape:join-team', { pin, code: 'ABCD' })).toMatchObject(
       out,
     );
+  });
+
+  // ── Scheduled start (Task 7.8) ──
+
+  describe('scheduled start', () => {
+    const timings = () => ctx.h.app.get(EscapeTimings);
+    const engine = () => ctx.h.app.get(EscapeEngine);
+    const metaOf = async (pin: string) => (await ctx.h.app.get(GameService).getMeta(pin))!;
+    let saved: { raceMinLeadMs: number; raceTouchEveryMs: number };
+
+    beforeAll(() => {
+      const t = timings();
+      saved = { raceMinLeadMs: t.raceMinLeadMs, raceTouchEveryMs: t.raceTouchEveryMs };
+      Object.assign(t, { raceMinLeadMs: 500, raceTouchEveryMs: 100 });
+    });
+    afterAll(() => Object.assign(timings(), saved));
+
+    const scheduled = async (inMs: number) => {
+      const host = ctx.h.connectHost();
+      const startsAt = Date.now() + inMs;
+      const { pin } = await createAs(host, library, 'race', {
+        race: { format: 'solo', startsAt },
+      });
+      if (!pin) throw new Error('race refused');
+      expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+      return { host, pin, startsAt };
+    };
+
+    it('starts on its own at startsAt, with no host message; the clock starts then', async () => {
+      const { pin, startsAt } = await scheduled(1_500);
+      const [a, b] = [await joinAndSync(ctx.h, pin, 'Ann'), await joinAndSync(ctx.h, pin, 'Ben')];
+      expect(a.last().session).toMatchObject({ startsAt });
+      const escape = nextEvent<{ state: string }>(a.socket, 'game:state', {
+        where: (s) => s.state === GameState.Escape,
+      });
+      const running = [a, b].map((p) => stateWhere(p.socket, (s) => s.phase === 'running', 5_000));
+      await escape;
+      const [first] = await Promise.all(running);
+      const startedAt = first.clock.serverNow - first.clock.elapsedMs;
+      expect(Math.abs(startedAt - startsAt)).toBeLessThan(200);
+      const meta = await metaOf(pin);
+      expect(engine().inProcess(meta.id, pin).scheduled).toBe(false);
+    });
+
+    it('"Start now" before startsAt starts it once; the timer does not start it again', async () => {
+      const { host, pin } = await scheduled(800);
+      const a = await joinAndSync(ctx.h, pin, 'Ann');
+      let escapes = 0;
+      a.socket.on('game:state', (s: { state: string }) => {
+        if (s.state === GameState.Escape) escapes++;
+      });
+      expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+      const meta = await metaOf(pin);
+      expect(engine().inProcess(meta.id, pin).scheduled).toBe(false);
+      await settle(1_200);
+      expect(escapes).toBe(1);
+      expect(a.last().phase).toBe('running');
+    });
+
+    it('nobody in at startsAt: it keeps forming, and the host starts it later', async () => {
+      const { host, pin } = await scheduled(600);
+      const meta = await metaOf(pin);
+      await eventually(async () => expect(engine().inProcess(meta.id, pin).scheduled).toBe(false));
+      await settle(100);
+      expect((await metaOf(pin)).state).toBe(GameState.Lobby);
+      const a = await joinAndSync(ctx.h, pin, 'Ann');
+      const running = stateWhere(a.socket, (s) => s.phase === 'running');
+      expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+      await running;
+    });
+
+    it('a restart before startsAt arms it again (recover), and it starts', async () => {
+      const { pin } = await scheduled(1_500);
+      const a = await joinAndSync(ctx.h, pin, 'Ann');
+      const meta = await metaOf(pin);
+      // What a restart loses: the timer.
+      const inner = engine() as unknown as {
+        scheduler: { disarm(pin: string): void };
+        recover(): Promise<void>;
+      };
+      inner.scheduler.disarm(pin);
+      expect(engine().inProcess(meta.id, pin).scheduled).toBe(false);
+      await inner.recover();
+      expect(engine().inProcess(meta.id, pin).scheduled).toBe(true);
+      await stateWhere(a.socket, (s) => s.phase === 'running', 5_000);
+    });
+
+    it('the room keeps its TTL while it waits; a closed room leaves no timer', async () => {
+      const { host, pin } = await scheduled(60_000);
+      const redis = ctx.h.app.get(RedisService);
+      await redis.expire(gameKeys.room(pin), 100);
+      await eventually(async () =>
+        expect(await redis.ttl(gameKeys.room(pin))).toBeGreaterThan(100),
+      );
+      const meta = await metaOf(pin);
+      expect(engine().inProcess(meta.id, pin).scheduled).toBe(true);
+      const ended = nextEvent(host, 'game:ended');
+      host.emit('host:end', { pin });
+      await ended;
+      expect(engine().inProcess(meta.id, pin)).toEqual({
+        ticking: false,
+        gone: false,
+        board: expect.any(Boolean),
+        scheduled: false,
+      });
+    });
   });
 }

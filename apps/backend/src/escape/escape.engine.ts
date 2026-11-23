@@ -63,6 +63,7 @@ import {
 } from './escape-payloads';
 import { adjustTime, hostUnlock, newTeam, nextHint, submit, useHint } from './escape-rules';
 import { allDone, tickTeam } from './escape-tick';
+import { EscapeScheduler } from './escape-scheduler';
 import { EscapeTicker } from './escape-ticker';
 import { validateTemplate } from './escape-template';
 import { EscapeTemplatesService } from './escape-templates.service';
@@ -88,9 +89,6 @@ import {
   type LicencePort,
 } from './licences/licence.port';
 import { SerialQueue } from './serial-queue';
-
-/** A scheduled race starts at least this far ahead. */
-const RACE_MIN_LEAD_MS = 60_000;
 
 type EscapeServer = Server<
   ClientToServerEvents,
@@ -192,6 +190,8 @@ export class EscapeEngine implements OnModuleDestroy {
   private readonly queue = new SerialQueue();
   /** One ticker per running run, keyed by game id (timed hints, time-up, stuck). */
   private readonly ticker = new EscapeTicker(this.log);
+  /** Scheduled race starts, by PIN (M7 §1.7); re-armed by recover() after a restart. */
+  private readonly scheduler = new EscapeScheduler(this.log);
   /**
    * Board throttle per room: present while a board went out less than
    * `boardEveryMs` ago; `pending` when another was asked for meanwhile. An
@@ -229,6 +229,7 @@ export class EscapeEngine implements OnModuleDestroy {
 
   onModuleDestroy(): void {
     this.ticker.stopAll();
+    this.scheduler.stopAll();
     for (const b of this.boards.values()) clearTimeout(b.timer);
     this.boards.clear();
   }
@@ -237,13 +238,22 @@ export class EscapeEngine implements OnModuleDestroy {
    * What this process keeps for a run and its room (tests check that nothing stays).
    * @internal test seam
    */
-  inProcess(id: GameId, pin: string): { ticking: boolean; gone: boolean; board: boolean } {
-    return { ticking: this.ticker.has(id), gone: this.gone.has(id), board: this.boards.has(pin) };
+  inProcess(
+    id: GameId,
+    pin: string,
+  ): { ticking: boolean; gone: boolean; board: boolean; scheduled: boolean } {
+    return {
+      ticking: this.ticker.has(id),
+      gone: this.gone.has(id),
+      board: this.boards.has(pin),
+      scheduled: this.scheduler.has(pin),
+    };
   }
 
   /**
    * V1: tickers live in this process. After a restart, every escape run still
-   * running gets its ticker again, from Redis (as GameEngine.recoverTimers).
+   * running gets its ticker again, from Redis (as GameEngine.recoverTimers),
+   * and every race still waiting for its scheduled start its timer (M7 §1.7).
    */
   private async recover(): Promise<void> {
     for (const key of await this.redis.scanKeys(gameKeys.room('*'))) {
@@ -252,6 +262,11 @@ export class EscapeEngine implements OnModuleDestroy {
       const meta = await this.game.getMeta(pin);
       if (meta?.kind !== 'escape') continue;
       const run = await this.store.run(meta.id);
+      if (run?.phase === 'forming') {
+        const race = (await this.store.session(pin))?.race;
+        if (race?.startsAt && !race.started) this.armRace(pin, race.startsAt);
+        continue;
+      }
       if (run?.phase !== 'running') continue;
       // R4: every member counts as gone since boot until they sync again.
       this.gone.set(meta.id, new Map());
@@ -282,6 +297,7 @@ export class EscapeEngine implements OnModuleDestroy {
     const meta = await this.game.getMeta(pin);
     if (!meta) throw new NotFoundException('session.not_found');
     await this.openOn(pin, meta.id, hostUserId, snap, dto.durationMin, session);
+    if (session.race?.startsAt) this.armRace(pin, session.race.startsAt);
     return pin;
   }
 
@@ -568,7 +584,38 @@ export class EscapeEngine implements OnModuleDestroy {
   // ── Start (S1–S3) ──
 
   async start(pin: string, hostUserId: string): Promise<void> {
+    await this.startRun(pin, hostUserId);
+  }
+
+  /**
+   * M7 §1.7: a race's scheduled start, without a host: the same steps as the
+   * host's. Already started (the host's "Start now") changes nothing; with
+   * nobody in, the race keeps forming and the host may start it later.
+   */
+  async startRace(pin: string): Promise<void> {
+    await this.startRun(pin, undefined).catch((err: Error) => {
+      this.log.warn(`scheduled start ${pin}: ${err.message}`);
+    });
+  }
+
+  private armRace(pin: string, at: number): void {
+    this.scheduler.arm(pin, at, {
+      fire: () => this.startRace(pin),
+      touch: () => this.touchWaiting(pin),
+      touchEveryMs: this.timings.raceTouchEveryMs,
+    });
+  }
+
+  /** A race waiting for its start keeps its room alive. */
+  private async touchWaiting(pin: string): Promise<void> {
+    const meta = await this.game.getMeta(pin);
+    if (meta?.kind === 'escape') await this.keepAlive(pin, meta.id);
+  }
+
+  /** S1–S3, by the host or (`hostUserId` undefined) by the race's schedule. */
+  private async startRun(pin: string, hostUserId: string | undefined): Promise<void> {
     await this.mutate(pin, hostUserId, async (ref) => {
+      if (hostUserId === undefined && ref.run.phase !== 'forming') return;
       if (ref.run.phase !== 'forming' || ref.meta.state !== GameState.Lobby) {
         throw new BadRequestException('escape.wrong_phase');
       }
@@ -614,6 +661,12 @@ export class EscapeEngine implements OnModuleDestroy {
       });
       // Atomic: a host gone meanwhile comes back to the run (prevState).
       const was = await this.store.setGameState(ref.id, GameState.Escape);
+      this.scheduler.disarm(pin);
+      const session =
+        v.session?.race && !v.session.race.started
+          ? { ...v.session, race: { ...v.session.race, started: true } }
+          : v.session;
+      if (session !== v.session && session) await this.store.writeSession(pin, session);
       await this.keepAlive(pin, ref.id);
       // S3.
       if (this.wrote(was)) {
@@ -621,7 +674,7 @@ export class EscapeEngine implements OnModuleDestroy {
           .to(pin)
           .emit('game:state', { state: GameState.Escape, questionIndex: -1, totalQuestions: 0 });
       }
-      await this.broadcast({ ...ref, run }, { ...v, run, teams: recs, now });
+      await this.broadcast({ ...ref, run }, { ...v, run, teams: recs, now, session });
       this.startTicker(pin, ref.id);
     });
   }
@@ -934,6 +987,7 @@ export class EscapeEngine implements OnModuleDestroy {
    * finale, in its queue; any other has nothing to send.
    */
   private async closing(pin: string, id: GameId): Promise<void> {
+    this.scheduler.disarm(pin);
     await this.queue.run(id, async () => {
       const ref = await this.requireRun(pin).catch(() => null);
       if (ref?.id !== id || ref.run.phase !== 'running') return;
@@ -1207,7 +1261,8 @@ export class EscapeEngine implements OnModuleDestroy {
       const { format } = dto.race;
       const startsAt = dto.race.startsAt ?? null;
       const lead = startsAt === null ? null : startsAt - Date.now();
-      if (lead !== null && (lead < RACE_MIN_LEAD_MS || lead > RACE_MAX_LEAD_MIN * 60_000)) {
+      const min = this.timings.raceMinLeadMs;
+      if (lead !== null && (lead < min || lead > RACE_MAX_LEAD_MIN * 60_000)) {
         throw new BadRequestException('escape.race_start_out_of_range');
       }
       return { ...base, type, cap: capOf(type), race: { format, startsAt, started: false } };

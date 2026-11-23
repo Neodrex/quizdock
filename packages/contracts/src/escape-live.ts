@@ -306,9 +306,18 @@ export interface EscapeRosterEntry {
   connected: boolean;
 }
 
+/** The room's session on the board (M7 §1.4): public, as the board is. */
+export interface EscapeBoardSession {
+  type: EscapeSessionType;
+  /** A scheduled race's start (server epoch ms): the lobby counts down to it. */
+  startsAt: number | null;
+}
+
 export interface EscapeBoard {
   /** The run's id: what the screen keys its record by. */
   gameId: string;
+  /** null: a room opened before session types. */
+  session: EscapeBoardSession | null;
   phase: EscapePhase;
   clock: EscapeClock;
   title: string;

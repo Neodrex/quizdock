@@ -140,6 +140,7 @@ export const hostTeamOf = (over: Partial<EscapeHostTeam> = {}): EscapeHostTeam =
 
 export const boardOf = (over: Partial<EscapeBoard> = {}): EscapeBoard => ({
   gameId: GAME,
+  session: null,
   phase: 'running',
   clock: { serverNow: 1_000_000_000, paused: false, elapsedMs: 0, limitMs: 2_400_000 },
   title: 'Vault Heist',

@@ -97,7 +97,12 @@ export function finaleTests(ctx: EscapeContext): void {
     const resent = finaleOn(host);
     expect(await host.emitWithAck('escape:finale', { pin })).toEqual({ ok: true });
     expect(await resent).toEqual(first);
-    expect(inProcess(id, pin)).toEqual({ ticking: false, gone: false, board: false });
+    expect(inProcess(id, pin)).toEqual({
+      ticking: false,
+      gone: false,
+      board: false,
+      scheduled: false,
+    });
     // Phones and the screen: nothing they should not see, the finale included.
     for (const [i, p] of players.entries()) {
       expect(receivedLeaks(seen[i], ctx.vault, p.playerId)).toEqual([]);
@@ -177,7 +182,12 @@ export function finaleTests(ctx: EscapeContext): void {
     expect(order).toEqual(['escape:finale', 'game:ended']);
     expect(await ctx.h.app.get(EscapeStore).results(id)).toEqual(f);
     await eventually(async () =>
-      expect(inProcess(id, pin)).toEqual({ ticking: false, gone: false, board: false }),
+      expect(inProcess(id, pin)).toEqual({
+        ticking: false,
+        gone: false,
+        board: false,
+        scheduled: false,
+      }),
     );
     // The room stays ended: the finale does not put it back on a podium.
     expect((await ctx.h.app.get(GameService).getMeta(pin))!.state).toBe(GameState.Ended);
@@ -457,7 +467,12 @@ export function finaleTests(ctx: EscapeContext): void {
       error: { code: 'escape.not_found' },
     });
     await eventually(async () =>
-      expect(inProcess(id, pin)).toEqual({ ticking: false, gone: false, board: false }),
+      expect(inProcess(id, pin)).toEqual({
+        ticking: false,
+        gone: false,
+        board: false,
+        scheduled: false,
+      }),
     );
     await settle(150);
     expect(finales).toBe(0);

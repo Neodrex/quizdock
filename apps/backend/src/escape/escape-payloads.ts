@@ -200,6 +200,10 @@ function rosterOf(v: RunView): EscapeRosterEntry[] {
 export function boardOf(v: RunView): EscapeBoard {
   return {
     gameId: v.id,
+    session: v.session && {
+      type: v.session.type,
+      startsAt: v.session.race?.startsAt ?? null,
+    },
     phase: v.run.phase,
     clock: clockOf(v),
     title: v.snap.template.title,
