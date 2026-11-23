@@ -44,8 +44,25 @@ describe('useEscapeLook', () => {
     // The lobby it was synced in keeps it, and so does the run.
     rerender({ s: GameState.Escape });
     expect(result.current).toEqual(ACME_LOOK);
+    rerender({ s: GameState.Podium });
+    expect(result.current).toEqual(ACME_LOOK);
     rerender({ s: GameState.Lobby });
     expect(result.current).toEqual(NO_LOOK);
+    fire('escape:look', ACME_LOOK);
+    rerender({ s: GameState.Ended });
+    rerender({ s: GameState.Lobby });
+    expect(result.current).toEqual(NO_LOOK);
+  });
+
+  it('the host coming back (HOST_DISCONNECTED, then the lobby again) keeps it', () => {
+    const { socket, fire } = fakeSocket();
+    const { result, rerender } = renderHook(({ s }) => useEscapeLook(socket, s), {
+      initialProps: { s: GameState.Lobby as string },
+    });
+    fire('escape:look', ACME_LOOK);
+    rerender({ s: GameState.HostDisconnected });
+    rerender({ s: GameState.Lobby });
+    expect(result.current).toEqual(ACME_LOOK);
   });
 
   it('no socket yet: unbranded', () => {

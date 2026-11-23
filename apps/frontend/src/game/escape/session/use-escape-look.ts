@@ -8,7 +8,7 @@ export const NO_LOOK: EscapeLook = { theme: null, brand: null };
 /**
  * The room's colours and brand (M7 §1.9), from `escape:look`: the server sends it to
  * every synced socket once per sync, static per room. Kept until the room switches:
- * back to the lobby (`game:state LOBBY` after anything else) drops it, and the next
+ * back to the lobby after a finale (`game:state LOBBY` after PODIUM or ENDED) drops it, and the next
  * escape sync sends the new room's look, if any. Shared by the console, the phone and
  * the screens; the listener goes with the page.
  */
@@ -31,7 +31,9 @@ export function useEscapeLook(
   useEffect(() => {
     const prev = prevRef.current;
     prevRef.current = roomState;
-    if (roomState === GameState.Lobby && prev !== GameState.Lobby && prev != null) {
+    // Only the lobby after a finale is a new room: the host coming back
+    // (HOST_DISCONNECTED, then LOBBY) is the same one.
+    if (roomState === GameState.Lobby && (prev === GameState.Podium || prev === GameState.Ended)) {
       setLook(NO_LOOK);
     }
   }, [roomState]);
