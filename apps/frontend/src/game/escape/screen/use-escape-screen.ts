@@ -8,6 +8,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import type { GameSocket } from '../../game-client';
 import type { GameView } from '../../use-game-session';
 import { useEscapeMode, useEscapeSync } from '../escape-sync';
+import { useEscapeLook } from '../session/use-escape-look';
 import {
   clearScreenRecord,
   loadScreenRecord,
@@ -51,6 +52,8 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
   const [resync, setResync] = useState(0);
 
   const { socket } = session;
+  // The room's brand and colours (M7 §1.9).
+  const look = useEscapeLook(socket, session.view.state);
   useEffect(() => {
     if (!socket) return;
     const onBoard = (board: EscapeBoard) => {
@@ -150,7 +153,7 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
     dispatch({ type: 'replay', replay: 'done' });
   }, [pin, gameId]);
 
-  return { active: active || closedWithRecord, ui, replayDone };
+  return { active: active || closedWithRecord, ui, replayDone, look };
 }
 
 export type EscapeScreenSession = ReturnType<typeof useEscapeScreen>;

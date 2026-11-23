@@ -542,5 +542,8 @@
       "notFound": "没有使用此 PIN 的竞赛。",
       "waitingStart": "等待开始"
     }
+  },
+  "brand": {
+    "logo": "{{name}} 标志"
   }
 }

@@ -1,5 +1,6 @@
 import type {
   EscapeBoard,
+  EscapeBrand,
   EscapeHostOutline,
   EscapeHostSession,
   EscapePhase,
@@ -23,6 +24,9 @@ import { ScreenPanel } from '../game/escape/host/screen-panel';
 import { TeamBoard } from '../game/escape/host/team-board';
 import { TeamDetailPanel } from '../game/escape/host/team-detail';
 import { RaceBoardLink, RaceHostPanel } from '../game/escape/host/race-host-panel';
+import { BrandBand } from '../game/escape/session/brand-band';
+import { useEscapeLook } from '../game/escape/session/use-escape-look';
+import { LiveTheme } from '../game/theme';
 import { can, maxTeamsFor, seatsOf, toolsFor } from '../game/escape/session/session-tools';
 import type { EscapeHost } from '../game/escape/host/use-escape-host';
 import { useNow } from '../game/escape/use-now';
@@ -104,6 +108,7 @@ function Header({
   phase,
   session,
   room,
+  brand,
 }: {
   pin: string;
   outline: EscapeHostOutline | null;
@@ -111,12 +116,14 @@ function Header({
   phase: EscapePhase | null;
   session: ReturnType<typeof useGameSession>;
   room: EscapeHostSession | null;
+  brand: EscapeBrand | null;
 }) {
   const { t } = useTranslation('escape');
   const title = outline?.title ?? board?.title ?? t('host.console');
   return (
     <header className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 flex-wrap items-center gap-3">
+        {brand ? <BrandBand brand={brand} className="text-sm" /> : null}
         <PageTitle className="min-w-0 break-words">{title}</PageTitle>
         <Badge variant="muted" className="font-mono tabular-nums">
           {t('host.header.pin', { pin })}
@@ -166,6 +173,8 @@ export function EscapeConsole({
   // The room's session (M7): what its type allows; none, a hosted room of M5.
   const room = host?.session ?? null;
   const tools = toolsFor(room);
+  // A hosted event's brand and colours (M7 §1.9); the console's own look otherwise.
+  const look = useEscapeLook(socket, session.view.state);
 
   const commands: HostCommands = {
     pending: ui.pending,
@@ -296,21 +305,24 @@ export function EscapeConsole({
   }
 
   return (
-    <section className={SECTION} data-escape-phase={phase ?? 'none'}>
-      <Header
-        pin={pin}
-        outline={outline}
-        board={board}
-        phase={phase}
-        session={session}
-        room={room}
-      />
-      {/* Down, every action would be refused: all are off, and the view stays. The
+    <LiveTheme theme={look.theme}>
+      <section className={SECTION} data-escape-phase={phase ?? 'none'}>
+        <Header
+          pin={pin}
+          outline={outline}
+          board={board}
+          phase={phase}
+          session={session}
+          room={room}
+          brand={look.brand}
+        />
+        {/* Down, every action would be refused: all are off, and the view stays. The
           results disable their own commands, so the CSV (made locally) still downloads. */}
-      <fieldset disabled={lost && !showResults} className="contents">
-        {body}
-      </fieldset>
-      <ConsoleAnnouncer polite={ui.polite} />
-    </section>
+        <fieldset disabled={lost && !showResults} className="contents">
+          {body}
+        </fieldset>
+        <ConsoleAnnouncer polite={ui.polite} />
+      </section>
+    </LiveTheme>
   );
 }

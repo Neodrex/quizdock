@@ -15,6 +15,7 @@ import {
 } from '../game-client';
 import type { GameView } from '../use-game-session';
 import { clearEscapeRecord, loadEscapeRecord, saveEscapeRecord } from './escape-record';
+import { useEscapeLook } from './session/use-escape-look';
 import { type EscapeAction, escapeReducer, initialEscapeUi } from './escape-reducer';
 
 /** How long a phone waits for the finale after `game:ended` before fetching it (§1.4). */
@@ -39,6 +40,9 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
   const [ui, dispatch] = useReducer(escapeReducer, initialEscapeUi);
   const { active, setActive, quizOnRef } = useEscapeMode(session.view);
   const socketRef = useRef<GameSocket | null>(null);
+  // The socket once taken, for the look's listener (M7 §1.9).
+  const [sock, setSock] = useState<GameSocket | null>(null);
+  const look = useEscapeLook(sock, session.view.state);
   const stateRef = useRef<EscapePlayerState | null>(null);
   // Bumped on each escape:state: a state that came makes a sync with no answer moot.
   const statesRef = useRef(0);
@@ -95,6 +99,7 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
       if (!live) return;
       s = sock;
       socketRef.current = sock;
+      setSock(sock);
       const on = sock.on as unknown as (e: string, h: Listener) => void;
       for (const [e, h] of events) on.call(sock, e, h);
     });
@@ -251,6 +256,7 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
     active,
     checkingRecord,
     ui,
+    look,
     dispatch: dispatch as (a: EscapeAction) => void,
     submit,
     askHint,

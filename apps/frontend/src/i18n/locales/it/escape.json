@@ -568,5 +568,8 @@
       "notFound": "Nessuna gara con questo PIN.",
       "waitingStart": "In attesa della partenza"
     }
+  },
+  "brand": {
+    "logo": "Logo di {{name}}"
   }
 }

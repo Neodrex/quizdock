@@ -3,6 +3,7 @@ import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { boardOf, finaleOf, hostStateOf, outlineOf } from '../game/escape/host/host-fixtures';
 import { type EscapeHostUi, initialEscapeHostUi } from '../game/escape/host/host-reducer';
+import { ACME_LOOK } from '../game/escape/session/look-fixtures';
 import { mockApi, renderApp } from '../test/harness';
 
 // The console follows the session type (M7 Task 7.15): the real parts, the two hooks faked.
@@ -39,6 +40,13 @@ vi.mock('../game/escape/host/use-escape-host', () => ({
     resultsFromRecord: vi.fn(async () => null),
   }),
 }));
+
+// The room's look (M7 Task 7.19): unbranded unless a test says otherwise.
+const { looks } = vi.hoisted(() => ({ looks: { current: null as unknown } }));
+vi.mock('../game/escape/session/use-escape-look', async (orig) => {
+  const real = await orig<typeof import('../game/escape/session/use-escape-look')>();
+  return { ...real, useEscapeLook: () => looks.current ?? real.NO_LOOK };
+});
 
 const PIN = '482913';
 
@@ -94,6 +102,7 @@ describe('EscapeConsole by session type', () => {
   // The app runs in French in these tests (as the phone's).
   afterEach(() => {
     vi.useRealTimers();
+    looks.current = null;
     vi.restoreAllMocks();
     localStorage.clear();
     sessionStorage.clear();
@@ -218,5 +227,26 @@ describe('EscapeConsole by session type', () => {
     const page = document.querySelector<HTMLElement>('[data-escape-phase]')!;
     expect(page.querySelector('header')!.className).toMatch(/flex-wrap/);
     expect(page.innerHTML).not.toMatch(/\bw-\[\d{3,}px\]|min-w-\[\d{3,}px\]/);
+  });
+
+  it('a hosted event: the logo and name in the header, the console under its colours', async () => {
+    looks.current = ACME_LOOK;
+    draw(running(sessionOf({ type: 'hosted' })));
+    await screen.findByRole('heading', { name: 'Équipes en direct' });
+    const page = document.querySelector<HTMLElement>('[data-escape-phase]')!;
+    const header = page.querySelector('header')!;
+    expect(within(header).getByRole('img', { name: 'Logo Acme' })).toBeInTheDocument();
+    expect(within(header).getByText('Acme')).toBeInTheDocument();
+    expect(
+      page.closest<HTMLElement>('[data-theme-scope]')!.style.getPropertyValue('--primary'),
+    ).toBe('#c2410c');
+  });
+
+  it('no look: no band, the console’s own look', async () => {
+    draw(running(sessionOf({ type: 'hosted' })));
+    await screen.findByRole('heading', { name: 'Équipes en direct' });
+    const page = document.querySelector<HTMLElement>('[data-escape-phase]')!;
+    expect(page.querySelector('[data-brand]')).toBeNull();
+    expect(page.closest('[data-theme-scope]')).toBeNull();
   });
 });

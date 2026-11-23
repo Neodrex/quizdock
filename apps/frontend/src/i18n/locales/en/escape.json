@@ -556,5 +556,8 @@
       "notFound": "No race with this PIN.",
       "waitingStart": "Waiting for the start"
     }
+  },
+  "brand": {
+    "logo": "{{name}} logo"
   }
 }

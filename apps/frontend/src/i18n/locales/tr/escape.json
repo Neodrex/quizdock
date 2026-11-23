@@ -556,5 +556,8 @@
       "notFound": "Bu PIN ile bir yarış yok.",
       "waitingStart": "Başlangıç bekleniyor"
     }
+  },
+  "brand": {
+    "logo": "{{name}} logosu"
   }
 }

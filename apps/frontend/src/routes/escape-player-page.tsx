@@ -1,4 +1,4 @@
-import type { EscapePlayerState } from '@quiz-dock/contracts';
+import type { EscapeLook, EscapePlayerState } from '@quiz-dock/contracts';
 import { Link } from '@tanstack/react-router';
 import { Hourglass, Loader2, PartyPopper, UserRoundX } from 'lucide-react';
 import { useState } from 'react';
@@ -13,6 +13,8 @@ import { EscapeLobby } from '../game/escape/escape-lobby';
 import { loadEscapeRecord } from '../game/escape/escape-record';
 import { HintPanel } from '../game/escape/hint-panel';
 import { usePhoneHost } from '../game/escape/host/use-phone-host';
+import { BrandBand } from '../game/escape/session/brand-band';
+import { NO_LOOK } from '../game/escape/session/use-escape-look';
 import { blockOf, LockList } from '../game/escape/locks/lock-list';
 import { ProgressDots } from '../game/escape/progress-dots';
 import { RoleCard } from '../game/escape/role-card';
@@ -21,6 +23,7 @@ import { TeamTimer, formatClock } from '../game/escape/team-timer';
 import { STAGE_TITLE_ID, UnlockMoment } from '../game/escape/unlock-moment';
 import type { EscapeSession } from '../game/escape/use-escape-session';
 import { useTeamClock } from '../game/escape/use-team-clock';
+import { LiveTheme } from '../game/theme';
 
 /**
  * A phone in an escape run (`PlayerView` hands over here while escape mode is on):
@@ -146,21 +149,27 @@ export function EscapePlayer({
     );
   }
 
+  // A hosted event's brand and colours (M7 §1.9), over the room's theme.
+  // An older session object (a test's fake) has none: unbranded.
+  const look = (escape.look as EscapeLook | undefined) ?? NO_LOOK;
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[24em] flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain px-4 pb-4 text-left">
-      {hostAway && !ui.finale && ui.ended === 'none' && (
-        <p className="bg-muted text-muted-foreground flex items-center gap-2 rounded-lg px-3 py-2 text-sm">
-          <UserRoundX aria-hidden className="size-4 shrink-0" />
-          {t('hostAway')}
-        </p>
-      )}
-      {screen}
-      {isPhoneHost && state && ui.ended !== 'final' ? (
-        <PhoneHostBar pin={pin} state={state} room={phoneHost.room} send={phoneHost.send} />
-      ) : null}
-      <UnlockMoment overlay={ui.overlay} onClose={() => dispatch({ type: 'dismissOverlay' })} />
-      <EscapeAnnouncer polite={ui.polite} assertive={ui.assertive} />
-    </div>
+    <LiveTheme theme={look.theme}>
+      <div className="mx-auto flex min-h-0 w-full max-w-[24em] flex-1 flex-col gap-4 overflow-y-auto overscroll-y-contain px-4 pb-4 text-left">
+        {look.brand ? <BrandBand brand={look.brand} className="pt-2" /> : null}
+        {hostAway && !ui.finale && ui.ended === 'none' && (
+          <p className="bg-muted text-muted-foreground flex items-center gap-2 rounded-lg px-3 py-2 text-sm">
+            <UserRoundX aria-hidden className="size-4 shrink-0" />
+            {t('hostAway')}
+          </p>
+        )}
+        {screen}
+        {isPhoneHost && state && ui.ended !== 'final' ? (
+          <PhoneHostBar pin={pin} state={state} room={phoneHost.room} send={phoneHost.send} />
+        ) : null}
+        <UnlockMoment overlay={ui.overlay} onClose={() => dispatch({ type: 'dismissOverlay' })} />
+        <EscapeAnnouncer polite={ui.polite} assertive={ui.assertive} />
+      </div>
+    </LiveTheme>
   );
 }
 

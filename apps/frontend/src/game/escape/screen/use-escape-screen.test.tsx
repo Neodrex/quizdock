@@ -308,12 +308,13 @@ describe('useEscapeScreen', () => {
     });
   });
 
-  it('listens for escape:board, escape:announce and escape:screen-finale only, and lets them go', async () => {
+  it('listens for escape:board, escape:announce, escape:screen-finale and escape:look only, and lets them go', async () => {
     const { unmount } = mount(seam({ attachSeq: 1 }));
     await flush();
     expect([...listeners.keys()].sort()).toEqual([
       'escape:announce',
       'escape:board',
+      'escape:look',
       'escape:screen-finale',
     ]);
     unmount();

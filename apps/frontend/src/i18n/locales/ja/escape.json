@@ -542,5 +542,8 @@
       "notFound": "このPINのレースはありません。",
       "waitingStart": "開始を待っています"
     }
+  },
+  "brand": {
+    "logo": "{{name}} のロゴ"
   }
 }

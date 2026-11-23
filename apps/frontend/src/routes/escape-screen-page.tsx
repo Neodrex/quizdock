@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useFullscreen } from '@/lib/use-fullscreen';
 import { cn } from '@/lib/utils';
 import { ScreenBanners } from '../game/escape/screen/banners';
+import { BrandBand } from '../game/escape/session/brand-band';
 import { RaceTrack } from '../game/escape/screen/race-track';
 import { ScreenFinale } from '../game/escape/screen/screen-finale';
 import { ScreenLobby } from '../game/escape/screen/screen-lobby';
@@ -81,8 +82,11 @@ export function EscapeScreen({
   // Late joiners still can: the PIN stays in the corner until the finale.
   const showPin = phase === 'forming' || phase === 'running';
   const title = finale?.title ?? board?.title ?? null;
+  // A hosted event's colours (M7 §1.9) over the room's theme; none, as M6.
+  const theme = escape.look.theme ?? view.theme;
+  const brand = escape.look.brand;
   // Read from the back of the room: 7:1 text, the theme's background only when it allows.
-  const palette = screenPaletteOf(view.theme);
+  const palette = screenPaletteOf(theme);
 
   let stage;
   if (finale) {
@@ -101,7 +105,7 @@ export function EscapeScreen({
       </p>
     );
   } else if (board.phase === 'forming') {
-    stage = <ScreenLobby board={board} pin={pin} view={view} />;
+    stage = <ScreenLobby board={board} pin={pin} view={view} brand={brand} />;
   } else {
     // Running, or the finale before its screen finale came: the race as it stood.
     stage = (
@@ -114,7 +118,7 @@ export function EscapeScreen({
   }
 
   return (
-    <LiveTheme theme={view.theme}>
+    <LiveTheme theme={theme}>
       <LiveMotion on={view.motion}>
         <div
           ref={ref}
@@ -157,6 +161,13 @@ export function EscapeScreen({
           <ScreenSoundUnlock audible={audible && !ui.closed} />
 
           <header className="flex shrink-0 items-center justify-between gap-[1em] pr-[3em]">
+            {brand ? (
+              <BrandBand
+                brand={brand}
+                className="shrink-0 text-[1.2em]"
+                logoClassName="h-[1.6em]"
+              />
+            ) : null}
             <div className="flex min-w-0 flex-col leading-tight">
               {/* The lobby and the finale carry the title as their heading. */}
               {phase === 'running' && title ? (

@@ -1,6 +1,12 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { BUILTIN_THEME_VALUES, type EscapeBoard } from '@quiz-dock/contracts';
+import {
+  BUILTIN_THEME_VALUES,
+  contrast,
+  type EscapeBoard,
+  type EscapeLook,
+  parseHex,
+} from '@quiz-dock/contracts';
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { addClockSample, resetClock, serverNow } from '../game/clock';
@@ -14,6 +20,8 @@ import {
 import { OWN_TOKENS } from '../game/escape/screen/screen-palette';
 import { initialScreenUi, type EscapeScreenUi } from '../game/escape/screen/screen-reducer';
 import type { EscapeScreenSession } from '../game/escape/screen/use-escape-screen';
+import { ACME_LOOK } from '../game/escape/session/look-fixtures';
+import { NO_LOOK } from '../game/escape/session/use-escape-look';
 import { drawEn } from '../game/escape/test-fixtures';
 import { type GameView, INITIAL_VIEW } from '../game/use-game-session';
 import { EscapeScreen } from './escape-screen-page';
@@ -51,15 +59,24 @@ const running = (left = 20 * MIN, over: Partial<EscapeBoard> = {}) =>
     ...over,
   });
 
-const escapeOf = (ui: Partial<EscapeScreenUi> = {}): EscapeScreenSession => ({
+const escapeOf = (
+  ui: Partial<EscapeScreenUi> = {},
+  look: EscapeLook = NO_LOOK,
+): EscapeScreenSession => ({
   active: true,
   ui: { ...initialScreenUi, ...ui },
   replayDone: vi.fn(),
+  look,
 });
 
 const page = (
   ui: Partial<EscapeScreenUi>,
-  over: { view?: Partial<GameView>; role?: 'lead' | 'follow' | 'preview'; sound?: boolean } = {},
+  over: {
+    view?: Partial<GameView>;
+    role?: 'lead' | 'follow' | 'preview';
+    sound?: boolean;
+    look?: EscapeLook;
+  } = {},
 ) => (
   <>
     {/* As ScreenView: upstream's banner sits outside the escape screen. */}
@@ -67,7 +84,7 @@ const page = (
     <EscapeScreen
       pin={PIN}
       view={view(over.view)}
-      escape={escapeOf(ui)}
+      escape={escapeOf(ui, over.look)}
       role={over.role ?? 'lead'}
       sound={over.sound ?? true}
     />
@@ -244,6 +261,31 @@ describe('EscapeScreen', () => {
 
 describe('the big screen colours (7:1 from the back of the room)', () => {
   const frame = () => document.querySelector<HTMLElement>('[data-escape-phase]')!;
+
+  it('a hosted event: the logo and name in the band, the intro in the lobby, its accent at 7:1', () => {
+    const board = boardOf({ phase: 'forming', teams: [summaryOf()] });
+    draw({ board }, { view: { theme: BUILTIN_THEME_VALUES.night }, look: ACME_LOOK });
+    expect(screen.getByRole('img', { name: 'Acme logo' })).toHaveAttribute(
+      'src',
+      'https://acme.example/logo.png',
+    );
+    expect(screen.getByText('Acme')).toBeInTheDocument();
+    expect(screen.getByText('Welcome, Acme team.')).toBeInTheDocument();
+    // The look's theme wins over the room's; the screen palette still tunes it.
+    const scope = frame().closest<HTMLElement>('[data-theme-scope]')!;
+    expect(scope.style.getPropertyValue('--primary')).toBe('#c2410c');
+    expect(frame()).toHaveAttribute('data-tone', 'light');
+    const primary = parseHex(frame().style.getPropertyValue('--primary') || '#c2410c');
+    const on = parseHex(frame().style.getPropertyValue('--primary-foreground') || '#ffffff');
+    expect(contrast(primary, on)).toBeGreaterThanOrEqual(7);
+  });
+
+  it('a logo that fails: the name alone in the band', () => {
+    draw({ board: running() }, { look: ACME_LOOK });
+    fireEvent.error(screen.getByRole('img', { name: 'Acme logo' }));
+    expect(screen.queryByRole('img', { name: 'Acme logo' })).toBeNull();
+    expect(screen.getByText('Acme')).toBeInTheDocument();
+  });
 
   it("a theme whose background reads draws it, with the screen's tokens tuned to it", () => {
     draw({ board: running() }, { view: { theme: BUILTIN_THEME_VALUES.night } });

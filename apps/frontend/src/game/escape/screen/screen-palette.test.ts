@@ -61,6 +61,12 @@ describe('screenPaletteOf', () => {
     },
   );
 
+  it('Acme’s look (an accent over classic, M7) reads at 7:1 too', () => {
+    const acme = { ...BUILTIN_THEME_VALUES.classic, accent: '#c2410c' };
+    const p = screenPaletteOf(acme);
+    expectReadable(p, extremesOf(p, acme));
+  });
+
   it("the screen's own tokens pass on their own, in both tones", () => {
     for (const tone of ['light', 'dark'] as const) {
       const bg = hex(OWN_TOKENS[tone].background);

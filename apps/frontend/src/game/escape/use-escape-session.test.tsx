@@ -462,6 +462,8 @@ describe('useEscapeSession', () => {
     await flush();
     expect([...listeners.keys()].sort()).toEqual([
       'escape:finale',
+      // The room's brand (M7): static, public, for every synced socket.
+      'escape:look',
       'escape:state',
       'escape:team-update',
       'game:ended',

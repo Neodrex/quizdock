@@ -1,10 +1,12 @@
-import type { EscapeFinale } from '@quiz-dock/contracts';
+import type { EscapeFinale, EscapeLook } from '@quiz-dock/contracts';
 import { screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { type EscapeUi, initialEscapeUi } from '../game/escape/escape-reducer';
 import { drawEn, GAME, ME, state, team, view } from '../game/escape/test-fixtures';
 import type { EscapeSession } from '../game/escape/use-escape-session';
+import { ACME_LOOK } from '../game/escape/session/look-fixtures';
+import { NO_LOOK } from '../game/escape/session/use-escape-look';
 import { EscapedView, EscapePlayer, TimeUpView } from './escape-player-page';
 
 vi.mock('@tanstack/react-router', () => ({
@@ -40,10 +42,11 @@ const finale: EscapeFinale = {
   awards: { fastest: null, fewestHints: null, teamwork: null, photoFinish: null },
 };
 
-const session = (ui: Partial<EscapeUi>): EscapeSession => ({
+const session = (ui: Partial<EscapeUi>, look: EscapeLook = NO_LOOK): EscapeSession => ({
   active: true,
   checkingRecord: false,
   ui: { ...initialEscapeUi, ...ui },
+  look,
   dispatch: vi.fn(),
   submit: vi.fn(),
   askHint: vi.fn(),
@@ -198,5 +201,40 @@ describe('EscapePlayer: the phone host bar (group play)', () => {
     draw({ state: state() });
     expect(screen.queryByRole('region', { name: 'Host controls' })).toBeNull();
     expect(phoneHost.calls.every((on) => !on)).toBe(true);
+  });
+});
+
+describe('EscapePlayer: a hosted event’s brand (M7 Task 7.19)', () => {
+  const drawLook = (ui: Partial<EscapeUi>) =>
+    drawEn(
+      <EscapePlayer
+        pin="482913"
+        escape={session(ui, ACME_LOOK)}
+        me={ME}
+        connectionLost={false}
+        hostAway={false}
+      />,
+    );
+
+  it('the logo and name in the lobby, the run and the finale, under the brand’s colours', () => {
+    const phases: Partial<EscapeUi>[] = [
+      { state: state({ phase: 'forming', team: null, view: null }) },
+      { state: state() },
+      { state: state({ phase: 'finale' }), finale },
+    ];
+    for (const ui of phases) {
+      const { unmount, container } = drawLook(ui);
+      expect(screen.getByRole('img', { name: 'Acme logo' })).toBeInTheDocument();
+      expect(screen.getByText('Acme')).toBeInTheDocument();
+      const scope = container.querySelector<HTMLElement>('[data-theme-scope]')!;
+      expect(scope.style.getPropertyValue('--primary')).toBe('#c2410c');
+      unmount();
+    }
+  });
+
+  it('no look: no band and no theme of its own (as M6)', () => {
+    const { container } = draw({ state: state() });
+    expect(container.querySelector('[data-brand]')).toBeNull();
+    expect(container.querySelector('[data-theme-scope]')).toBeNull();
   });
 });

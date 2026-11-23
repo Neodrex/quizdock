@@ -1,4 +1,4 @@
-import type { EscapeBoard } from '@quiz-dock/contracts';
+import type { EscapeBoard, EscapeBrand } from '@quiz-dock/contracts';
 import { Loader2, Smartphone, Users, WifiOff } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
@@ -48,10 +48,13 @@ export function ScreenLobby({
   board,
   pin,
   view,
+  brand = null,
 }: {
   board: EscapeBoard;
   pin: string;
   view: Pick<GameView, 'joinBaseUrl'>;
+  /** A hosted event's brand (M7): its intro under the title. */
+  brand?: EscapeBrand | null;
 }) {
   const { t } = useTranslation('escape');
   const lobby = lobbyOf(board);
@@ -61,6 +64,14 @@ export function ScreenLobby({
   return (
     <section className="flex h-full min-h-0 flex-col gap-[1.2em]">
       <h1 className="text-center text-[2em] leading-tight font-bold">{board.title}</h1>
+      {brand?.intro ? (
+        <p
+          data-brand-intro
+          className="mx-auto max-w-[40em] text-center text-[1.2em] whitespace-pre-line"
+        >
+          {brand.intro}
+        </p>
+      ) : null}
       {/* 16:9 and 16:10: the join panel beside the teams. Narrower (4:3 projectors):
           above them, in a row, so the teams keep the screen's whole width. */}
       <div data-testid="lobby-body" className={cn('flex min-h-0 flex-1 gap-[2em]', NARROW_STACK)}>

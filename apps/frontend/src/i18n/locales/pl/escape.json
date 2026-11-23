@@ -584,5 +584,8 @@
       "notFound": "Brak wyścigu z tym PIN-em.",
       "waitingStart": "Czekamy na start"
     }
+  },
+  "brand": {
+    "logo": "Logo {{name}}"
   }
 }
