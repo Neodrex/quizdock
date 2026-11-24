@@ -503,6 +503,27 @@ export function sessionTests(ctx: EscapeContext): void {
     expect(await phaseOf(pin)).toBe('running');
   });
 
+  it('a use recorded whose answer was lost: the next start finds it, the last event still starts the room', async () => {
+    useLicences(ctx.h, [{ ...ACME_LICENCE, eventsLeft: 1 }]);
+    const { host, pin } = await readyRoom('hosted', { licenceId: 'acme' });
+    const real = port().recordUse.bind(port());
+    const recordUse = jest.spyOn(port(), 'recordUse').mockImplementationOnce(async (id, use) => {
+      await real(id, use);
+      return { ok: false, reason: 'unavailable' };
+    });
+    try {
+      expect(await host.emitWithAck('escape:start', { pin })).toMatchObject(
+        refused('escape.licence_unavailable'),
+      );
+    } finally {
+      recordUse.mockRestore();
+    }
+    expect((await store().session(pin))?.licenceUsed).toBe(false);
+    expect(await eventsLeft('acme')).toBe(0);
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    expect(await phaseOf(pin)).toBe('running');
+  });
+
   it('a hosted room not started yet never starts without a host (fails closed)', async () => {
     useLicences(ctx.h, DEV_LICENCES);
     const { pin } = await readyRoom('hosted', { licenceId: 'acme' });

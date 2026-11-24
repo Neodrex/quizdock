@@ -909,7 +909,11 @@ export class EscapeEngine implements OnModuleDestroy {
     if (!host) throw new ForbiddenException(LICENCE_REQUIRED);
     const now = Date.now();
     const checked = await this.licences.check(host, s.licence.id, now);
-    if (!checked.ok) throw new ForbiddenException(licenceErrorCode(checked.reason));
+    // No event left may be this room's own use, recorded by a start whose answer
+    // was lost: the idempotent use below finds it, and refuses any other room.
+    if (!checked.ok && checked.reason !== 'no-events-left') {
+      throw new ForbiddenException(licenceErrorCode(checked.reason));
+    }
     const use = await this.licences.recordUse(s.licence.id, {
       useKey: ref.meta.roomId,
       pin: ref.pin,
