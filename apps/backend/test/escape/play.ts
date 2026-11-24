@@ -23,6 +23,13 @@ import {
 } from './escape-harness';
 import { leaksIn, receivedLeaks, screenLeaksIn } from './leaks';
 
+/** The host state `act` makes the console get. */
+async function nextHostState(host: Socket, act: () => Promise<unknown>): Promise<EscapeHostState> {
+  const next = nextEvent<EscapeHostState>(host, 'escape:host');
+  await act();
+  return next;
+}
+
 /** Submissions: outcomes, events, the wrong-answer limit and concurrent submits (Task 3.10). */
 export function playTests(ctx: EscapeContext): void {
   const teamUpdate = (p: SyncedPlayer, where: (u: EscapeTeamUpdate) => boolean) =>
@@ -168,6 +175,30 @@ export function playTests(ctx: EscapeContext): void {
         ).some((t) => t.id === team && t.adjustMs === 60_000),
       );
       expect(adjusted).toBe(true);
+    } finally {
+      timings.hostEveryMs = was;
+    }
+  });
+
+  it('a hosted event’s escape:open: the new run’s host state comes before its ack, inside a held period (M9 batch 2 re-review)', async () => {
+    const timings = ctx.h.app.get(EscapeTimings);
+    const was = timings.hostEveryMs;
+    timings.hostEveryMs = 10_000;
+    try {
+      const host = ctx.h.connectHost();
+      const pin = await createEscape(host, ctx.templateId);
+      expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+      const first = (await nextHostState(host, () => joinAndSync(ctx.h, pin, 'Ann'))).gameId;
+      // The host lane's period is open: a held send would wait 10 s.
+      const hostSeen = record(host);
+      expect(await host.emitWithAck('escape:open', { pin, templateId: ctx.templateId })).toEqual({
+        ok: true,
+      });
+      const states = hostSeen
+        .filter(([e]) => e === 'escape:host')
+        .map(([, p]) => (p as EscapeHostState).gameId);
+      expect(states.length).toBeGreaterThanOrEqual(1);
+      expect(states.at(-1)).not.toBe(first);
     } finally {
       timings.hostEveryMs = was;
     }

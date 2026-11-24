@@ -402,6 +402,8 @@ export class EscapeEngine implements OnModuleDestroy {
       if (session) this.server.to(pin).emit('escape:look', lookOf(session));
       const ref = await this.requireRun(pin);
       await this.broadcast(ref, await this.viewOf(ref));
+      // A host command outside `mutate`: its result before its ack, as there.
+      await this.held.flushNow(pin, 'host');
     });
   }
 
@@ -1526,8 +1528,10 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /**
    * Runs `job` on the current run, one at a time per game, with the run read
-   * inside the queue. A host command's result reaches a hosted event's console
-   * before its ack: what the host lane holds goes out at once (`hostHold`).
+   * inside the queue. A host command's result reaches the console before its
+   * ack in hosted events only: what the host lane holds goes out at once
+   * (`hostHold`). A race's host frames ride the board lane (`all`) and keep
+   * its period (owner decision, M9 Batch 2).
    */
   private async mutate<T>(
     pin: string,
