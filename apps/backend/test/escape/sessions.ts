@@ -792,6 +792,32 @@ export function phoneHostTests(ctx: EscapeContext): void {
     expect((await running).team?.id).toBe(team.id);
   });
 
+  it('a group room that runs again deals its connected players at once: no sync, and the phone host can start', async () => {
+    const { host, pin, other, playerId } = await groupRoom();
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
+    const first = await gameIdOf(pin);
+    const dealt = [host, other.socket].map((s) =>
+      stateWhere(s, (st) => st.gameId !== first && st.team?.members.length === 2),
+    );
+    const hostState = nextEvent<EscapeHostState>(host, 'escape:host', {
+      where: (h) => h.gameId !== first && h.teams.length === 1,
+    });
+    expect(await host.emitWithAck('escape:open', { pin, templateId: library })).toEqual({
+      ok: true,
+    });
+    const [mine, theirs] = await Promise.all(dealt);
+    expect(mine.team).toMatchObject({ name: 'Team 1' });
+    expect(theirs.team!.members.map((m) => m.playerId).sort()).toEqual(
+      [playerId, other.playerId].sort(),
+    );
+    expect((await hostState).unassigned).toEqual([]);
+    const running = stateWhere(other.socket, (s) => s.phase === 'running');
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    await running;
+  });
+
   it('a host that joins its group room as a player gets the host payloads and its phone state', async () => {
     const { host, pin, seen, other, teamId } = await groupRoom();
     const events = seen.map(([e]) => e);

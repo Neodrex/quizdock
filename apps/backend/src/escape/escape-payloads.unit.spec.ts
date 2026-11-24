@@ -908,10 +908,21 @@ describe('team updates', () => {
     ).toBeNull();
   });
 
-  it('hint and time-up updates carry ids only', () => {
-    const hint = hintUpdateOf('a', 'lobby-h1', 'timer');
-    expect(hint).toEqual({ teamId: 'a', kind: 'hint', hintId: 'lobby-h1', source: 'timer' });
+  it('hint and time-up updates carry ids only; a hint its cost (none when timed)', () => {
+    const hint = hintUpdateOf(tpl, 'a', 'lobby-h1', 'timer');
+    expect(hint).toEqual({
+      teamId: 'a',
+      kind: 'hint',
+      hintId: 'lobby-h1',
+      source: 'timer',
+      penaltyS: 0,
+    });
     expect(leaksIn(hint, tpl)).toEqual([]);
+    const cost = tpl.stages[0].hints[0].penaltyS;
+    expect(cost).toBeGreaterThan(0);
+    for (const source of ['request', 'host'] as const) {
+      expect(hintUpdateOf(tpl, 'a', 'lobby-h1', source)).toMatchObject({ penaltyS: cost });
+    }
     expect(timeUpOf('a')).toEqual({ teamId: 'a', kind: 'time-up' });
   });
 });

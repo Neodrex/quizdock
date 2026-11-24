@@ -139,6 +139,33 @@ export function brandTests(ctx: EscapeContext): void {
     }
   });
 
+  it('a branded room that runs again sends its look with the new run, no sync needed', async () => {
+    const host = ctx.h.connectHost();
+    const { pin } = await createAs(host, library, 'hosted', { licenceId: 'acme' });
+    if (!pin) throw new Error('hosted create refused');
+    expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    const { socket: phone } = await ctx.h.join(pin, 'Ann');
+    expect(await phone.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    const screen = ctx.h.connect();
+    await screen.emitWithAck('spectator:join', { pin });
+    expect(await screen.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    expect(await host.emitWithAck('escape:teams', { pin, mode: 'auto', count: 1 })).toEqual({
+      ok: true,
+    });
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
+    // The clients dropped the look with the podium (use-escape-look).
+    const looks = [host, phone, screen].map((s) => nextEvent<EscapeLook>(s, 'escape:look'));
+    expect(await host.emitWithAck('escape:open', { pin, templateId: library })).toEqual({
+      ok: true,
+    });
+    for (const look of await Promise.all(looks)) {
+      expect(look.brand?.name).toBe('Acme');
+      expect(look.theme?.accent).toBe('#c2410c');
+    }
+  });
+
   it('a quiz room opened as a hosted event sends its look to everyone in it, no sync needed', async () => {
     const host = ctx.h.connectHost();
     const quiz = await ctx.h.seedQuiz();

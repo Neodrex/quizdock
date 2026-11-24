@@ -349,13 +349,20 @@ export function submitUpdateOf(
   }
 }
 
-/** A hint released: its id only, the text goes in the team's `view.hints`. */
+/**
+ * A hint released: its id and what it cost (a timed one is free), the text goes
+ * in the team's `view.hints`. The cost rides here: the phone's state that comes
+ * with it already offers the next hint.
+ */
 export function hintUpdateOf(
+  tpl: EscapeTemplate,
   teamId: string,
   hintId: string,
   source: 'request' | 'timer' | 'host',
 ): EscapeTeamUpdate {
-  return { teamId, kind: 'hint', hintId, source };
+  const hint = tpl.stages.flatMap((s) => s.hints).find((h) => h.id === hintId);
+  const penaltyS = source === 'timer' ? 0 : (hint?.penaltyS ?? 0);
+  return { teamId, kind: 'hint', hintId, source, penaltyS };
 }
 
 export function timeUpOf(teamId: string): EscapeTeamUpdate {

@@ -49,6 +49,7 @@ export function hintTests(ctx: EscapeContext): void {
       kind: 'hint',
       hintId: lobbyH1.id,
       source: 'request',
+      penaltyS: lobbyH1.penaltyS,
     });
     const s = await state;
     expect(s.view?.hints).toEqual([{ id: lobbyH1.id, text: lobbyH1.text }]);
@@ -77,7 +78,12 @@ export function hintTests(ctx: EscapeContext): void {
     const updates = [hintUpdate(teams.t1[0]), hintUpdate(teams.t2[0])];
     expect(await host.emitWithAck('escape:hint', { pin })).toEqual({ ok: true, released: 2 });
     for (const u of await Promise.all(updates)) {
-      expect(u).toMatchObject({ kind: 'hint', hintId: lobbyH1.id, source: 'host' });
+      expect(u).toMatchObject({
+        kind: 'hint',
+        hintId: lobbyH1.id,
+        source: 'host',
+        penaltyS: lobbyH1.penaltyS,
+      });
     }
     await eventually(async () =>
       expect(teams.t1[0].last().team?.hintPenaltyS).toBe(lobbyH1.penaltyS),
@@ -160,6 +166,7 @@ export function hintTests(ctx: EscapeContext): void {
       kind: 'hint',
       hintId: lobbyH1.id,
       source: 'timer',
+      penaltyS: 0,
     });
     await eventually(async () => expect(players[0].last().view?.hints).toHaveLength(1));
     expect(players[0].last().team?.hintPenaltyS).toBe(0);

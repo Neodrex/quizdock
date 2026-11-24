@@ -429,11 +429,13 @@ export class EscapeEngine implements OnModuleDestroy {
       this.server
         .to(pin)
         .emit('game:state', { state: GameState.Lobby, questionIndex: -1, totalQuestions: 0 });
-      // A quiz room turned hosted: its clients follow the new run without a sync,
-      // so the look goes to the whole room now (M7 §1.9).
-      if (session) this.server.to(pin).emit('escape:look', lookOf(session));
-      const ref = await this.requireRun(pin);
-      await this.broadcast(ref, await this.viewOf(ref));
+      // The room's clients follow the new run without a sync (a quiz room turned
+      // hosted, or a room running again, whose clients dropped the look with the
+      // podium): the look goes to the whole room now (M7 §1.9).
+      this.server.to(pin).emit('escape:look', lookOf(session ?? kept));
+      const opened = await this.requireRun(pin);
+      const { ref, v } = await this.dealGroup(opened, await this.viewOf(opened));
+      await this.broadcast(ref, v);
       // A host command outside `mutate`: its result before its ack, as there.
       await this.held.flushNow(pin, 'host');
     });
@@ -849,6 +851,26 @@ export class EscapeEngine implements OnModuleDestroy {
     return { ref: { ...ref, run }, v: { ...v, run, teams } };
   }
 
+  /**
+   * M7 §1.8: group play's default team for a run that opens with players
+   * already in the room ("run it again"): phones sync on a join, not on a new
+   * run, so the connected players are dealt here, as each one's sync would.
+   */
+  private async dealGroup(ref: RunRef, v: RunView): Promise<{ ref: RunRef; v: RunView }> {
+    if (v.session?.type !== 'group') return { ref, v };
+    let at = { ref, v };
+    for (const p of v.players) {
+      if (!p.connected || teamOf(this.teamsOf(at.v), p.playerId)) continue;
+      if (!at.ref.run.teamIds.length) {
+        at = await this.addTeam(at.ref, at.v, makeTeams(1)[0].name);
+      }
+      const to = smallestTeam(this.teamsOf(at.v), at.ref.run.maxSize);
+      if (!to) break;
+      at = { ref: at.ref, v: await this.applyMove(at.ref, at.v, p.playerId, to.id) };
+    }
+    return at;
+  }
+
   /** A new empty team at the end of the run (a race's), saved; the run and view with it. */
   private async addTeam(
     ref: RunRef,
@@ -1186,7 +1208,7 @@ export class EscapeEngine implements OnModuleDestroy {
       const team = useHint(ref.snap.template, at.rec.team, dto.hintId);
       if (team === at.rec.team) return { ok: false, reason: 'no-hint' };
       await this.store.save(ref.id, { teams: [{ ...at.rec, team }] });
-      const update = hintUpdateOf(team.id, dto.hintId, 'request');
+      const update = hintUpdateOf(ref.snap.template, team.id, dto.hintId, 'request');
       await this.teamChanged(ref, await this.viewOf(ref), team.id, [update], ['hint']);
       return { ok: true };
     });
@@ -1238,7 +1260,7 @@ export class EscapeEngine implements OnModuleDestroy {
       await this.store.save(ref.id, { teams: released.map((r) => r.rec) });
       const v = await this.viewOf(ref);
       for (const { rec, hintId } of released) {
-        const update = hintUpdateOf(rec.team.id, hintId, 'host');
+        const update = hintUpdateOf(tpl, rec.team.id, hintId, 'host');
         await this.teamChanged(ref, v, rec.team.id, [update], ['hint']);
       }
       return released.length;
@@ -1402,7 +1424,7 @@ export class EscapeEngine implements OnModuleDestroy {
             updates.push(timeUpOf(teamId));
             announce.push('time-up');
           } else if (e.startsWith('hint:')) {
-            updates.push(hintUpdateOf(teamId, e.slice('hint:'.length), 'timer'));
+            updates.push(hintUpdateOf(snap.template, teamId, e.slice('hint:'.length), 'timer'));
             announce.push('hint');
           }
         }

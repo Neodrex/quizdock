@@ -175,24 +175,26 @@ describe('escapeReducer', () => {
     expect(escapeReducer(e, { type: 'dismissOverlay' }).overlay).toBeNull();
   });
 
-  it('a timed hint is free; an asked or host hint costs the offered penalty', () => {
+  it('a timed hint is free; an asked or host hint costs the penalty its update carries', () => {
     const timer = run(
       { type: 'state', state: stateOf() },
-      update({ teamId: 't1', kind: 'hint', hintId: 'h1', source: 'timer' }),
+      update({ teamId: 't1', kind: 'hint', hintId: 'h1', source: 'timer', penaltyS: 0 }),
     );
     expect(last(timer)).toMatchObject({ key: 'announce.hintFree' });
     expect(timer.hintTags).toEqual({ h1: 'free' });
     for (const source of ['request', 'host'] as const) {
+      // As the server sends them: the state first, already offering the next hint.
       const paid = run(
         { type: 'state', state: stateOf() },
-        update({ teamId: 't1', kind: 'hint', hintId: 'h1', source }),
+        { type: 'state', state: stateOf({ nextHint: { id: 'h2', penaltyS: 30 } }) },
+        update({ teamId: 't1', kind: 'hint', hintId: 'h1', source, penaltyS: 60 }),
       );
       expect(last(paid)).toMatchObject({ key: 'announce.hintPaid', params: { seconds: 60 } });
       expect(paid.hintTags).toEqual({ h1: 'paid' });
     }
     const none = run(
-      { type: 'state', state: stateOf({ nextHint: { id: 'h1', penaltyS: 0 } }) },
-      update({ teamId: 't1', kind: 'hint', hintId: 'h1', source: 'host' }),
+      { type: 'state', state: stateOf({ nextHint: { id: 'h2', penaltyS: 30 } }) },
+      update({ teamId: 't1', kind: 'hint', hintId: 'h1', source: 'host', penaltyS: 0 }),
     );
     expect(last(none)).toMatchObject({ key: 'announce.hint' });
     expect(none.hintTags).toEqual({});

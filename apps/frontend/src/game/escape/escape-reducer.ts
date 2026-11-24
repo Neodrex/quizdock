@@ -150,8 +150,8 @@ function onTeamUpdate(ui: EscapeUi, u: EscapeTeamUpdate, me: string | null): Esc
           'announce.hintFree',
         );
       }
-      // The cost is the one offered before this hint came: the state that follows offers the next.
-      const penaltyS = s.nextHint?.id === u.hintId ? s.nextHint.penaltyS : 0;
+      // The update carries the cost: the state that came with it already offers the next hint.
+      const { penaltyS } = u;
       if (!penaltyS) return say(ui, 'announce.hint');
       return say({ ...ui, hintTags: { ...ui.hintTags, [u.hintId]: 'paid' } }, 'announce.hintPaid', {
         seconds: penaltyS,

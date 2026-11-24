@@ -103,7 +103,7 @@ describe('escapeHostReducer: state', () => {
         roleId: 'hacker',
         by: 'p1',
       },
-      { teamId: 't1', kind: 'hint', hintId: 'lobby-h1', source: 'host' },
+      { teamId: 't1', kind: 'hint', hintId: 'lobby-h1', source: 'host', penaltyS: 60 },
       { teamId: 't2', kind: 'time', deltaMs: 120_000 },
       { teamId: 't1', kind: 'lock-solved', lockId: 'lobby-door', by: null },
     ];
@@ -260,21 +260,38 @@ describe('escapeHostReducer: the feed', () => {
     const ui = ready();
     expect(
       lastLine(
-        run(ui, update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h2', source: 'timer' })),
+        run(
+          ui,
+          update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h2', source: 'timer', penaltyS: 0 }),
+        ),
       ),
     ).toMatchObject({
       key: 'host.feed.hintFree',
     });
     expect(
       lastLine(
-        run(ui, update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h2', source: 'request' })),
+        run(
+          ui,
+          update({
+            teamId: 't1',
+            kind: 'hint',
+            hintId: 'lobby-h2',
+            source: 'request',
+            penaltyS: 60,
+          }),
+        ),
       ),
     ).toMatchObject({
       key: 'host.feed.hintAsked',
       params: { team: 'Team Red', seconds: 60 },
     });
     expect(
-      lastLine(run(ui, update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h1', source: 'host' }))),
+      lastLine(
+        run(
+          ui,
+          update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h1', source: 'host', penaltyS: 60 }),
+        ),
+      ),
     ).toMatchObject({
       key: 'host.feed.hintGiven',
       params: { team: 'Team Red', seconds: 30 },
@@ -284,9 +301,9 @@ describe('escapeHostReducer: the feed', () => {
   it('keeps how each hint was released, per team; a new run forgets it', () => {
     const ui = run(
       ready(),
-      update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h1', source: 'host' }),
-      update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h2', source: 'timer' }),
-      update({ teamId: 't2', kind: 'hint', hintId: 'lobby-h1', source: 'request' }),
+      update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h1', source: 'host', penaltyS: 60 }),
+      update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h2', source: 'timer', penaltyS: 0 }),
+      update({ teamId: 't2', kind: 'hint', hintId: 'lobby-h1', source: 'request', penaltyS: 60 }),
     );
     expect(ui.hintSources).toEqual({
       t1: { 'lobby-h1': 'host', 'lobby-h2': 'timer' },
@@ -453,7 +470,7 @@ describe('no answers', () => {
     const ui = run(
       ready(),
       update({ teamId: 't1', kind: 'lock-solved', lockId: 'lobby-door', by: null }),
-      update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h1', source: 'host' }),
+      update({ teamId: 't1', kind: 'hint', hintId: 'lobby-h1', source: 'host', penaltyS: 60 }),
       { type: 'hostTeam', team: hostTeamOf({ stuck: true }), now: NOW },
     );
     const team = ui.host!.teams[0];

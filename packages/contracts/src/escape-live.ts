@@ -370,7 +370,8 @@ export type EscapeTeamUpdate = { teamId: string } & (
   | { kind: 'lock-solved'; lockId: string; by: string | null }
   | { kind: 'stage-cleared'; stageIndex: number; unlockText: string; by: string | null }
   | { kind: 'escaped'; unlockText: string; by: string | null }
-  | { kind: 'hint'; hintId: string; source: 'request' | 'timer' | 'host' }
+  /** `penaltyS`: what the hint cost the team (0: a timed hint, or one with no penalty). */
+  | { kind: 'hint'; hintId: string; source: 'request' | 'timer' | 'host'; penaltyS: number }
   | { kind: 'roles' }
   | { kind: 'time'; deltaMs: number }
   | { kind: 'time-up' }
