@@ -18,6 +18,7 @@ import {
   playerSessionOf,
   placesOf,
   playerStateOf,
+  publicFinaleOf,
   type RoomPlayer,
   type RunView,
   screenFinaleOf,
@@ -561,6 +562,24 @@ describe('hostOutlineOf (owner question 1: no answers to the host)', () => {
     expect(leaksIn(outline, t, all)).toEqual([]);
   });
 
+  it('a host who plays (group play): no clue, no stage intro or unlock text, no hint text; the rest stays', () => {
+    const full = hostOutlineOf(snap, 'g1');
+    const mine = hostOutlineOf(snap, 'g1', true);
+    const json = JSON.stringify(mine);
+    for (const s of tpl.stages) {
+      for (const text of [s.intro, s.unlockText, ...s.hints.map((h) => h.text)]) {
+        if (text) expect(json).not.toContain(JSON.stringify(text).slice(1, -1));
+      }
+      for (const c of s.clues) expect(json).not.toContain(JSON.stringify(c.body).slice(1, -1));
+    }
+    expect(mine.stages.map((s) => s.clues)).toEqual(tpl.stages.map(() => []));
+    expect(mine.stages.map((s) => s.locks)).toEqual(full.stages.map((s) => s.locks));
+    expect(mine.stages.map((s) => s.hints.map((h) => [h.id, h.penaltyS, h.text]))).toEqual(
+      tpl.stages.map((s) => s.hints.map((h) => [h.id, h.penaltyS, ''])),
+    );
+    expect({ ...mine, stages: [] }).toEqual({ ...full, stages: [] });
+  });
+
   it('keeps what the host needs: locks, part roles, labels, hints and unlock texts', () => {
     const outline = hostOutlineOf(snap, 'g1');
     expect(outline).toMatchObject({
@@ -1065,7 +1084,7 @@ describe('race scale (M7 §1.7)', () => {
     expect(board.session).toEqual({
       type: 'race',
       startsAt: null,
-      totals: { teams: 500, players: 500, escaped: 0 },
+      totals: { teams: 500, players: 500, escaped: 0, playing: 500, latest: expect.anything() },
     });
     expect(JSON.stringify(board).length).toBeLessThan(12 * 1024);
   });
@@ -1090,6 +1109,57 @@ describe('race scale (M7 §1.7)', () => {
     expect(boardOf(forming).session?.totals.players).toBe(500);
     const hosted = { ...forming, session: { ...raceSession, type: 'hosted' as const, race: null } };
     expect(boardOf(hosted).roster).toHaveLength(500);
+  });
+
+  it('a race board counts the teams still playing beyond its top 30, with their latest deadline', () => {
+    const v = soloView(40);
+    // The 30 leaders are out; ten still play, one of them with two more minutes.
+    const teams = v.teams.map((r, i) =>
+      i < 30
+        ? rec({ ...r.team, stageIndex: tpl.stages.length, escapedAt: 60_000 + i })
+        : i === 39
+          ? rec({ ...r.team, adjustMs: 120_000 })
+          : r,
+    );
+    const board = boardOf({ ...v, teams });
+    expect(board.teams).toHaveLength(RACE_BOARD_TEAMS);
+    expect(board.teams.every((t) => t.escaped)).toBe(true);
+    const last = boardOf({ ...v, teams: [teams[39]] }).teams[0];
+    expect(board.session!.totals).toMatchObject({
+      escaped: 30,
+      playing: 10,
+      latest: { remainingMs: last.remainingMs, deadlineAt: last.deadlineAt },
+    });
+    // Every team out (escaped or timed out): none plays.
+    const done = teams.map((r) => (r.team.escapedAt === null ? { ...r, timedOut: true } : r));
+    expect(boardOf({ ...v, teams: done }).session!.totals).toMatchObject({
+      playing: 0,
+      latest: null,
+    });
+    // Other session types carry the same counts.
+    const hosted = boardOf({
+      ...v,
+      teams,
+      session: { ...raceSession, type: 'hosted', race: null },
+    });
+    expect(hosted.session!.totals).toMatchObject({ playing: 10 });
+  });
+
+  it('a player of the room in no team reads the finale without host columns (a race: its top teams)', () => {
+    const v = { ...soloView(40), run: { ...running, phase: 'finale' as const } };
+    const teams = v.teams.map((r) =>
+      rec({ ...r.team, adjustMs: 60_000, hostUnlocks: ['x'], paidHints: ['h'] }),
+    );
+    const finale = finaleOf({ ...v, teams }, 'g1');
+    expect(finale.ranking[0]).toMatchObject({ adjustMs: 60_000, hostUnlocks: 1, paidHints: 1 });
+    const limits = { boardTeams: 30, boardEveryMs: 1000, finaleTop: RACE_FINALE_TOP };
+    const open = publicFinaleOf(finale, limits);
+    expect(open.ranking).toHaveLength(RACE_FINALE_TOP);
+    expect(open.totalTeams).toBe(40);
+    for (const r of open.ranking) {
+      expect(r).toMatchObject({ adjustMs: 0, hostUnlocks: 0, paidHints: 0 });
+    }
+    expect(publicFinaleOf(finale, null).ranking).toHaveLength(40);
   });
 
   it('other session types keep every team on the board', () => {

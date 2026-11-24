@@ -273,11 +273,17 @@ export function placesOf(v: RunView): { summary: EscapeTeamSummary; place: numbe
 
 export function boardOf(v: RunView): EscapeBoard {
   const limits = viewLimits(v);
-  const teams = limits
-    ? placesOf(v)
-        .slice(0, limits.boardTeams)
-        .map((p) => p.summary)
-    : v.teams.map((r) => teamSummaryOf(v, r));
+  const all = limits ? placesOf(v).map((p) => p.summary) : v.teams.map((r) => teamSummaryOf(v, r));
+  const teams = limits ? all.slice(0, limits.boardTeams) : all;
+  // Of every team, listed or not: a race's top teams may all be out while others play.
+  const playing = all.filter((t) => !t.escaped && !t.timedOut);
+  const deadlines = playing.flatMap((t) => (t.deadlineAt === null ? [] : [t.deadlineAt]));
+  const latest = playing.length
+    ? {
+        remainingMs: Math.max(...playing.map((t) => t.remainingMs)),
+        deadlineAt: deadlines.length ? Math.max(...deadlines) : null,
+      }
+    : null;
   return {
     gameId: v.id,
     session: v.session && {
@@ -287,6 +293,8 @@ export function boardOf(v: RunView): EscapeBoard {
         teams: v.teams.length,
         players: v.players.length,
         escaped: v.teams.filter((r) => r.team.escapedAt !== null).length,
+        playing: playing.length,
+        latest,
       },
     },
     phase: v.run.phase,
@@ -463,8 +471,31 @@ function hostLockOf(l: Lock, seed: string): EscapeHostLock {
   }
 }
 
-/** The frozen template for the host console, without any answer (M5 §1.4). `gameId`: the run's. */
-export function hostOutlineOf(snap: EscapeSnapshot, gameId: string): EscapeHostOutline {
+/**
+ * The frozen template for the host console, without any answer (M5 §1.4). `gameId`: the run's.
+ * `playing`: for a host who also plays in the room (group play), without what a
+ * player has not seen yet: no clue, no stage intro or unlock text, no hint text.
+ */
+export function hostOutlineOf(
+  snap: EscapeSnapshot,
+  gameId: string,
+  playing = false,
+): EscapeHostOutline {
+  const full = fullOutlineOf(snap, gameId);
+  if (!playing) return full;
+  return {
+    ...full,
+    stages: full.stages.map((s) => ({
+      ...s,
+      intro: '',
+      unlockText: '',
+      clues: [],
+      hints: s.hints.map((h) => ({ ...h, text: '' })),
+    })),
+  };
+}
+
+function fullOutlineOf(snap: EscapeSnapshot, gameId: string): EscapeHostOutline {
   const t = snap.template;
   return {
     templateId: snap.templateId,
@@ -541,6 +572,19 @@ export function finaleFor(
   const own = finale.ranking.find((r) => r.teamId === teamId);
   const ranking = own && !top.includes(own) ? [...top, own] : top;
   return { ...finale, ranking, totalTeams: finale.ranking.length };
+}
+
+/**
+ * The finale for a player of the room who was in no team: the phone's (a
+ * race's top teams), without the host columns a screen never gets either
+ * (`adjustMs`, `hostUnlocks`, `paidHints`), in the phone's shape.
+ */
+export function publicFinaleOf(finale: EscapeFinale, limits: SessionLimits | null): EscapeFinale {
+  const trimmed = finaleFor(finale, null, limits);
+  return {
+    ...trimmed,
+    ranking: trimmed.ranking.map((r) => ({ ...r, adjustMs: 0, hostUnlocks: 0, paidHints: 0 })),
+  };
 }
 
 /**

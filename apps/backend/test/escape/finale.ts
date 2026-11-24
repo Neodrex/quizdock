@@ -237,6 +237,34 @@ export function finaleTests(ctx: EscapeContext): void {
     });
   });
 
+  it('escape:results: a player of the room in no team (joined in the finale) reads the finale without host columns, while the run is the room’s', async () => {
+    const { pin, host, players } = await runningRoom(ctx, { players: 1, teams: 1 });
+    const id = await gameId(pin);
+    const lock = ctx.vault.stages[0].locks[0].id;
+    expect(await host.emitWithAck('escape:unlock', { pin, teamId: 't1', lockId: lock })).toEqual({
+      ok: true,
+    });
+    const finale = finaleOn(players[0].socket);
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    const f = await finale;
+    expect(f.ranking[0].hostUnlocks).toBe(1);
+    const late = await joinAndSync(ctx.h, pin, 'Late');
+    expect(late.last()).toMatchObject({ phase: 'finale', team: null });
+    const ask = () =>
+      late.socket.emitWithAck('escape:results', { gameId: id, sessionToken: late.sessionToken });
+    expect(await ask()).toEqual({
+      ok: true,
+      finale: { ...f, ranking: [{ ...f.ranking[0], hostUnlocks: 0, adjustMs: 0, paidHints: 0 }] },
+    });
+    // Without its token, or once the room moved on: refused, as before.
+    expect(await late.socket.emitWithAck('escape:results', { gameId: id })).toMatchObject({
+      ok: false,
+      error: { code: 'escape.not_in_room' },
+    });
+    expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
+    expect(await ask()).toMatchObject({ ok: false, error: { code: 'escape.not_in_room' } });
+  });
+
   it("escape:results: the run's host reads them on a new socket after the room closed; nobody else does", async () => {
     const { pin, host, players } = await runningRoom(ctx, { players: 1, teams: 1 });
     const id = await gameId(pin);

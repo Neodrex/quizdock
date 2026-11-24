@@ -138,7 +138,8 @@ export function GiveHintButton({
         onConfirm={() => asking && void confirm(asking.id)}
         onCancel={() => setAsking(null)}
       >
-        {asking ? (
+        {/* No text: a host who plays (group play) does not read a hint before its team. */}
+        {asking?.text ? (
           <blockquote className="border-l-4 pl-3 text-sm italic">{asking.text}</blockquote>
         ) : null}
       </ConfirmDialog>

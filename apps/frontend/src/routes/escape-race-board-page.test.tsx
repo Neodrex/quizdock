@@ -137,7 +137,7 @@ const lobbyRoom = { state: 'LOBBY', questionIndex: -1, totalQuestions: 0 };
 const raceOf = (over: Partial<EscapeBoardSession> = {}): EscapeBoardSession => ({
   type: 'race',
   startsAt: null,
-  totals: { teams: 42, players: 44, escaped: 0 },
+  totals: { teams: 42, players: 44, escaped: 0, playing: 42, latest: null },
   ...over,
 });
 
@@ -267,7 +267,11 @@ describe('/race/$pin, the public race board', () => {
     await sync(
       boardOf({
         phase: 'forming',
-        session: { type: 'hosted', startsAt: null, totals: { teams: 1, players: 1, escaped: 0 } },
+        session: {
+          type: 'hosted',
+          startsAt: null,
+          totals: { teams: 1, players: 1, escaped: 0, playing: 1, latest: null },
+        },
       }),
       lobbyRoom,
     );
@@ -302,7 +306,11 @@ describe('/race/$pin, the public race board', () => {
     await sync(
       boardOf({
         phase: 'forming',
-        session: { type: 'group', startsAt: null, totals: { teams: 0, players: 0, escaped: 0 } },
+        session: {
+          type: 'group',
+          startsAt: null,
+          totals: { teams: 0, players: 0, escaped: 0, playing: 0, latest: null },
+        },
       }),
       lobbyRoom,
     );

@@ -34,6 +34,8 @@ export interface EscapeUi {
   assertive: Announcement | null;
   /** `waiting`: the room ended before the finale came (§1.4). */
   ended: 'none' | 'waiting' | 'final';
+  /** In the finale phase, the results could not be read after every try: no spinner for ever. */
+  resultsMissing: boolean;
   /** Released hints known to be free (timed) or paid, from the update that brought them. */
   hintTags: Record<string, 'free' | 'paid'>;
   /** The next announcement's id. */
@@ -48,6 +50,8 @@ export type EscapeAction =
   /** `escape:closed`: the host stopped the run, which is discarded. */
   | { type: 'stopped' }
   | { type: 'finaleTimeout' }
+  /** In the finale phase, the results could not be read after every try. */
+  | { type: 'finaleMissing' }
   | { type: 'submitAck'; lockId: string; ack: EscapeSubmitAck }
   | { type: 'hintAck'; ack: EscapeAskHintAck }
   | { type: 'clockWarning'; minutes: number }
@@ -60,6 +64,7 @@ export const initialEscapeUi: EscapeUi = {
   polite: [],
   assertive: null,
   ended: 'none',
+  resultsMissing: false,
   hintTags: {},
   seq: 1,
 };
@@ -176,7 +181,12 @@ export function escapeReducer(ui: EscapeUi, a: EscapeAction): EscapeUi {
     case 'finale':
       // A late finale of the room's last run, once a new one is on: not ours.
       if (ui.state && a.finale.gameId !== ui.state.gameId) return ui;
-      return { ...ui, finale: a.finale, ended: ui.ended === 'waiting' ? 'final' : ui.ended };
+      return {
+        ...ui,
+        finale: a.finale,
+        resultsMissing: false,
+        ended: ui.ended === 'waiting' ? 'final' : ui.ended,
+      };
     case 'gameEnded': {
       if (ui.finale) return { ...ui, ended: 'final' };
       // Something was played, so results may still come (or be fetched): wait for them.
@@ -187,6 +197,9 @@ export function escapeReducer(ui: EscapeUi, a: EscapeAction): EscapeUi {
       return initialEscapeUi;
     case 'finaleTimeout':
       return ui.ended === 'waiting' ? { ...ui, ended: 'final' } : ui;
+    case 'finaleMissing':
+      // The page says the game is over; a finale read later (the next attach) still shows.
+      return ui.finale ? ui : { ...ui, resultsMissing: true };
     case 'submitAck':
       if (a.ack.ok) return a.ack.outcome === 'wrong' ? say(ui, 'announce.wrong') : ui;
       if (a.ack.reason === 'rate-limited') {

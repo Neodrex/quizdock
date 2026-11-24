@@ -73,6 +73,7 @@ import {
   raceResultsOf,
   playerStateOf,
   finaleFor,
+  publicFinaleOf,
   type RunView,
   screenFinaleOf,
   submitUpdateOf,
@@ -470,7 +471,12 @@ export class EscapeEngine implements OnModuleDestroy {
       if (hostConsole) {
         await socket.join(escapeRooms.host(pin));
         const v = await this.viewOf(ref);
-        socket.emit('escape:outline', hostOutlineOf(ref.snap, ref.id));
+        // Group play: the host competes. Once it plays (this socket, or its phone
+        // already synced), its outline holds nothing a player has not seen yet.
+        const plays =
+          v.session?.type === 'group' &&
+          (!!me || (!!v.session.phoneHostPlayerId && v.session.phoneHostUserId === data.user?.id));
+        socket.emit('escape:outline', hostOutlineOf(ref.snap, ref.id, plays));
         socket.emit('escape:host', hostStateOf(v));
         socket.emit('escape:board', boardOf(v));
         // M7 §1.7: a race whose start was missed (the host away then) starts now.
@@ -1520,22 +1526,30 @@ export class EscapeEngine implements OnModuleDestroy {
     const who = await this.wasInRun(socket, dto.sessionToken, id, pin);
     if (!who) throw new ForbiddenException('escape.not_in_room');
     // M7 §1.7: a race's phone gets the top teams and its own row, as at the finale.
-    if (who === 'host' || !stored.race) return stored.finale;
-    return finaleFor(stored.finale, who.teamId, limitsOf('race'));
+    if (who === 'host') return stored.finale;
+    const limits = stored.race ? limitsOf('race') : null;
+    if (who.teamId === null) return publicFinaleOf(stored.finale, limits);
+    return finaleFor(stored.finale, who.teamId, limits);
   }
 
-  /** How the socket was in the run: a phone of a team, the host, or not at all (null). */
+  /**
+   * How the socket was in the run: a phone of a team, a player of the room in no
+   * team (`teamId` null) while the run is still the room's game (a late joiner
+   * in the finale: it reads what a screen shows, `publicFinaleOf`), the host,
+   * or not at all (null).
+   */
   private async wasInRun(
     socket: EscapeSocket,
     sessionToken: string | undefined,
     id: GameId,
     pin: string,
-  ): Promise<{ teamId: string } | 'host' | null> {
+  ): Promise<{ teamId: string | null } | 'host' | null> {
     const session = sessionToken ? await this.game.resolveSession(sessionToken) : null;
     if (session) {
-      const teamId =
-        session.pin === pin ? await this.store.teamOfPlayer(id, session.playerId) : null;
-      return teamId === null ? null : { teamId };
+      if (session.pin !== pin) return null;
+      const teamId = await this.store.teamOfPlayer(id, session.playerId);
+      if (teamId !== null) return { teamId };
+      return (await this.game.getMeta(pin))?.id === id ? { teamId: null } : null;
     }
     if (socket.data.playerId) return null;
     // Never a screen (spectator:join sets `projection`), even one signed in as the

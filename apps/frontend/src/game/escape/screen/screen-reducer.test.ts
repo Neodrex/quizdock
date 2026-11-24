@@ -9,6 +9,7 @@ import {
   lanesOf,
   lastSecondsOf,
   lobbyOf,
+  allOutOf,
   finalMinutesOf,
   ownTimeOf,
   screenReducer,
@@ -308,6 +309,43 @@ describe('showClockOf', () => {
       deadlineAt: NOW + 12 * MIN,
       paused: false,
     });
+  });
+
+  it('a race whose listed leaders are all out while others play: the clock and "all out" follow the room’s totals', () => {
+    const out = [
+      { ...red, escaped: true, escapedAtMs: 5 * MIN },
+      { ...blue, escaped: true, escapedAtMs: 6 * MIN },
+    ];
+    const totals = { teams: 40, players: 40, escaped: 30 };
+    const latest = { remainingMs: 22 * MIN, deadlineAt: NOW + 22 * MIN };
+    const race = (playing: number) => ({
+      ...running(out),
+      session: {
+        type: 'race' as const,
+        startsAt: null,
+        totals: { ...totals, playing, latest: playing ? latest : null },
+      },
+    });
+    expect(showClockOf(race(10), NOW + MIN)).toEqual({
+      remainingMs: 21 * MIN,
+      deadlineAt: NOW + 22 * MIN,
+      paused: false,
+    });
+    expect(allOutOf(race(10))).toBe(false);
+    expect(finalMinutesOf(race(10), NOW + MIN)).toBe(false);
+    // Paused: frozen on the room's time left.
+    const paused = { ...race(10), clock: { ...race(10).clock, paused: true } };
+    expect(showClockOf(paused, NOW + MIN)).toEqual({
+      remainingMs: 22 * MIN,
+      deadlineAt: null,
+      paused: true,
+    });
+    // The last one out: no clock, all out.
+    expect(showClockOf(race(0), NOW + MIN)).toBeNull();
+    expect(allOutOf(race(0))).toBe(true);
+    // No session (an older room): the listed teams decide.
+    expect(allOutOf(running(out))).toBe(true);
+    expect(allOutOf(running([red, blue]))).toBe(false);
   });
 
   it('freezes while paused', () => {

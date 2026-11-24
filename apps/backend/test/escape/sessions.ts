@@ -1,5 +1,6 @@
 import {
   type EscapeFinale,
+  type EscapeHostOutline,
   type EscapeHostState,
   type EscapePlayerState,
   GameState,
@@ -823,6 +824,26 @@ export function phoneHostTests(ctx: EscapeContext): void {
     const events = seen.map(([e]) => e);
     for (const e of ['escape:outline', 'escape:host', 'escape:board', 'escape:state']) {
       expect(events).toContain(e);
+    }
+    // It competes: its outline holds no clue, unlock text or hint text (it has the locks).
+    const outlines = async (s: Socket) => {
+      const got = record(s);
+      expect(await s.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+      s.offAny();
+      return got.filter(([e]) => e === 'escape:outline').map(([, o]) => o as EscapeHostOutline);
+    };
+    const console2 = ctx.h.connectHost();
+    expect(await console2.emitWithAck('host:attach', { pin })).toMatchObject({ ok: true });
+    // The phone's own socket, and the same user's console opened next to it.
+    for (const [outline] of [await outlines(host), await outlines(console2)]) {
+      expect(outline.stages).toHaveLength(tpl.stages.length);
+      expect(outline.stages[0].locks).toHaveLength(tpl.stages[0].locks.length);
+      const json = JSON.stringify(outline);
+      for (const s of tpl.stages) {
+        expect(json).not.toContain(JSON.stringify(s.unlockText).slice(1, -1));
+        for (const c of s.clues) expect(json).not.toContain(JSON.stringify(c.body).slice(1, -1));
+        for (const h of s.hints) expect(json).not.toContain(JSON.stringify(h.text).slice(1, -1));
+      }
     }
     const id = await gameIdOf(pin);
     expect(await inRoom(escapeRooms.host(pin), host.id)).toBe(true);

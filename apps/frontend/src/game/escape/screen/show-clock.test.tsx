@@ -132,6 +132,30 @@ describe('ShowClock', () => {
     expect(screen.getByRole('timer')).toHaveAttribute('data-final', 'false');
   });
 
+  it('a race whose listed leaders are out while others play: the clock runs on, not "Every team is out"', () => {
+    const board = running(20 * MIN);
+    const race = {
+      ...board,
+      teams: board.teams.map((tm) => ({ ...tm, escaped: true, escapedAtMs: 10 * MIN })),
+      session: {
+        type: 'race' as const,
+        startsAt: null,
+        totals: {
+          teams: 40,
+          players: 40,
+          escaped: 30,
+          playing: 10,
+          latest: { remainingMs: 20 * MIN, deadlineAt: NOW + 20 * MIN },
+        },
+      },
+    };
+    const { rerender } = drawEn(<ShowClock board={race} now={NOW} />);
+    expect(screen.queryByText('Every team is out')).toBeNull();
+    expect(digits()).toHaveTextContent('20:00');
+    rerender(el(race, NOW + 5 * MIN));
+    expect(digits()).toHaveTextContent('15:00');
+  });
+
   it('labels the time for a screen reader once a minute', () => {
     const board = running(20 * MIN + 30_000);
     const { rerender } = drawEn(<ShowClock board={board} now={NOW} />);

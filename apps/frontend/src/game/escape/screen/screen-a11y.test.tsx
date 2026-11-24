@@ -256,7 +256,11 @@ describe('the layout fits 16:9, 16:10 and 4:3 without a scroll', () => {
 
   it('a race board: its 30 leaders by place fit 4 columns of 8, the rest counted', () => {
     const board = boardOf({
-      session: { type: 'race', startsAt: null, totals: { teams: 212, players: 300, escaped: 0 } },
+      session: {
+        type: 'race',
+        startsAt: null,
+        totals: { teams: 212, players: 300, escaped: 0, playing: 212, latest: null },
+      },
       teams: Array.from({ length: 30 }, (_, i) =>
         summaryOf({ id: `t${i}`, name: `Team ${i}`, locksSolved: i % 3 }),
       ),
@@ -278,7 +282,7 @@ describe('the layout fits 16:9, 16:10 and 4:3 without a scroll', () => {
       session: {
         type: 'race',
         startsAt: NOW + 5 * MIN,
-        totals: { teams: 0, players: 44, escaped: 0 },
+        totals: { teams: 0, players: 44, escaped: 0, playing: 0, latest: null },
       },
     });
     drawEn(<ScreenLobby board={board} pin="482913" view={{ joinBaseUrl: null }} />);

@@ -192,7 +192,7 @@ export function TeamDetail({
           <ol className="flex flex-col gap-2 text-sm">
             {released.map((h) => (
               <li key={h.id} className="rounded-md border p-2">
-                <p>{h.text}</p>
+                {h.text ? <p>{h.text}</p> : null}
                 <p className="text-muted-foreground text-xs">
                   {sourceText(t, team.paidHintIds.includes(h.id), hintSources?.[h.id], h.penaltyS)}
                 </p>
@@ -213,7 +213,7 @@ export function TeamDetail({
               <p className="text-xs font-medium">
                 {t('host.detail.nextHint', { seconds: next.penaltyS })}
               </p>
-              <p>{next.text}</p>
+              {next.text ? <p>{next.text}</p> : null}
             </div>
           ) : (
             <p className="text-muted-foreground text-sm">{t('host.detail.noHintsLeft')}</p>

@@ -215,12 +215,31 @@ function remainingOf(t: EscapeTeamSummary, now: number, paused: boolean): number
 }
 
 /**
- * The run clock: the latest deadline among the teams still playing, which is when the
- * run ends. Frozen while paused. Null before the run, after it, or with no team playing.
+ * How many teams still play: the room's count when the board carries it (a race
+ * lists its top teams only, and they may all be out while others play), else the
+ * listed teams'.
+ */
+export function playingOf(board: EscapeBoard): number {
+  return board.session?.totals.playing ?? board.teams.filter(playing).length;
+}
+
+/** The run plays and every team of the room is out (escaped or out of time). */
+export function allOutOf(board: EscapeBoard): boolean {
+  return board.phase === 'running' && board.teams.length > 0 && playingOf(board) === 0;
+}
+
+/**
+ * The run clock: the latest deadline among the teams still playing (listed or, from
+ * the room's totals, not), which is when the run ends. Frozen while paused. Null
+ * before the run, after it, or with no team playing.
  */
 export function showClockOf(board: EscapeBoard, now: number): ShowClock | null {
   if (board.phase !== 'running') return null;
-  const left = board.teams.filter(playing);
+  const latest = board.session?.totals.latest;
+  const left: Pick<EscapeTeamSummary, 'remainingMs' | 'deadlineAt'>[] = [
+    ...board.teams.filter(playing),
+    ...(latest ? [latest] : []),
+  ];
   if (!left.length) return null;
   const paused = board.clock.paused;
   const deadlines = left.map((t) => t.deadlineAt).filter((d): d is number => d !== null);

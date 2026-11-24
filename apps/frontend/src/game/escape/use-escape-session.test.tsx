@@ -50,6 +50,7 @@ vi.mock('./escape-record', async (orig) => {
 import { loadEscapeRecord, saveEscapeRecord } from './escape-record';
 import {
   FINALE_GRACE_MS,
+  FINALE_RETRY_MS,
   SYNC_RETRY_MS,
   type EscapeSessionSeam,
   useEscapeSession,
@@ -400,6 +401,50 @@ describe('useEscapeSession', () => {
     await flush();
     expect(sent('escape:results')).toHaveLength(1);
     expect(result.current.ui.finale).toEqual(finale);
+  });
+
+  it('the finale phase with no finale: a failed read is tried again with a backoff, a bounded number of times, then on the next attach', async () => {
+    vi.useFakeTimers();
+    acks.set('escape:results', () => ({ ok: false, error: { code: 'escape.not_in_room' } }));
+    const { result, rerender } = mount(seam({ attachSeq: 1 }));
+    await flush();
+    fire('escape:state', state({ phase: 'finale' }));
+    await flush();
+    expect(sent('escape:results')).toHaveLength(1);
+    for (const [i, ms] of FINALE_RETRY_MS.entries()) {
+      expect(result.current.ui.resultsMissing).toBe(false);
+      await act(() => vi.advanceTimersByTimeAsync(ms - 1));
+      expect(sent('escape:results')).toHaveLength(i + 1);
+      await act(() => vi.advanceTimersByTimeAsync(1));
+      expect(sent('escape:results')).toHaveLength(i + 2);
+    }
+    // Every try failed: no more, and the page stops waiting.
+    await act(() => vi.advanceTimersByTimeAsync(120_000));
+    expect(sent('escape:results')).toHaveLength(FINALE_RETRY_MS.length + 1);
+    expect(result.current.ui).toMatchObject({ resultsMissing: true, finale: null, ended: 'none' });
+    // A reconnect reads again, and the finale shows.
+    acks.set('escape:results', () => ({ ok: true, finale }));
+    rerender(seam({ attachSeq: 2 }));
+    await flush();
+    expect(sent('escape:results')).toHaveLength(FINALE_RETRY_MS.length + 2);
+    expect(result.current.ui).toMatchObject({ resultsMissing: false, finale, ended: 'none' });
+  });
+
+  it('the finale phase: a read that works on its second try shows the finale', async () => {
+    vi.useFakeTimers();
+    let n = 0;
+    acks.set('escape:results', () =>
+      ++n === 1 ? { ok: false, error: { code: 'escape.not_found' } } : { ok: true, finale },
+    );
+    const { result } = mount(seam({ attachSeq: 1 }));
+    await flush();
+    fire('escape:state', state({ phase: 'finale' }));
+    await flush();
+    expect(result.current.ui.finale).toBeNull();
+    await act(() => vi.advanceTimersByTimeAsync(FINALE_RETRY_MS[0]));
+    expect(result.current.ui.finale).toEqual(finale);
+    await act(() => vi.advanceTimersByTimeAsync(120_000));
+    expect(sent('escape:results')).toHaveLength(2);
   });
 
   it('submit sends the try and resolves its ack, a rate limit included', async () => {

@@ -317,8 +317,19 @@ export interface EscapeBoardSession {
   type: EscapeSessionType;
   /** A scheduled race's start (server epoch ms): the lobby counts down to it. */
   startsAt: number | null;
-  /** The whole room, also when `teams` holds only a race's top teams. */
-  totals: { teams: number; players: number; escaped: number };
+  /**
+   * The whole room, also when `teams` holds only a race's top teams. `playing`:
+   * teams neither escaped nor timed out, and `latest` the latest deadline among
+   * them (null: none plays): the screen's clock and its "all out" read these, as
+   * the teams still playing may all be outside the listed ones.
+   */
+  totals: {
+    teams: number;
+    players: number;
+    escaped: number;
+    playing: number;
+    latest: EscapeTeamClock | null;
+  };
 }
 
 /** A hosted event's brand as every client shows it (M7 §1.9): no licence details. */
@@ -498,7 +509,11 @@ export interface EscapeHostStage {
   hints: EscapeStageContent['hints'];
 }
 
-/** The frozen template without its answers: host console only (M5 owner question 1). */
+/**
+ * The frozen template without its answers: host console only (M5 owner question 1).
+ * Group play's host who also plays in the room gets it without what a player has
+ * not seen yet: no clue, no stage intro or unlock text, and every hint's text empty.
+ */
 export interface EscapeHostOutline {
   templateId: string;
   version: number;

@@ -73,9 +73,12 @@ export function EscapePlayer({
     screen = (
       <EscapeFinaleView finale={ui.finale} myTeamId={myTeamId} closed={ui.ended === 'final'} />
     );
-  } else if (ui.ended === 'waiting' || (state?.phase === 'finale' && ui.ended === 'none')) {
+  } else if (
+    !ui.resultsMissing &&
+    (ui.ended === 'waiting' || (state?.phase === 'finale' && ui.ended === 'none'))
+  ) {
     screen = <Waiting text={t('end.resultsComing')} />;
-  } else if (ui.ended === 'final') {
+  } else if (ui.ended === 'final' || ui.resultsMissing) {
     screen = (
       <section className="my-auto flex flex-col items-center gap-4 text-center">
         <p className="text-xl font-semibold">{t('end.over')}</p>

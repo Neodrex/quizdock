@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { useMotionLevel } from '../../motion/level';
 import { formatClock } from '../team-timer';
-import { finalMsOf, LAST_SECONDS_MS, showClockOf } from './screen-reducer';
+import { allOutOf, finalMsOf, LAST_SECONDS_MS, showClockOf } from './screen-reducer';
 
 /**
  * The run clock (M6 Task 6.10): the time left to the latest deadline of the teams
@@ -19,10 +19,7 @@ export function ShowClock({ board, now }: { board: EscapeBoard; now: number }) {
   const { t } = useTranslation('escape');
   const level = useMotionLevel();
   const show = showClockOf(board, now);
-  const allOut =
-    board.phase === 'running' &&
-    board.teams.length > 0 &&
-    board.teams.every((tm) => tm.escaped || tm.timedOut);
+  const allOut = allOutOf(board);
   const remainingMs = show
     ? show.remainingMs
     : allOut

@@ -21,6 +21,8 @@ import { type EscapeAction, escapeReducer, initialEscapeUi } from './escape-redu
 
 /** How long a phone waits for the finale after `game:ended` before fetching it (§1.4). */
 export const FINALE_GRACE_MS = 3000;
+/** In the finale phase with no finale: the waits before each further fetch, then no more. */
+export const FINALE_RETRY_MS = [2000, 5000, 10_000, 20_000];
 
 export { SYNC_RETRY_MS };
 
@@ -46,8 +48,6 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
   const stateRef = useRef<EscapePlayerState | null>(null);
   // Bumped on each escape:state: a state that came makes a sync with no answer moot.
   const statesRef = useRef(0);
-  // The run whose results were already asked for (the finale phase after a reload).
-  const fetchedRef = useRef<string | null>(null);
 
   // My player id: this room's session, or the record when the session is another room's.
   const me = () => {
@@ -169,16 +169,30 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
     };
   }, [ui.ended, gameId, fetchResults, tokenFor]);
 
-  // A phone back in the finale phase got the state, not the finale: fetch it once.
+  // A phone back in the finale phase got the state, not the finale: fetch it. A failed
+  // read is tried again a few times (FINALE_RETRY_MS), and from the start on each
+  // attach (a reconnect); with none left, the phone says the game is over.
   const phase = ui.state?.phase;
   const hasFinale = ui.finale !== null;
+  const attachSeq = session.attachSeq;
   useEffect(() => {
-    if (phase !== 'finale' || hasFinale || !gameId || fetchedRef.current === gameId) return;
-    fetchedRef.current = gameId;
-    void fetchResults(gameId, tokenFor()).then((finale) => {
-      if (finale) dispatch({ type: 'finale', finale });
-    });
-  }, [phase, hasFinale, gameId, fetchResults, tokenFor]);
+    if (phase !== 'finale' || hasFinale || !gameId) return;
+    let live = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const attempt = (n: number) =>
+      void fetchResults(gameId, tokenFor()).then((finale) => {
+        if (!live) return;
+        if (finale) dispatch({ type: 'finale', finale });
+        else if (n < FINALE_RETRY_MS.length) {
+          timer = setTimeout(() => attempt(n + 1), FINALE_RETRY_MS[n]);
+        } else dispatch({ type: 'finaleMissing' });
+      });
+    attempt(0);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [phase, hasFinale, gameId, fetchResults, tokenFor, attachSeq]);
 
   const socket = async () => socketRef.current ?? ensureGameSocket('guest', pin);
 
