@@ -8,7 +8,7 @@
       "memGb": 8,
       "node": "v24.22.3",
       "commit": "0018832",
-      "backendCommit": ".ab/b2"
+      "backendCommit": "3758df4"
     },
     "cpuCap": "none (native, M1 8 cores)",
     "scenario": "race-solo",
@@ -21,7 +21,7 @@
       "cpu-cap": "none (native, M1 8 cores)",
       "criteria": "local",
       "out": "/Volumes/Crucial X9/Projects/claude-escape-room/.tmp/escape-load/ab-parse-6-B.json",
-      "backend-commit": ".ab/b2",
+      "backend-commit": "3758df4",
       "think": "2-8",
       "join-rate": "10",
       "burst": false,

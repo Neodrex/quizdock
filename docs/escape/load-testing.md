@@ -335,7 +335,7 @@ backend with `SIGKILL` 300 s into the run and listening again 5 s later):
 | Timer hints after the restart | 48 (the tickers came back) |
 | Finale | at time-up, 901 s into the run, to all 500 phones (spread p95 16 ms) |
 | Submit ack p50 / p95 / p99 (ms) | before the kill 9 / 18 / 39 (220); the minute after 9 / 29 / 467 (133); later 12 / 32 / 111 (708); no lost ack |
-| `/health/ready` p95 (ms) | 7 (6 failures while the backend was down) |
+| `/health/ready` p95 (ms) | 7 (5 failures while the backend was down) |
 | The same run without the restart (control) | submit ack 15 / 32 / 160, `/health/ready` p95 7, finale at 901 s |
 
 The board interval criterion fails in these two runs by design of the pace:
@@ -366,13 +366,61 @@ drop, shows the restart itself adds only a short tail in the following minute.
   intervals in a 31 s run, the longest being the first, before any bot's first
   move (as in the baseline). The board criterion is meant for a run of some
   length; at the default pace it is 1.02 s.
-- **Hosted events are unchanged by design**: their console gets 20.7 frames a
-  second at the default pace and 92 (800 KB/s) at the stress pace, with the
-  board every 100 ms (4–6/s). No criterion covers it; it is a candidate for
-  the same coalescing if hosted events grow.
+- **Hosted events were unchanged by design here**: their console got 20.7
+  frames a second at the default pace and 92 (800 KB/s) at the stress pace,
+  with the board every 100 ms (4–6/s). The owner then asked for the same
+  coalescing as races (below).
 - The first hosted run of this series stalled during its joins (24 joins and
   the host's `escape:teams` lost, then 500 sockets dropped) while another
   process held five cores and the machine swapped; the bots' retry each second
   then made a storm of `player:reconnect` (each fanned out to every socket as
   `player:joined`, RSS 1.5 GB). The bots now back off as socket.io-client does
   (`0b3e2e7`), the run was discarded, and its rerun passes (above).
+
+### After the Batch 2 fix round: hosted events coalesced (2026-11-24)
+
+Owner decision: a hosted event's console gets its host frames held like a
+race's (`9c2aba7`). Team updates and details go out in one `escape:host-batch`
+at most every `hostEveryMs` (1 s, a race board's period), with the host state
+and the board on the same host lane. The screens keep their 100 ms board. A
+host command's result still reaches the console before its ack. Group play is
+unchanged. The same round fixed the order of held news (`6d7e201`: news that
+came while a flush read its view used to overtake the older news, and a failed
+flush dropped it) and sends what is held before `escape:finale`.
+
+Backend `351169b`, load tool `7a10dae`, the same machine and set-up (native,
+uncapped, freshly started, local Supabase stopped). macOS's `mediaanalysisd`
+(about 1.2 cores) ran during the runs. They waited until another session's
+video render had stopped.
+
+| hosted, 500 players | default before | default after | stress before | stress after |
+|---|--:|--:|--:|--:|
+| Run, s; submits | 187; 1094 | 187; 1096 | 36; 1097 | 37; 1094 |
+| Submit ack p50 / p95 / p99 (ms) | 15 / 27 / 106 | 11 / 19 / 54 | 12 / 62 / 93 | 7 / 19 / 35 |
+| Lost acks, unexpected refusals | 0, 0 | 0, 0 | 0, 0 | 0, 0 |
+| Team-update fan-out p95 (ms) | 27 | 18 | 61 | 19 |
+| Board interval p50 / p95 (ms, the screen) | 110 / 244 | 107 / 255 | 104 / 113 | 104 / 107 |
+| **Host frames/s (all; `escape:*`), KB/s** | 20.7 (20.0), 228.7 | **2.09** (1.35), 65.9 | 91.6 (87.9), 799.3 | **5.5** (1.67), 113.9 |
+| `/health/ready` p95 (ms) | 9 | 9 | 14 | 5 |
+| Backend CPU p50 / p95 | 11 / 22 | 9 / 20 | 12 / 49 | 11 / 31 |
+| RSS max (MB) | 466 | 456 | 335 | 447 |
+| Local criteria | PASS | PASS | PASS | PASS |
+
+Host frames per event, after (frames/s): default `escape:host-batch` 0.66,
+`escape:host` 0.34, `escape:board` 0.35, upstream `player:joined`/`player:left`
+0.37 each; stress `escape:host-batch` 0.82, `escape:host` 0.66,
+`escape:board` 0.19, `player:joined`/`player:left` 1.89 each.
+
+- **The hosted console now gets 2.1 frames a second at the default pace (20.7
+  before) and 5.5 at the stress pace (92 before).** Escape frames are 1.35 and
+  1.67 a second. The rest of the stress figure is upstream's `player:joined`
+  and `player:left`, one per reconnect, as in races (accepted, §0).
+- The screens' board is unchanged (p95 255 / 107 ms). Submit acks did not get
+  slower; the lower figures are within this machine's run-to-run noise.
+- The checks `two-phones`, `host-console` (now also checking that a hosted
+  console gets `escape:host-batch` and no per-change frames), `big-screen` and
+  `sessions` pass.
+- Raw JSON: `load-results/2026-11-24-fix-hosted.json`,
+  `load-results/2026-11-24-fix-stress-hosted.json`. The A/B JSON files of Task
+  9.4 now name their backends by commit (they had the dist folders).
+
