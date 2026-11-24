@@ -160,10 +160,15 @@ export function raceTests(ctx: EscapeContext): void {
     const game = ctx.h.app.get(GameService);
     const meta = await metaOf(pin);
     // The room is there for the first read, gone for the next.
-    jest.spyOn(game, 'getMeta').mockResolvedValueOnce(meta).mockResolvedValue(null);
+    const spy = jest.spyOn(game, 'getMeta').mockResolvedValueOnce(meta).mockResolvedValue(null);
     const engine = ctx.h.app.get(EscapeEngine) as unknown as {
-      boardNow(pin: string, what: { board: boolean; host: boolean }): Promise<void>;
+      currentView(pin: string): Promise<{ id: string } | null>;
     };
-    await expect(engine.boardNow(pin, { board: true, host: true })).resolves.toBeUndefined();
+    try {
+      await expect(engine.currentView(pin)).resolves.toMatchObject({ id: meta.id });
+      await expect(engine.currentView(pin)).resolves.toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
   });
 }

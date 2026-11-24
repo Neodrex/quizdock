@@ -631,6 +631,42 @@ export function raceSessionTests(ctx: EscapeContext): void {
     );
   });
 
+  it('a race’s held host news goes out before its finale, and nothing of the run after it (M9 fix round)', async () => {
+    const { host, pin } = await raceRoom('solo');
+    const players: SyncedPlayer[] = [];
+    for (let i = 0; i < 3; i++) players.push(await joinAndSync(ctx.h, pin, `F${i}`));
+    await start(host, pin, players);
+    await settle(1_100); // the start's frames are out of the window
+    const hostSeen = record(host);
+    // The first change opens the window; the others wait in it.
+    for (const p of players) {
+      await p.socket.emitWithAck('escape:submit', { pin, lockId: 'catalogue', input: '00' });
+    }
+    const ended = nextEvent<EscapeFinale>(host, 'escape:finale');
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    await ended;
+    await settle(2_200); // past any held period
+    const at = hostSeen.findIndex(([e]) => e === 'escape:finale');
+    const feed = [
+      'escape:host-batch',
+      'escape:host',
+      'escape:board',
+      'escape:team-update',
+      'escape:host-team',
+    ];
+    expect(hostSeen.slice(at + 1).filter(([e]) => feed.includes(e))).toEqual([]);
+    // Every team's wrong code came before the finale.
+    const updates = hostSeen
+      .slice(0, at)
+      .filter(([e]) => e === 'escape:host-batch')
+      .flatMap(([, b]) => (b as EscapeHostBatch).updates);
+    for (const p of players) {
+      expect(updates.filter((u) => u.teamId === p.last().team!.id).map((u) => u.kind)).toEqual([
+        'wrong',
+      ]);
+    }
+  });
+
   it('escape:results in a race: a phone gets the top teams and its own row, the host all', async () => {
     const { host, pin } = await raceRoom('solo');
     const players: SyncedPlayer[] = [];
