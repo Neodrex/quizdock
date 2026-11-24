@@ -217,6 +217,8 @@ export class GameEngine {
   afterBan?: (ref: { pin: string; id: GameId }, playerId: string) => Promise<void>;
   /** Set by EscapeEngine: awaited before `host:back-to-lobby` stops an escape run (it is discarded). */
   beforeStop?: (ref: { pin: string; id: GameId }) => Promise<void>;
+  /** Set by EscapeEngine: awaited once that stop has the room back in its lobby (the same escape room forms again). */
+  afterStop?: (ref: { pin: string; id: GameId }) => Promise<void>;
   /** Set by EscapeEngine: whether the host window leaves an escape room open (a race before its start). */
   keepOrphaned?: (ref: { pin: string; id: GameId }) => Promise<boolean>;
   /** Per room, when the answer count last went out, and whether one waits (`countAnswers`). */
@@ -1838,6 +1840,7 @@ export class GameEngine {
       throw err;
     }
     await this.sendLobby(pin);
+    if (meta.kind === 'escape') await this.runHook('afterStop', this.afterStop?.(refOf(pin, meta)));
   }
 
   /**

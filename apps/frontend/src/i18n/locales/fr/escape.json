@@ -340,7 +340,7 @@
       "endConfirm": "Terminer maintenant",
       "stop": "Arrêter la partie",
       "stopTitle": "Arrêter la partie et l’abandonner ?",
-      "stopDescription": "La partie s’arrête maintenant pour toutes les équipes et rien n’en est conservé : ni finale, ni résultats. Tout le monde revient au salon. Pour terminer plus tôt en gardant les résultats, utilisez « Terminer la partie ».",
+      "stopDescription": "La partie s’arrête maintenant pour toutes les équipes et rien n’en est conservé : ni finale, ni résultats. Tout le monde revient au salon du même jeu, prêt pour un nouveau départ. Pour terminer plus tôt en gardant les résultats, utilisez « Terminer la partie ».",
       "stopConfirm": "Arrêter et abandonner"
     },
     "results": {

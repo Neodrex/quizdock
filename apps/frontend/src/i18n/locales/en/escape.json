@@ -333,7 +333,7 @@
       "endConfirm": "End now",
       "stop": "Stop the run",
       "stopTitle": "Stop the run and discard it?",
-      "stopDescription": "The run stops for every team now and nothing of it is kept: no finale, no results. Everyone goes back to the lobby. To end early and keep the results, use “End the run”.",
+      "stopDescription": "The run stops for every team now and nothing of it is kept: no finale, no results. Everyone goes back to the same escape room’s lobby, ready to start again. To end early and keep the results, use “End the run”.",
       "stopConfirm": "Stop and discard"
     },
     "results": {

@@ -179,6 +179,24 @@ describe('useEscapeScreen', () => {
       expect(result.current.stopped).toBe(false);
     });
 
+    it('a stop the server follows with the same escape room: the screen shows the new lobby, and a late escape:closed of the old run does not wipe it', async () => {
+      const { result, rerender } = mount(at(GameState.Escape));
+      await flush();
+      fire('escape:board', boardOf({ phase: 'running' }));
+      const next = 'a'.repeat(32);
+      fire('escape:closed', { gameId: GAME });
+      rerender(at(GameState.Lobby));
+      await flush();
+      fire('escape:board', boardOf({ gameId: next, phase: 'forming' }));
+      expect(result.current).toMatchObject({ active: true, stopped: false });
+      expect(result.current.ui.board).toMatchObject({ gameId: next, phase: 'forming' });
+      fire('escape:closed', { gameId: GAME });
+      expect(result.current).toMatchObject({ active: true, stopped: false });
+      expect(result.current.ui.board?.gameId).toBe(next);
+      expect(result.current.ui.finale).toBeNull();
+      expect(sent('escape:sync')).toHaveLength(1);
+    });
+
     it('the host leaving changes nothing', async () => {
       const { result, rerender } = mount(at(GameState.Escape));
       await flush();

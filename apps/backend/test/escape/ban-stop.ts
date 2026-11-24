@@ -6,6 +6,7 @@ import {
 } from '@quiz-dock/contracts';
 import type { Socket } from 'socket.io-client';
 import { EscapeEngine } from '../../src/escape/escape.engine';
+import { EscapeTimings } from '../../src/escape/escape-timings';
 import { EscapeStore } from '../../src/escape/escape.store';
 import { lostLibrary } from '../../src/escape/samples';
 import { GameEngine } from '../../src/game/game.engine';
@@ -174,49 +175,85 @@ export function stopTests(ctx: EscapeContext): void {
     library = await seedTemplate(ctx.h, lostLibrary);
   });
 
-  it('the run is discarded: everyone is told, nothing is stored or left in process, and the room opens a new run', async () => {
+  /** The escape and `game:state` events of `seen`, as short tags, in order. */
+  const tags = (seen: [string, unknown][]) =>
+    seen.flatMap(([e, p]) => {
+      const { gameId, phase, state, board } = (p ?? {}) as {
+        gameId?: string;
+        phase?: string;
+        state?: string;
+        board?: { phase?: string };
+      };
+      if (e === 'game:state') return [`state ${state}`];
+      if (!e.startsWith('escape:')) return [];
+      return [[e.slice(7), gameId, phase ?? board?.phase].filter(Boolean).join(' ')];
+    });
+  /** `a` then `b` are both in `list`, in that order. */
+  const inOrder = (list: string[], ...wanted: string[]) => {
+    let from = 0;
+    for (const w of wanted) {
+      const at = list.indexOf(w, from);
+      expect({ wanted: w, found: at >= 0, list }).toMatchObject({ wanted: w, found: true });
+      from = at + 1;
+    }
+  };
+
+  it('the run is discarded: everyone is told, nothing is stored or left in process, and the room forms the same escape room again on its own', async () => {
     const { host, pin, players, screen } = await runningRoom(ctx, { players: 2, teams: 1 });
     const [a] = players;
     const { id } = await metaOf(pin);
-    const finales: unknown[] = [];
-    for (const s of [host, a.socket, screen]) {
-      s.on('escape:finale', (f) => finales.push(f));
-      s.on('escape:screen-finale', (f) => finales.push(f));
-    }
-    const closed = [host, a.socket, players[1].socket, screen].map((s) =>
-      nextEvent<EscapeClosed>(s, 'escape:closed'),
-    );
-    const lobby = nextEvent<{ state: string }>(a.socket, 'game:state', {
-      where: (s) => s.state === GameState.Lobby,
-    });
+    const session = await store().session(pin);
+    await settle(100);
+    const seen = [host, a.socket, players[1].socket, screen].map((s) => record(s));
+    const port = (engine() as unknown as { licences: { check(): unknown; recordUse(): unknown } })
+      .licences;
+    const licence = [jest.spyOn(port, 'check'), jest.spyOn(port, 'recordUse')];
     expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
-    expect(await Promise.all(closed)).toEqual(Array(4).fill({ gameId: id }));
-    await lobby;
-    expect(finales).toEqual([]);
+    // The whole sequence is out before the ack: no console has to ask for anything.
+    const next = await metaOf(pin);
+    expect(next).toMatchObject({ kind: 'escape', state: GameState.Lobby, title: 'Vault Heist' });
+    expect(next.id).not.toBe(id);
+    await settle(150);
+    const [hostSeen, phone, other, board] = seen.map(tags);
+    for (const list of [hostSeen, phone, other, board]) {
+      expect(list.filter((t) => t.startsWith('closed'))).toEqual([`closed ${id}`]);
+      expect(list.filter((t) => /finale/.test(t))).toEqual([]);
+      // Nothing of the stopped run after its `escape:closed`.
+      const after = list.slice(list.indexOf(`closed ${id}`) + 1);
+      expect(after.filter((t) => t.includes(id))).toEqual([]);
+    }
+    const forming = `${next.id} forming`;
+    for (const list of [phone, other]) {
+      inOrder(list, `closed ${id}`, `state ${GameState.Lobby}`, 'look', `state ${forming}`);
+    }
+    inOrder(hostSeen, `closed ${id}`, `state ${GameState.Lobby}`, 'look', `host ${forming}`);
+    inOrder(board, `closed ${id}`, `state ${GameState.Lobby}`, `board ${forming}`);
+    // The players stay, unassigned: no team, progress, hint or clock of the stopped run.
+    expect(a.last()).toMatchObject({ gameId: next.id, phase: 'forming', team: null, view: null });
+    const run = (await store().run(next.id))!;
+    expect(run).toMatchObject({ phase: 'forming', teamIds: [] });
+    expect(run.clock).toMatchObject({ startedAt: 0, pausedMs: 0 });
+    expect((await store().snapshot(next.id))!.templateId).toBe(ctx.templateId);
+    // The session is the room's: kept as it was, and the re-open checks no licence.
+    expect(await store().session(pin)).toEqual(session);
+    for (const spy of licence) {
+      expect(spy).not.toHaveBeenCalled();
+      spy.mockRestore();
+    }
+
     expect(await store().run(id)).toBeNull();
     expect(await store().results(id)).toBeNull();
     expect(await store().teamOfPlayer(id, a.playerId)).toBeNull();
     await eventually(async () =>
-      expect(engine().inProcess(id, pin)).toEqual({
-        ticking: false,
-        gone: false,
-        board: false,
-        scheduled: false,
-        siteRetry: false,
-      }),
+      expect(engine().inProcess(id, pin)).toMatchObject({ ticking: false, gone: false }),
     );
-    // A restart finds nothing to revive.
+    // A restart finds nothing of the stopped run to revive.
     await (engine() as unknown as { recover(): Promise<void> }).recover();
     expect(engine().inProcess(id, pin).ticking).toBe(false);
     expect(await submitAs(a, pin, 'lobby-door', '0417')).toMatchObject({ ok: false });
     expect(await host.emitWithAck('escape:results', { gameId: id })).toMatchObject({ ok: false });
 
-    // The room is ready for a new run, with no stale state.
-    const forming = stateWhere(a.socket, (s) => s.phase === 'forming' && s.gameId !== id);
-    expect(await host.emitWithAck('escape:open', { pin, templateId: ctx.templateId })).toEqual({
-      ok: true,
-    });
-    expect((await forming).team).toBeNull();
+    // The new run forms and starts as any other.
     expect(await host.emitWithAck('escape:teams', { pin, mode: 'auto', count: 1 })).toEqual({
       ok: true,
     });
@@ -225,23 +262,144 @@ export function stopTests(ctx: EscapeContext): void {
     expect((await running).view!.stageIndex).toBe(0);
   });
 
-  it('a race: nothing is reported, and the room keeps its session', async () => {
+  it('a second console (not the one that stopped) follows to the new run with no command of its own', async () => {
+    const { host, pin } = await runningRoom(ctx, { players: 1, teams: 1 });
+    const { id } = await metaOf(pin);
+    const second = ctx.h.connectHost();
+    expect(await second.emitWithAck('host:attach', { pin })).toMatchObject({ ok: true });
+    expect(await second.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    const formed = nextEvent<EscapeHostState>(second, 'escape:host', {
+      where: (s) => s.gameId !== id && s.board.phase === 'forming',
+    });
+    expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
+    expect((await formed).teams).toEqual([]);
+  });
+
+  it('group play: the players are dealt into the new run’s team, and the look goes out', async () => {
+    const host = ctx.h.connectHost();
+    const { pin } = await createAs(host, library, 'group');
+    if (!pin) throw new Error('group refused');
+    expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    const a = await joinAndSync(ctx.h, pin, 'Ann');
+    const b = await joinAndSync(ctx.h, pin, 'Bob');
+    const running = stateWhere(a.socket, (s) => s.phase === 'running');
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    await running;
+    const { id } = await metaOf(pin);
+    const session = await store().session(pin);
+    await settle(100);
+    const seen = [a, b].map((p) => record(p.socket));
+    expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
+    const next = await metaOf(pin);
+    expect(next.kind).toBe('escape');
+    await settle(150);
+    for (const [i, p] of [a, b].entries()) {
+      inOrder(tags(seen[i]), `closed ${id}`, 'look', `state ${next.id} forming`);
+      expect(p.last()).toMatchObject({ gameId: next.id, phase: 'forming', view: null });
+      expect(
+        p
+          .last()
+          .team?.members.map((m) => m.playerId)
+          .sort(),
+      ).toEqual([a.playerId, b.playerId].sort());
+    }
+    expect((await store().run(next.id))!.teamIds).toHaveLength(1);
+    expect(await store().session(pin)).toEqual(session);
+    const again = stateWhere(a.socket, (s) => s.phase === 'running' && s.gameId === next.id);
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    expect((await again).view!.stageIndex).toBe(0);
+  });
+
+  it('a race: nothing is reported, the room keeps its session, and the new run forms until the host starts it', async () => {
     const { host, pin } = await soloRace(ctx, library);
     const a = await joinAndSync(ctx.h, pin, 'Ann');
     const running = stateWhere(a.socket, (s) => s.phase === 'running');
     expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
     await running;
     const { id } = await metaOf(pin);
+    const session = await store().session(pin);
     const report = jest.spyOn(engine() as unknown as { reportRace(): void }, 'reportRace');
     try {
       const closed = nextEvent<EscapeClosed>(a.socket, 'escape:closed');
+      const forming = stateWhere(a.socket, (s) => s.phase === 'forming' && s.gameId !== id);
       expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
       expect(await closed).toEqual({ gameId: id });
+      expect((await forming).team).toBeNull();
       expect(report).not.toHaveBeenCalled();
     } finally {
       report.mockRestore();
     }
-    expect(await store().session(pin)).toMatchObject({ type: 'race', race: { started: true } });
+    expect(await store().session(pin)).toEqual(session);
+    expect(session).toMatchObject({ type: 'race', race: { started: true } });
+    const next = await metaOf(pin);
+    expect(await store().run(next.id)).toMatchObject({ phase: 'forming', maxSize: 1, teamIds: [] });
+  });
+
+  it('a scheduled race stopped after its start time does not start again on its own: the host starts it', async () => {
+    const timings = ctx.h.app.get(EscapeTimings);
+    const saved = { raceMinLeadMs: timings.raceMinLeadMs };
+    Object.assign(timings, { raceMinLeadMs: 300 });
+    try {
+      const host = ctx.h.connectHost();
+      const { pin } = await createAs(host, library, 'race', {
+        race: { format: 'solo', startsAt: Date.now() + 500 },
+      });
+      if (!pin) throw new Error('race refused');
+      expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+      const a = await joinAndSync(ctx.h, pin, 'Ann');
+      await stateWhere(a.socket, (s) => s.phase === 'running');
+      const { id } = await metaOf(pin);
+      expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
+      const next = await metaOf(pin);
+      expect(next.id).not.toBe(id);
+      // A phone and the console sync again (a reload): neither starts it.
+      expect(await a.socket.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+      expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+      await settle(300);
+      expect((await store().run(next.id))!.phase).toBe('forming');
+      expect(engine().inProcess(next.id, pin)).toMatchObject({ ticking: false, scheduled: false });
+      // The host window treats it as any forming room: no scheduled start to wait for.
+      const waits = engine() as unknown as {
+        waitsForStart(p: string, i: string): Promise<boolean>;
+      };
+      expect(await waits.waitsForStart(pin, next.id)).toBe(false);
+      const running = stateWhere(a.socket, (s) => s.phase === 'running' && s.gameId === next.id);
+      expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+      await running;
+    } finally {
+      Object.assign(timings, saved);
+    }
+  });
+
+  it('a template that can no longer be opened: the stop still goes through, to the room’s plain lobby', async () => {
+    const gone = await seedTemplate(ctx.h, { ...lostLibrary, title: 'Withdrawn' });
+    const { host, pin, players } = await runningRoom(ctx, {
+      players: 1,
+      teams: 1,
+      templateId: gone,
+    });
+    const { id } = await metaOf(pin);
+    const session = await store().session(pin);
+    await ctx.h.prisma.escapeTemplate.update({ where: { id: gone }, data: { status: 'draft' } });
+    await settle(100);
+    const seen = record(players[0].socket);
+    expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
+    await settle(150);
+    const next = await metaOf(pin);
+    expect(next.id).not.toBe(id);
+    expect(next.state).toBe(GameState.Lobby);
+    expect(next.kind).not.toBe('escape');
+    const list = tags(seen);
+    inOrder(list, `closed ${id}`, `state ${GameState.Lobby}`);
+    expect(list.filter((t) => t.startsWith('state ') && t.includes('forming'))).toEqual([]);
+    expect(await store().run(id)).toBeNull();
+    expect(await store().session(pin)).toEqual(session);
+    // The host picks another escape room from there, as before.
+    const forming = stateWhere(players[0].socket, (s) => s.phase === 'forming');
+    expect(await host.emitWithAck('escape:open', { pin, templateId: ctx.templateId })).toEqual({
+      ok: true,
+    });
+    await forming;
   });
 
   it('a Stop that raced the run’s end is a podium’s back to the lobby: the finale and its results stay, no escape:closed, every client ends in the lobby', async () => {

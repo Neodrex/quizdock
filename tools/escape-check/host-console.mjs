@@ -6,7 +6,8 @@
  * join, the console forms the teams, moves a player, starts, gives a hint, adds and
  * takes time, pauses, opens a lock, reloads, leaves and comes back, ends the run and
  * downloads the CSV, runs the room again, then stops that second run (a confirmation,
- * `escape:closed`, everyone back in the lobby, no results). It prints OK or FAIL per check, writes
+ * `escape:closed`, the same escape room forming again for everyone, no results). It prints
+ * OK or FAIL per check, writes
  * screenshots to OUT/host-<viewport>-*.png, and lets the host seat go if it took it.
  *
  * Setup and servers: as two-phones.mjs (devenv.sh, compose postgres/redis, backend
@@ -552,7 +553,9 @@ async function main() {
   await keepConsoleText();
 
   // ── 14b. Stop during the second run: a confirmation, then an abort. Every client
-  // gets `escape:closed` and is back in the lobby; no finale, no results. ──
+  // gets `escape:closed`, then the same escape room forming again (the server opens
+  // it): four unassigned on the console, the team-forming wait on the phones; no
+  // finale, no results. ──
   const makeTeams = cpage.getByRole('button', { name: 'Make teams' });
   if (!(await visible(makeTeams, 1500))) {
     await cpage.getByRole('button', { name: 'I make the teams' }).click();
@@ -584,9 +587,21 @@ async function main() {
   check(await visible(stopDialog), 'stop: the console asks before it discards the run');
   await shot(cpage, 'stop-confirm');
   await stopDialog.getByRole('button', { name: 'Stop and discard' }).click();
+  const formingAgain = await until(async () => {
+    const un = (await boardLayout()).find((c) => c.name === 'Unassigned');
+    return un && un.players.length === 4 ? un.players : null;
+  }, 15_000);
   check(
-    await visible(cpage.getByText('The lobby is waiting: choose the quiz it plays next.'), 15_000),
-    'stop: the console is back in the lobby',
+    !!formingAgain,
+    `stop: the console forms the same escape room again, four unassigned (${formingAgain?.join(', ') ?? 'not seen'})`,
+  );
+  check(
+    !(await visible(cpage.getByText('The lobby is waiting: choose the quiz it plays next.'), 500)),
+    'stop: not the quiz lobby',
+  );
+  check(
+    await visible(cpage.getByRole('button', { name: /Start the game/ })),
+    'stop: the console can start the run again',
   );
   check(
     !(await visible(cpage.getByRole('button', { name: 'Download CSV' }), 1000)),
@@ -603,8 +618,8 @@ async function main() {
       `${p.name}: escape:closed frame`,
     );
     check(
-      await visible(p.page.getByText('Waiting for the host…')),
-      `${p.name}: back in the lobby after the stop`,
+      await visible(p.page.getByText('Waiting for the host to form teams')),
+      `${p.name}: in the escape lobby after the stop, no team`,
     );
     check(
       !(await visible(p.page.getByRole('heading', { name: lobby.title }), 500)),

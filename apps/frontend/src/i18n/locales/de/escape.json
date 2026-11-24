@@ -333,7 +333,7 @@
       "endConfirm": "Jetzt beenden",
       "stop": "Spiel abbrechen",
       "stopTitle": "Spiel abbrechen und verwerfen?",
-      "stopDescription": "Das Spiel stoppt jetzt für alle Teams und nichts davon bleibt erhalten: kein Finale, keine Ergebnisse. Alle kehren in die Lobby zurück. Um vorzeitig zu beenden und die Ergebnisse zu behalten, nutze „Spiel beenden“.",
+      "stopDescription": "Das Spiel stoppt jetzt für alle Teams und nichts davon bleibt erhalten: kein Finale, keine Ergebnisse. Alle kehren in die Lobby desselben Spiels zurück, bereit für einen neuen Start. Um vorzeitig zu beenden und die Ergebnisse zu behalten, nutze „Spiel beenden“.",
       "stopConfirm": "Abbrechen und verwerfen"
     },
     "results": {

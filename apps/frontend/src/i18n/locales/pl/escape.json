@@ -347,7 +347,7 @@
       "endConfirm": "Zakończ teraz",
       "stop": "Przerwij grę",
       "stopTitle": "Przerwać grę i ją odrzucić?",
-      "stopDescription": "Gra zatrzymuje się teraz dla wszystkich drużyn i nic z niej nie zostaje: ani finału, ani wyników. Wszyscy wracają do lobby. Aby zakończyć wcześniej i zachować wyniki, użyj „Zakończ grę”.",
+      "stopDescription": "Gra zatrzymuje się teraz dla wszystkich drużyn i nic z niej nie zostaje: ani finału, ani wyników. Wszyscy wracają do lobby tej samej gry, gotowi zacząć od nowa. Aby zakończyć wcześniej i zachować wyniki, użyj „Zakończ grę”.",
       "stopConfirm": "Przerwij i odrzuć"
     },
     "results": {

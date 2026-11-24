@@ -340,7 +340,7 @@
       "endConfirm": "Terminar ya",
       "stop": "Detener la partida",
       "stopTitle": "¿Detener la partida y descartarla?",
-      "stopDescription": "La partida se detiene ahora para todos los equipos y no se conserva nada: ni final ni resultados. Todos vuelven a la sala de espera. Para terminar antes y conservar los resultados, usa «Terminar la partida».",
+      "stopDescription": "La partida se detiene ahora para todos los equipos y no se conserva nada: ni final ni resultados. Todos vuelven a la sala de espera del mismo juego, listos para empezar de nuevo. Para terminar antes y conservar los resultados, usa «Terminar la partida».",
       "stopConfirm": "Detener y descartar"
     },
     "results": {

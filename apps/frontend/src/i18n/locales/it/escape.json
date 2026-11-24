@@ -340,7 +340,7 @@
       "endConfirm": "Termina ora",
       "stop": "Interrompi la partita",
       "stopTitle": "Interrompere la partita e scartarla?",
-      "stopDescription": "La partita si ferma ora per tutte le squadre e non ne resta nulla: né finale né risultati. Tutti tornano alla lobby. Per finire prima e conservare i risultati, usa «Termina la partita».",
+      "stopDescription": "La partita si ferma ora per tutte le squadre e non ne resta nulla: né finale né risultati. Tutti tornano alla lobby dello stesso gioco, pronti a ricominciare. Per finire prima e conservare i risultati, usa «Termina la partita».",
       "stopConfirm": "Interrompi e scarta"
     },
     "results": {

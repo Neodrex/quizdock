@@ -333,7 +333,7 @@
       "endConfirm": "Şimdi bitir",
       "stop": "Oyunu durdur",
       "stopTitle": "Oyun durdurulup silinsin mi?",
-      "stopDescription": "Oyun şimdi tüm takımlar için durur ve ondan hiçbir şey saklanmaz: final yok, sonuç yok. Herkes lobiye döner. Erken bitirip sonuçları saklamak için “Oyunu bitir”i kullanın.",
+      "stopDescription": "Oyun şimdi tüm takımlar için durur ve ondan hiçbir şey saklanmaz: final yok, sonuç yok. Herkes aynı oyunun lobisine döner, yeniden başlamaya hazır. Erken bitirip sonuçları saklamak için “Oyunu bitir”i kullanın.",
       "stopConfirm": "Durdur ve sil"
     },
     "results": {

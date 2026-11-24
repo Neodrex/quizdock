@@ -156,7 +156,10 @@ export function raceTests(ctx: EscapeContext): void {
     for (const seen of [phone, board]) {
       const events = escapeEvents(seen);
       expect(events.filter((e) => e === 'escape:closed')).toHaveLength(1);
-      expect(events.at(-1)).toBe('escape:closed');
+      // After it, only the run the room forms next: nothing of the stopped one.
+      const after = seen.slice(seen.findIndex(([e]) => e === 'escape:closed') + 1);
+      expect(after.map(([e]) => e)).not.toContain('escape:team-update');
+      expect(after.filter(([, p]) => (p as { gameId?: string })?.gameId === meta.id)).toEqual([]);
     }
     expect(escapeEvents(phone)).toContain('escape:team-update');
     expect(screenLeaksIn(board, ctx.vault)).toEqual([]);

@@ -275,6 +275,12 @@ export class EscapeEngine implements OnModuleDestroy {
   private readonly siteRetries = new Map<string, NodeJS.Timeout>();
   /** When the ticker last gave a run's keys their TTL again, by game id. */
   private readonly touched = new Map<GameId, number>();
+  /**
+   * The run a Stop just discarded, by PIN, between `stopping` and `reopen`: the
+   * template the room forms again. Keyed to its game id, so one left behind by a
+   * stop that failed midway is never another run's.
+   */
+  private readonly stopped = new Map<string, { id: GameId; templateId: string }>();
   private readonly bootAt = Date.now();
 
   constructor(
@@ -296,6 +302,7 @@ export class EscapeEngine implements OnModuleDestroy {
     game.beforeEnd = (ref) => this.closing(ref.pin, ref.id);
     game.afterBan = (ref, playerId) => this.banned(ref.pin, ref.id, playerId);
     game.beforeStop = (ref) => this.stopping(ref.pin, ref.id);
+    game.afterStop = (ref) => this.reopen(ref.pin, ref.id);
     game.keepOrphaned = (ref) => this.waitsForStart(ref.pin, ref.id);
     this.recover().catch((err: Error) => this.log.error(`recover: ${err.message}`));
   }
@@ -404,7 +411,19 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /** O2: a run as the room's next game, from its lobby; the room's players unassigned. */
   async open(pin: string, host: LicenceHost, dto: EscapeOpen): Promise<void> {
-    const hostUserId = host.userId;
+    await this.openNext(pin, host.userId, dto, host);
+  }
+
+  /**
+   * `open`'s steps. Without `host` (the re-open after a Stop) the room must
+   * already have its session: none is made, and no licence is read.
+   */
+  private async openNext(
+    pin: string,
+    hostUserId: string,
+    dto: Pick<EscapeOpen, 'templateId' | 'durationMin' | 'licenceId'>,
+    host?: LicenceHost,
+  ): Promise<void> {
     const first = await this.requireHostMeta(pin, hostUserId);
     const next = await this.queue.run(first.id, async () => {
       const meta = await this.requireHostMeta(pin, hostUserId);
@@ -414,12 +433,14 @@ export class EscapeEngine implements OnModuleDestroy {
       // The room keeps its session (a licence id is then ignored); a quiz room gets
       // a hosted one, under the licence named or the host's only usable one.
       const kept = await this.requireSession(pin);
+      if (!kept && !host) throw new ConflictException('escape.session_lost');
       // A race opened again before its startsAt keeps its timer (armed per PIN), so
       // the scheduled time starts the new template's run.
       const snap = await this.freeze(hostUserId, dto.templateId, kept?.type ?? 'hosted');
-      const session = kept
-        ? undefined
-        : await this.newSession(host, 'hosted', { licenceId: dto.licenceId });
+      const session =
+        kept || !host
+          ? undefined
+          : await this.newSession(host, 'hosted', { licenceId: dto.licenceId });
       const id = await this.game.openGameWith(pin, null);
       // The room's keys just got their TTL again: its session and cap go with them.
       if (kept) await this.store.touchRoom(pin);
@@ -1501,7 +1522,8 @@ export class EscapeEngine implements OnModuleDestroy {
    * (GameEngine.beforeStop, awaited by `host:back-to-lobby` before the room
    * goes to its lobby). In its queue the run is discarded: no finale, no
    * results, nothing to the Site; what this process keeps for it goes, and the
-   * room is told (`escape:closed`). A licence use already recorded stays, and
+   * room is told (`escape:closed`); the room then forms the same escape room
+   * again (`reopen`). A licence use already recorded stays, and
    * a Site race's room keeps its claim. A run already in its finale is left: a
    * Stop that raced the run's end (its finale ran first in the queue) is a
    * podium's back to the lobby, so the results stay, a Site race is reported,
@@ -1515,6 +1537,7 @@ export class EscapeEngine implements OnModuleDestroy {
       this.forget(id);
       for (const lane of ['all', 'screens', 'host'] as const) this.held.take(pin, lane);
       await this.store.discard(id);
+      this.stopped.set(pin, { id, templateId: ref.snap.templateId });
       for (const s of await this.server.in(pin).fetchSockets()) {
         for (const room of s.rooms) {
           if (room.startsWith(TEAM_ROOM_PREFIX)) void s.leave(room);
@@ -1522,6 +1545,26 @@ export class EscapeEngine implements OnModuleDestroy {
       }
       this.server.to(pin).emit('escape:closed', { gameId: id });
     });
+  }
+
+  /**
+   * Owner decision (GameEngine.afterStop): after that abort the room forms the
+   * same escape room again, as the console's "Run it again" does after a finale
+   * (`open`: the template as published now, its own duration, the room's session
+   * untouched, group players dealt), here on the server so every console, phone
+   * and screen follows whoever stopped. It runs once `host:back-to-lobby` has
+   * left the stopped run's queue and opened the room's plain lobby, which is what
+   * stays when the template cannot be opened any more (unpublished, deleted) or
+   * the room moved on: the refusal is logged by the hook, never the stop's.
+   */
+  private async reopen(pin: string, id: GameId): Promise<void> {
+    const was = this.stopped.get(pin);
+    this.stopped.delete(pin);
+    if (was?.id !== id) return;
+    const meta = await this.game.getMeta(pin);
+    // The lobby the stop opened holds no quiz: one the room's selection picked stays.
+    if (!meta || meta.quizId) return;
+    await this.openNext(pin, meta.hostUserId, { templateId: was.templateId });
   }
 
   /**

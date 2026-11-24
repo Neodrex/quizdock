@@ -492,15 +492,13 @@ export function finaleTests(ctx: EscapeContext): void {
     screen.on('escape:screen-finale', () => finales++);
     players[0].socket.on('escape:finale', () => finales++);
     expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
-    expect(await submitAs(players[0], pin, 'lobby-door', '0417')).toMatchObject({
-      ok: false,
-      error: { code: 'escape.not_found' },
-    });
+    // The room forms the same escape room again: nobody plays yet.
+    expect(await gameId(pin)).not.toBe(id);
+    expect(await submitAs(players[0], pin, 'lobby-door', '0417')).toMatchObject({ ok: false });
     await eventually(async () =>
-      expect(inProcess(id, pin)).toEqual({
+      expect(inProcess(id, pin)).toMatchObject({
         ticking: false,
         gone: false,
-        board: false,
         scheduled: false,
         siteRetry: false,
       }),

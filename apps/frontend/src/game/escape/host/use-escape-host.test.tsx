@@ -267,6 +267,39 @@ describe('useEscapeHost', () => {
     expect(sent('escape:sync')).toHaveLength(2);
   });
 
+  it('a stop the server follows with the same escape room: the console is on the new forming run with no command, and a late escape:closed of the old run does not wipe it', async () => {
+    const { result, rerender } = mount(withState(GameState.Escape));
+    await flush();
+    fire('escape:outline', outlineOf());
+    fire('escape:host', hostStateOf());
+    fire('escape:board', boardOf({ phase: 'running' }));
+    const before = emitted.length;
+    // The server's sequence: closed, the room's lobby, the look, the new run's state.
+    fire('escape:closed', { gameId: GAME });
+    rerender(withState(GameState.Lobby));
+    await flush();
+    const next = 'a'.repeat(32);
+    fire('escape:look', ACME_LOOK);
+    fire(
+      'escape:host',
+      hostStateOf({ gameId: next, teams: [], board: boardOf({ gameId: next, phase: 'forming' }) }),
+    );
+    await flush();
+    expect(result.current.active).toBe(true);
+    expect(result.current.look).toEqual(ACME_LOOK);
+    expect(result.current.ui.host).toMatchObject({ gameId: next, teams: [] });
+    expect(result.current.ui.finale).toBeNull();
+    expect(loadHostRecord(PIN)?.gameId).toBe(next);
+    // Only a sync went out (for the new run's outline): no back-to-lobby, no open.
+    expect(emitted.slice(before).map((e) => e.event)).toEqual(['escape:sync']);
+    fire('escape:outline', outlineOf());
+    fire('escape:closed', { gameId: GAME });
+    expect(result.current.active).toBe(true);
+    expect(result.current.ui.host?.gameId).toBe(next);
+    expect(result.current.ui.outline).not.toBeNull();
+    expect(loadHostRecord(PIN)?.gameId).toBe(next);
+  });
+
   it('back in the lobby after a podium syncs again; a refusal hands back to the quiz', async () => {
     const { result, rerender } = mount(withState(GameState.Escape));
     await flush();

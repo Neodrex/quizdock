@@ -391,6 +391,27 @@ describe('useEscapeSession', () => {
     expect(result.current.ui.state?.gameId).toBe(next);
   });
 
+  it('a stop the server follows with the same escape room: the phone is in the new run’s lobby, and a late escape:closed of the old run does not wipe it', async () => {
+    const { result } = mount(seam({ attachSeq: 1 }));
+    await flush();
+    fire('escape:state', state());
+    const before = emitted.length;
+    const next = 'a'.repeat(32);
+    fire('escape:closed', { gameId: GAME });
+    fire('escape:state', state({ gameId: next, phase: 'forming', team: null, view: null }));
+    expect(result.current.active).toBe(true);
+    expect(result.current.ui).toMatchObject({
+      state: { gameId: next, phase: 'forming', team: null, view: null },
+      finale: null,
+      ended: 'none',
+    });
+    fire('escape:closed', { gameId: GAME });
+    expect(result.current.active).toBe(true);
+    expect(result.current.ui.state?.gameId).toBe(next);
+    // The phone asked for nothing.
+    expect(emitted.slice(before)).toEqual([]);
+  });
+
   it('a state in the finale phase with no finale fetches it once', async () => {
     acks.set('escape:results', () => ({ ok: true, finale }));
     const { result } = mount();
