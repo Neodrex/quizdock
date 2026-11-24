@@ -209,8 +209,9 @@ export class EscapeEngine implements OnModuleDestroy {
   /** Scheduled race starts, by PIN (M7 §1.7); re-armed by recover() after a restart. */
   private readonly scheduler = new EscapeScheduler(this.log);
   /**
-   * The board throttle per room (and, in a race, of the host's frames): what was
-   * held back goes out at the period's end, in order (`HeldSends`).
+   * The board throttle per room (and, in a race or a hosted event, of the host's
+   * frames, `hostHold`): what was held back goes out at the period's end, in
+   * order (`HeldSends`).
    */
   private readonly held = new HeldSends<RunView>({
     send: (pin, lane, v, what) => this.emitHeld(pin, lane, v, what),
@@ -1297,16 +1298,16 @@ export class EscapeEngine implements OnModuleDestroy {
     }
     await this.broadcast(next, final);
     this.flushHeld(ref.pin, final);
-    // Teams the finale found past their deadline: their time-up first (in a race,
-    // to the host in one frame, Task 9.3).
-    const race = !!viewLimits(final);
+    // Teams the finale found past their deadline: their time-up first (in a race
+    // or a hosted event, to the host in one frame, Task 9.3).
+    const held = this.hostHold(final) !== 'now';
     for (const rec of late) {
       const team = escapeRooms.team(ref.id, rec.team.id);
       this.server
-        .to(race ? team : [team, escapeRooms.host(ref.pin)])
+        .to(held ? team : [team, escapeRooms.host(ref.pin)])
         .emit('escape:team-update', timeUpOf(rec.team.id));
     }
-    if (race && late.length) {
+    if (held && late.length) {
       this.server.to(escapeRooms.host(ref.pin)).emit('escape:host-batch', {
         updates: late.map((rec) => timeUpOf(rec.team.id)),
         teams: [],
@@ -1425,7 +1426,11 @@ export class EscapeEngine implements OnModuleDestroy {
     return meta;
   }
 
-  /** Runs `job` on the current run, one at a time per game, with the run read inside the queue. */
+  /**
+   * Runs `job` on the current run, one at a time per game, with the run read
+   * inside the queue. A host command's result reaches a hosted event's console
+   * before its ack: what the host lane holds goes out at once (`hostHold`).
+   */
   private async mutate<T>(
     pin: string,
     hostUserId: string | undefined,
@@ -1436,7 +1441,9 @@ export class EscapeEngine implements OnModuleDestroy {
       const ref = await this.requireRun(pin, hostUserId);
       // The room moved to another game while this waited.
       if (ref.id !== first.id) throw new NotFoundException('escape.not_found');
-      return job(ref);
+      const out = await job(ref);
+      if (hostUserId !== undefined) await this.held.flushNow(pin, 'host');
+      return out;
     });
   }
 
@@ -1713,9 +1720,10 @@ export class EscapeEngine implements OnModuleDestroy {
    * U5: one team changed. With updates, its phones get their new state, the
    * team room and the host the updates, and the board is scheduled; the host
    * always gets the team's detail. `announce` banners the screens and the host.
-   * In a race (Task 9.3) the phones still get theirs at once, but the host's
-   * updates and team detail wait for the board, in one `escape:host-batch`, and
-   * the console, which ignores banners, gets none.
+   * In a race (Task 9.3) and a hosted event (the Batch 2 fix round) the phones
+   * still get theirs at once, but the host's updates and team detail wait for
+   * the host's next held send, in one `escape:host-batch`, and the console,
+   * which ignores banners, gets none.
    */
   private async teamChanged(
     ref: RunRef,
@@ -1727,7 +1735,7 @@ export class EscapeEngine implements OnModuleDestroy {
     const rec = v.teams.find((r) => r.team.id === teamId);
     if (!rec || !(await this.isCurrent(ref))) return;
     const host = escapeRooms.host(ref.pin);
-    const race = !!viewLimits(v);
+    const now = this.hostHold(v) === 'now';
     if (updates.length) {
       for (const s of await this.server.in(ref.pin).fetchSockets()) {
         const { playerId } = s.data;
@@ -1736,44 +1744,61 @@ export class EscapeEngine implements OnModuleDestroy {
         s.emit('escape:state', playerStateOf(v, playerId));
       }
       const team = escapeRooms.team(ref.id, teamId);
-      const to = this.server.to(race ? team : [team, host]);
+      const to = this.server.to(now ? [team, host] : team);
       for (const u of updates) to.emit('escape:team-update', u);
     }
-    if (!race) this.server.to(host).emit('escape:host-team', hostTeamOf(v, rec));
+    if (now) this.server.to(host).emit('escape:host-team', hostTeamOf(v, rec));
     for (const kind of announce) {
       this.server
-        .to(race ? escapeRooms.board(ref.pin) : [escapeRooms.board(ref.pin), host])
+        .to(now ? [escapeRooms.board(ref.pin), host] : escapeRooms.board(ref.pin))
         .emit('escape:announce', announceOf(kind, rec.team));
     }
-    if (race) {
-      const news = { id: ref.id, teams: new Set([teamId]), updates };
-      this.throttled(ref.pin, v, { board: updates.length > 0, host: false, news });
-    } else if (updates.length) this.toBoard(ref, v);
+    const news = now ? null : { id: ref.id, teams: new Set([teamId]), updates };
+    if (news || updates.length)
+      this.send(ref.pin, v, { board: updates.length > 0, host: false, news });
   }
 
-  /**
-   * The host state to the host room: at once, except in a race (M7 §1.7),
-   * where it is coalesced with the board, at most every `boardEveryMs` of the race.
-   */
+  /** The host state to the host room: at once in group play, else held (`send`). */
   private toHost(ref: RunRef, v: RunView): void {
-    if (!viewLimits(v)) {
-      this.server.to(escapeRooms.host(ref.pin)).emit('escape:host', hostStateOf(v));
-      return;
-    }
-    this.throttled(ref.pin, v, { board: false, host: true });
+    this.send(ref.pin, v, { board: false, host: true });
+  }
+
+  /** The host state and (with `board`) the board. */
+  private toHostAndBoard(ref: RunRef, v: RunView, board = true): void {
+    this.send(ref.pin, v, { board, host: true });
   }
 
   /**
-   * The host state and (with `board`) the board. In a race one throttled send
-   * carries both, so the board does not wait behind the host's slot (M7 §1.7).
+   * How the host's frames go (M9). Group play: at once. A race (M7 §1.7, Task
+   * 9.3): with the board, one held send each race board period carrying both, so
+   * the board does not wait behind the host's slot. A hosted event (Batch 2 fix
+   * round, owner decision): held on their own, at most every `hostEveryMs`; its
+   * screens keep the faster board period, and its console gets the board with
+   * its own sends.
    */
-  private toHostAndBoard(ref: RunRef, v: RunView, board = true): void {
-    if (viewLimits(v)) {
-      this.throttled(ref.pin, v, { board, host: true });
+  private hostHold(v: RunView): 'now' | 'board' | 'own' {
+    if (viewLimits(v)) return 'board';
+    return v.session?.type === 'hosted' ? 'own' : 'now';
+  }
+
+  /** The board, the host state and the host's news, each as the room's `hostHold` says. */
+  private send(pin: string, v: RunView, what: Held): void {
+    const hold = this.hostHold(v);
+    if (hold === 'board') {
+      this.held.request(pin, 'all', v, what, this.boardEveryMs(v));
       return;
     }
-    this.toHost(ref, v);
-    if (board) this.toBoard(ref, v);
+    if (hold === 'own') {
+      const board = this.boardEveryMs(v);
+      if (what.board) this.held.request(pin, 'screens', v, { board: true, host: false }, board);
+      if (what.board || what.host || what.news) {
+        this.held.request(pin, 'host', v, what, Math.max(board, this.timings.hostEveryMs));
+      }
+      return;
+    }
+    if (what.host) this.server.to(escapeRooms.host(pin)).emit('escape:host', hostStateOf(v));
+    if (what.board)
+      this.held.request(pin, 'all', v, { board: true, host: false }, this.boardEveryMs(v));
   }
 
   /** The player's socket in its team's room and no other team's. */
@@ -1788,15 +1813,7 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /** The board to the screens and the host, at most every `boardEveryMs` (the latest wins). */
   private toBoard(ref: RunRef, v: RunView): void {
-    this.throttled(ref.pin, v, { board: true, host: false });
-  }
-
-  /**
-   * The throttle of the board (and, in a race, of the host state and the host's
-   * news): now, or with the next.
-   */
-  private throttled(pin: string, v: RunView, what: Held): void {
-    this.held.request(pin, 'all', v, what, this.boardEveryMs(v));
+    this.send(ref.pin, v, { board: true, host: false });
   }
 
   /** The board period: the timings', or a race's when longer. */
@@ -1831,7 +1848,8 @@ export class EscapeEngine implements OnModuleDestroy {
   private emitHeld(pin: string, lane: HeldLane, v: RunView, what: Held): boolean {
     const host = escapeRooms.host(pin);
     let sent = false;
-    if (what.board) {
+    // The host state carries the board: the host lane sends it once.
+    if (what.board && !(lane === 'host' && what.host)) {
       const board = escapeRooms.board(pin);
       const to = lane === 'all' ? [board, host] : lane === 'screens' ? board : host;
       this.server.to(to).emit('escape:board', boardOf(v));

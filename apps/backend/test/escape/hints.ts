@@ -14,6 +14,7 @@ import {
   type EscapeContext,
   type SyncedPlayer,
   eventually,
+  nextHostTeam,
   record,
   runningRoom,
   seedTemplate,
@@ -171,15 +172,11 @@ export function hintTests(ctx: EscapeContext): void {
       players: 1,
       teams: 1,
       beforeStart: async (_pin, room) => {
-        stuck = nextEvent<EscapeHostTeam>(room.host, 'escape:host-team', {
-          where: (t) => t.stuck,
-        });
+        stuck = nextHostTeam(room.host, (t) => t.stuck);
       },
     });
     expect((await stuck).id).toBe('t1');
-    const unstuck = nextEvent<EscapeHostTeam>(host, 'escape:host-team', {
-      where: (t) => !t.stuck,
-    });
+    const unstuck = nextHostTeam(host, (t) => !t.stuck);
     expect(await submitAs(teams.t1[0], pin, 'lobby-door', '0417')).toMatchObject({ ok: true });
     expect(await unstuck).toMatchObject({ id: 't1', stuck: false, solved: ['lobby-door'] });
   });

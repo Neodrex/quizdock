@@ -1,4 +1,7 @@
 import type {
+  EscapeHostBatch,
+  EscapeHostState,
+  EscapeHostTeam,
   EscapePlayerState,
   EscapeSubmitAck,
   EscapeTemplateContent,
@@ -60,6 +63,7 @@ export function fastTimings(h: GameHarness): EscapeTimings {
     wrongMax: 3,
     wrongWindowS: 1,
     boardEveryMs: 50,
+    hostEveryMs: 50,
   });
 }
 
@@ -292,4 +296,38 @@ export function submitAs(
   roleId?: string,
 ): Promise<EscapeSubmitAck> {
   return p.socket.emitWithAck('escape:submit', { pin, lockId, input, roleId });
+}
+
+/**
+ * The next detail of a team the host console gets that matches `where`, however
+ * it comes: alone (`escape:host-team`, group play), in a held batch or in the
+ * host state (a race, a hosted event: M9 Batch 2 fix round).
+ */
+export function nextHostTeam(
+  host: Socket,
+  where: (t: EscapeHostTeam) => boolean,
+  timeoutMs = 5_000,
+): Promise<EscapeHostTeam> {
+  return new Promise<EscapeHostTeam>((resolve, reject) => {
+    const events: [string, (p: unknown) => void][] = [
+      ['escape:host-team', (t) => check([t as EscapeHostTeam])],
+      ['escape:host-batch', (b) => check((b as EscapeHostBatch).teams)],
+      ['escape:host', (s) => check((s as EscapeHostState).teams)],
+    ];
+    const off = () => {
+      clearTimeout(timer);
+      for (const [e, f] of events) host.off(e, f);
+    };
+    const timer = setTimeout(() => {
+      off();
+      reject(new Error(`no host team detail within ${timeoutMs} ms`));
+    }, timeoutMs);
+    function check(teams: EscapeHostTeam[]): void {
+      const t = teams.find(where);
+      if (!t) return;
+      off();
+      resolve(t);
+    }
+    for (const [e, f] of events) host.on(e, f);
+  });
 }

@@ -19,7 +19,9 @@
  * No answers to the console: every WebSocket frame the console receives (CDP) and
  * its page text are checked for the template's answer values, as whole words and
  * case-sensitive (a clue body may quote one in other words or case: clue bodies are
- * the host's to see, plan §1.4). The phones' frames may hold no host event.
+ * the host's to see, plan §1.4). The phones' frames may hold no host event. The
+ * room is a hosted event, so the console's team news comes in `escape:host-batch`
+ * frames only (M9 Batch 2 fix round).
  */
 import { chromium } from 'playwright-core';
 import { readFileSync } from 'node:fs';
@@ -595,6 +597,13 @@ check(answers.length > 0, `answers read for the leak checks (${answers.length})`
 const frames = consoleFrames.join('\n');
 check(consoleFrames.length > 20, `console: ${consoleFrames.length} frames recorded`);
 check(frames.includes('"escape:host"'), 'console: escape:host frames seen');
+// A hosted event (M9 Batch 2 fix round): the console's team news comes held, in
+// batches, never one frame per change.
+check(frames.includes('"escape:host-batch"'), 'console: escape:host-batch frames seen');
+const single = ['escape:host-team', 'escape:team-update', 'escape:announce'].filter((e) =>
+  frames.includes(`"${e}"`),
+);
+check(!single.length, `console: no per-change host frames (${single.join(', ') || 'none'})`);
 const leaked = leaksIn(frames, answers);
 check(!leaked.length, `console: no answer in frames (${leaked.join(', ') || 'none'})`);
 const keys = ['"answer"', '"answers"', '"correct"'];

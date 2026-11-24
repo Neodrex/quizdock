@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ANSWER_COUNT_EVERY_MS } from '../game/game.keys';
+import { RACE_BOARD_EVERY_MS } from './escape-session';
 
 /**
  * Escape run timings (M3 plan §1.5). Not in SETTINGS: the backend reads
@@ -21,6 +22,11 @@ export class EscapeTimings {
   wrongWindowS = 60;
   /** The big-screen board, at most this often. */
   boardEveryMs = ANSWER_COUNT_EVERY_MS;
+  /**
+   * A hosted event's host console (state, team details, updates, its board), at
+   * most this often: a race board's period (M9 Batch 2 fix round).
+   */
+  hostEveryMs = RACE_BOARD_EVERY_MS;
   /** A running run's keys (and its room's) get their TTL again at most this often, from the ticker. */
   touchEveryMs = 300_000;
   /** A scheduled race starts at least this far ahead of its create (M7 §1.7). */

@@ -1,10 +1,13 @@
 import type {
   EscapeAnnounce,
   EscapeBoard,
+  EscapeHostBatch,
+  EscapeHostState,
   EscapeHostTeam,
   EscapeTeamUpdate,
 } from '@quiz-dock/contracts';
 import type { Socket } from 'socket.io-client';
+import { EscapeTimings } from '../../src/escape/escape-timings';
 import { nextEvent, settle } from '../game-harness';
 import {
   type EscapeContext,
@@ -12,6 +15,7 @@ import {
   createEscape,
   eventually,
   joinAndSync,
+  nextHostTeam,
   record,
   runningRoom,
   stateWhere,
@@ -76,9 +80,7 @@ export function playTests(ctx: EscapeContext): void {
     const board = nextEvent<EscapeBoard>(screen, 'escape:board', {
       where: (b) => b.teams[0].stageIndex === 1,
     });
-    const hostTeam = nextEvent<EscapeHostTeam>(host, 'escape:host-team', {
-      where: (t) => t.stageIndex === 1,
-    });
+    const hostTeam = nextHostTeam(host, (t) => t.stageIndex === 1);
     const next = stateWhere(a2.socket, (s) => s.view?.stageIndex === 1);
     await clearLobby(a, pin);
     expect(await cleared).toEqual({
@@ -101,6 +103,74 @@ export function playTests(ctx: EscapeContext): void {
     expect((await next).view?.title).toBe(ctx.vault.stages[1].title);
     expect(receivedLeaks(seen.flat(), ctx.vault)).toEqual([]);
     expect(screenLeaksIn(seen.at(-1)!, ctx.vault)).toEqual([]);
+  });
+
+  it('a hosted event’s host gets its teams’ changes held, one batch a period; a host command’s result comes before its ack (M9 fix round)', async () => {
+    const timings = ctx.h.app.get(EscapeTimings);
+    const was = timings.hostEveryMs;
+    timings.hostEveryMs = 1_000;
+    try {
+      const { pin, players, host, screen } = await runningRoom(ctx, { players: 6, teams: 6 });
+      await settle(1_100); // the start's frames are out of the window
+      const hostSeen = record(host);
+      const screenSeen = record(screen);
+      const t0 = Date.now();
+      // 6 teams, 12 changes within one host period: a wrong code each, then the door.
+      await Promise.all(players.map((p) => submitAs(p, pin, 'lobby-door', '9999')));
+      expect(await Promise.all(players.map((p) => submitAs(p, pin, 'lobby-door', '0417')))).toEqual(
+        players.map(() => ({ ok: true, outcome: 'lock-solved' })),
+      );
+      await settle(Math.max(0, 2_200 - (Date.now() - t0)));
+      const of = (e: string) => hostSeen.filter(([n]) => n === e).map(([, p]) => p);
+      expect(of('escape:host-team')).toEqual([]);
+      expect(of('escape:team-update')).toEqual([]);
+      expect(of('escape:announce')).toEqual([]);
+      const batches = of('escape:host-batch') as EscapeHostBatch[];
+      expect(batches.length).toBeGreaterThanOrEqual(1);
+      expect(batches.length).toBeLessThanOrEqual(3);
+      // Every host frame: at most 3 a second.
+      expect(hostSeen.length).toBeLessThanOrEqual(3 * 3);
+      // The screens keep their own, faster board.
+      expect(screenSeen.filter(([e]) => e === 'escape:board').length).toBeGreaterThanOrEqual(1);
+      const updates = batches.flatMap((b) => b.updates);
+      const latest = new Map<string, EscapeHostTeam>();
+      for (const [e, p] of hostSeen) {
+        if (e === 'escape:host-batch')
+          for (const t of (p as EscapeHostBatch).teams) latest.set(t.id, t);
+        if (e === 'escape:host') for (const t of (p as EscapeHostState).teams) latest.set(t.id, t);
+      }
+      for (const p of players) {
+        const id = p.last().team!.id;
+        expect(updates.filter((u) => u.teamId === id).map((u) => u.kind)).toEqual([
+          'wrong',
+          'lock-solved',
+        ]);
+        expect(latest.get(id)).toMatchObject({ wrong: 1, solved: ['lobby-door'] });
+      }
+      // A host command inside an open period: its result before its ack, after the held news.
+      await submitAs(players[1], pin, 'lobby-badge', ['red']);
+      const team = players[0].last().team!.id;
+      const before = hostSeen.length;
+      expect(
+        await host.emitWithAck('escape:adjust-time', { pin, deltaS: 60, teamId: team }),
+      ).toEqual({ ok: true });
+      const after = hostSeen.slice(before);
+      const kinds = after
+        .filter(([e]) => e === 'escape:host-batch')
+        .flatMap(([, b]) => (b as EscapeHostBatch).updates.map((u) => u.kind));
+      expect(kinds.at(-1)).toBe('time');
+      const adjusted = after.some(([e, p]) =>
+        (e === 'escape:host-batch'
+          ? (p as EscapeHostBatch).teams
+          : e === 'escape:host'
+            ? (p as EscapeHostState).teams
+            : []
+        ).some((t) => t.id === team && t.adjustMs === 60_000),
+      );
+      expect(adjusted).toBe(true);
+    } finally {
+      timings.hostEveryMs = was;
+    }
   });
 
   it('after wrongMax wrong answers the team waits: a right answer is not checked until the window ends', async () => {
@@ -137,9 +207,7 @@ export function playTests(ctx: EscapeContext): void {
   it('two teammates submit the same lock at once: one solves it, the other gets already-solved', async () => {
     const { pin, teams, host } = await runningRoom(ctx, { players: 2, teams: 1 });
     const [a, b] = teams.t1;
-    const hostTeam = nextEvent<EscapeHostTeam>(host, 'escape:host-team', {
-      where: (t) => t.solved.includes('lobby-door'),
-    });
+    const hostTeam = nextHostTeam(host, (t) => t.solved.includes('lobby-door'));
     const acks = await Promise.all([
       submitAs(a, pin, 'lobby-door', '0417'),
       submitAs(b, pin, 'lobby-door', '0417'),
@@ -158,9 +226,7 @@ export function playTests(ctx: EscapeContext): void {
   it("the stage's two last locks at once: one lock-solved, one stage-cleared, one clear time", async () => {
     const { pin, teams, host } = await runningRoom(ctx, { players: 2, teams: 1 });
     const [a, b] = teams.t1;
-    const hostTeam = nextEvent<EscapeHostTeam>(host, 'escape:host-team', {
-      where: (t) => t.stageIndex === 1,
-    });
+    const hostTeam = nextHostTeam(host, (t) => t.stageIndex === 1);
     const acks = await Promise.all([
       submitAs(a, pin, 'lobby-door', '0417'),
       submitAs(b, pin, 'lobby-badge', ['blue']),
@@ -244,9 +310,7 @@ export function playTests(ctx: EscapeContext): void {
       const [a] = teams.t1;
       await host.emitWithAck('escape:pause', { pin, paused: true });
       const update = teamUpdate(a, (u) => u.kind === 'lock-solved');
-      const hostTeam = nextEvent<EscapeHostTeam>(host, 'escape:host-team', {
-        where: (t) => t.hostUnlocks.length > 0,
-      });
+      const hostTeam = nextHostTeam(host, (t) => t.hostUnlocks.length > 0);
       const state = stateWhere(
         a.socket,
         (s) => !!s.view?.locks.find((l) => l.id === 'lobby-door')?.solved,

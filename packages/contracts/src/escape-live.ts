@@ -431,12 +431,14 @@ export interface EscapeHostState {
 }
 
 /**
- * In a race (M9 Task 9.3), what the host room would otherwise get one frame at a
- * time, sent once per board period: the team updates in order, then each changed
- * team's detail as of the send.
+ * In a race (M9 Task 9.3) or a hosted event (Batch 2 fix round), what the host
+ * room would otherwise get one frame at a time, sent once per held period (a
+ * race's board period; a hosted event's host period, or at once after a host
+ * command): the team updates in order, then each changed team's detail as of
+ * the send.
  */
 export interface EscapeHostBatch {
-  /** Oldest first, as `escape:team-update` gives them outside races. */
+  /** Oldest first, as `escape:team-update` gives them in group play. */
   updates: EscapeTeamUpdate[];
   /** Each changed team once; empty when an `escape:host` (every team) follows. */
   teams: EscapeHostTeam[];
@@ -648,17 +650,20 @@ export interface EscapeClientToServerEvents {
 export interface EscapeServerToClientEvents {
   /** To one phone. */
   'escape:state': (p: EscapePlayerState) => void;
-  /** To the team room and (outside races) the host room. */
+  /** To the team room and (in group play) the host room. */
   'escape:team-update': (p: EscapeTeamUpdate) => void;
-  /** To the board room and the host room, throttled. */
+  /**
+   * To the board room and the host room, throttled (a hosted event's console
+   * gets it with its own held sends, or inside `escape:host`).
+   */
   'escape:board': (p: EscapeBoard) => void;
-  /** To the board room and (outside races) the host room. */
+  /** To the board room and (in group play) the host room. */
   'escape:announce': (p: EscapeAnnounce) => void;
-  /** To the host room, on sync and structural changes. */
+  /** To the host room, on sync and structural changes (held in races and hosted events). */
   'escape:host': (p: EscapeHostState) => void;
-  /** To the host room, when one team changed (outside races). */
+  /** To the host room, when one team changed (group play). */
   'escape:host-team': (p: EscapeHostTeam) => void;
-  /** To the host room in a race, with the board, at most once per board period. */
+  /** To the host room in a race or a hosted event, at most once per held period. */
   'escape:host-batch': (p: EscapeHostBatch) => void;
   /** To the host room only, on sync: the run's template, without its answers. */
   'escape:outline': (p: EscapeHostOutline) => void;

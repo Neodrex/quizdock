@@ -51,6 +51,8 @@ interface Entry {
   held: Held;
   /** What a flush is sending while it reads its view; null otherwise. */
   flushing: Held | null;
+  /** That flush, while it runs. */
+  inflight?: Promise<void>;
   timer?: NodeJS.Timeout;
 }
 
@@ -108,26 +110,41 @@ export class HeldSends<V> {
     return isEmpty(what) ? null : what;
   }
 
+  /**
+   * What a lane holds goes out now (after a flush in flight), with a view read
+   * now, and a fresh period starts: a host command's own result does not wait.
+   */
+  async flushNow(pin: string, lane: HeldLane): Promise<void> {
+    const key = keyOf(pin, lane);
+    const busy = this.entries.get(key)?.inflight;
+    if (busy) await busy;
+    const e = this.entries.get(key);
+    if (!e || isEmpty(e.held)) return;
+    clearTimeout(e.timer);
+    await this.fire(key, e);
+  }
+
   clear(): void {
     for (const e of this.entries.values()) clearTimeout(e.timer);
     this.entries.clear();
   }
 
   private arm(key: string, e: Entry): void {
-    e.timer = setTimeout(() => this.fire(key, e), e.everyMs);
+    e.timer = setTimeout(() => void this.fire(key, e), e.everyMs);
     e.timer.unref?.();
   }
 
-  private fire(key: string, e: Entry): void {
-    if (this.entries.get(key) !== e) return;
+  private fire(key: string, e: Entry): Promise<void> {
+    if (this.entries.get(key) !== e) return Promise.resolve();
     if (isEmpty(e.held)) {
       this.entries.delete(key);
-      return;
+      return Promise.resolve();
     }
     const what = e.held;
     e.held = nothing();
     e.flushing = what;
-    void this.flush(key, e, what);
+    e.inflight = this.flush(key, e, what);
+    return e.inflight;
   }
 
   private async flush(key: string, e: Entry, what: Held): Promise<void> {
@@ -141,6 +158,7 @@ export class HeldSends<V> {
       if (this.entries.get(key) === e) e.held = mergeHeld(what, e.held);
     } finally {
       e.flushing = null;
+      e.inflight = undefined;
     }
     if (this.entries.get(key) === e) this.arm(key, e);
   }

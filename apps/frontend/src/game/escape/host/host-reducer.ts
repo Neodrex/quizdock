@@ -298,7 +298,8 @@ export function escapeHostReducer(ui: EscapeHostUi, a: EscapeHostAction): Escape
     case 'hostTeam':
       return onHostTeam(ui, a.team, a.now);
     case 'hostBatch': {
-      // A race's period (M9 Task 9.3): as if each had come alone, the updates first.
+      // A held period of a race or a hosted event (M9 Task 9.3, Batch 2 fix round):
+      // as if each had come alone, the updates first.
       let out = ui;
       for (const u of a.batch.updates) out = onTeamUpdate(out, u, a.now);
       for (const t of a.batch.teams) out = onHostTeam(out, t, a.now);

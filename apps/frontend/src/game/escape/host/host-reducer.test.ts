@@ -70,7 +70,7 @@ describe('escapeHostReducer: state', () => {
     expect(stranger).toBe(ui);
   });
 
-  it('hostBatch (a race, M9 Task 9.3): the updates in order, then each team', () => {
+  it('hostBatch (a race or a hosted event, M9 Task 9.3): the updates in order, then each team', () => {
     const ui = ready();
     const solved = hostTeamOf({ wrong: 2, solved: ['lobby-door'] });
     const out = run(ui, {
@@ -90,6 +90,44 @@ describe('escapeHostReducer: state', () => {
     expect(out.feed.at(-1)?.key).toBe('host.feed.timeUp');
     // An empty batch changes nothing.
     expect(run(ui, { type: 'hostBatch', batch: { updates: [], teams: [] }, now: NOW })).toBe(ui);
+  });
+
+  it('a hosted event’s batch (M9 fix round): the same console as its frames one by one', () => {
+    const ui = ready();
+    const updates: EscapeTeamUpdate[] = [
+      { teamId: 't1', kind: 'roles' },
+      {
+        teamId: 't1',
+        kind: 'part-accepted',
+        lockId: 'security-switch',
+        roleId: 'hacker',
+        by: 'p1',
+      },
+      { teamId: 't1', kind: 'hint', hintId: 'lobby-h1', source: 'host' },
+      { teamId: 't2', kind: 'time', deltaMs: 120_000 },
+      { teamId: 't1', kind: 'lock-solved', lockId: 'lobby-door', by: null },
+    ];
+    const teams = [
+      hostTeamOf({ solved: ['lobby-door'], hostUnlocks: ['lobby-door'] }),
+      hostTeamOf({ id: 't2', name: 'Team Blue', adjustMs: 120_000 }),
+    ];
+    const batched = run(ui, { type: 'hostBatch', batch: { updates, teams }, now: NOW });
+    const single = run(
+      ui,
+      ...updates.map((u) => update(u)),
+      ...teams.map((team): EscapeHostAction => ({ type: 'hostTeam', team, now: NOW })),
+    );
+    expect(batched.feed).toEqual(single.feed);
+    expect(batched.hintSources).toEqual(single.hintSources);
+    expect(batched.host).toEqual(single.host);
+    expect(batched.heardAt).toEqual(single.heardAt);
+    expect(batched.feed.map((l) => l.key)).toEqual([
+      'host.feed.roles',
+      'host.feed.partAccepted',
+      'host.feed.hintGiven',
+      'host.feed.time',
+      'host.feed.lockSolvedByHost',
+    ]);
   });
 
   it('board moves the clock and the summaries, and keeps solved, parts and members', () => {

@@ -89,6 +89,7 @@ describe('EscapeTimings', () => {
       wrongMax: 6,
       wrongWindowS: 60,
       boardEveryMs: 100,
+      hostEveryMs: 1000,
       touchEveryMs: 300_000,
       raceMinLeadMs: 60_000,
       raceTouchEveryMs: 300_000,

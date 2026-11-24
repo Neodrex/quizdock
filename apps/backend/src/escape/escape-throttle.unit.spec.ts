@@ -189,6 +189,37 @@ describe('HeldSends (M9 Batch 2 fix round)', () => {
     expect(t.throttle.has('111111')).toBe(false);
   });
 
+  it('flushNow: what a lane holds goes out at once, after a flush in flight, then a fresh period', async () => {
+    const t = harness();
+    const req = (team: string) =>
+      t.throttle.request(
+        '111111',
+        'host',
+        { at: 'now' },
+        { board: false, host: false, news: news(team) },
+        1000,
+      );
+    req('a');
+    req('b');
+    await t.throttle.flushNow('111111', 'host');
+    expect(t.order()).toEqual([['a'], ['b']]);
+    // A flush in flight: flushNow waits for it, then sends what came meanwhile.
+    req('c');
+    let release!: (v: View) => void;
+    t.setLoad(() => new Promise<View>((r) => (release = r)));
+    await jest.advanceTimersByTimeAsync(1000);
+    req('d');
+    const done = t.throttle.flushNow('111111', 'host');
+    release({ at: 'fresh' });
+    await jest.advanceTimersByTimeAsync(0);
+    release({ at: 'fresh' });
+    await done;
+    expect(t.order()).toEqual([['a'], ['b'], ['c'], ['d']]);
+    // Nothing held: nothing sent.
+    await t.throttle.flushNow('111111', 'host');
+    expect(t.sent).toHaveLength(4);
+  });
+
   it('clear: nothing held, nothing sent later', async () => {
     const t = harness();
     t.throttle.request('111111', 'all', { at: 'now' }, { board: true, host: false }, 1000);
