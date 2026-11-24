@@ -220,6 +220,21 @@ describe('HeldSends (M9 Batch 2 fix round)', () => {
     expect(t.sent).toHaveLength(4);
   });
 
+  it('a send that sent nothing opens no period: the next goes out at once', () => {
+    const t = harness();
+    t.throttle.request(
+      '111111',
+      'all',
+      { at: 'now' },
+      { board: false, host: false, news: null },
+      1000,
+    );
+    expect(t.throttle.has('111111')).toBe(false);
+    t.throttle.request('111111', 'all', { at: 'now' }, { board: true, host: false }, 1000);
+    expect(t.sent.map((s) => s.what.board)).toEqual([false, true]);
+    expect(t.throttle.has('111111')).toBe(true);
+  });
+
   it('clear: nothing held, nothing sent later', async () => {
     const t = harness();
     t.throttle.request('111111', 'all', { at: 'now' }, { board: true, host: false }, 1000);

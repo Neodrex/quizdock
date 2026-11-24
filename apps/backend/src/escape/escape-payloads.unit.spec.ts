@@ -943,6 +943,22 @@ describe('race scale (M7 §1.7)', () => {
     }
   });
 
+  it('a player listed in two teams: the index gives the first team, as a find over the teams (M9 fix round)', () => {
+    const base = soloView(3, null);
+    const [t1, t2, t3] = base.teams;
+    // p2 listed by t1 as well as t2: the first team wins.
+    const twice = rec({ ...t1.team, members: ['p1', 'p2'] });
+    const v: RunView = { ...base, teams: [twice, t2, t3] };
+    const found = (id: string) => v.teams.find((r) => r.team.members.includes(id))?.team.id;
+    for (const id of ['p1', 'p2', 'p3']) {
+      expect(playerStateOf(v, id).team?.id).toBe(found(id));
+    }
+    expect(playerStateOf(v, 'p2').team?.id).toBe('t1');
+    const lobby: RunView = { ...v, run: { ...v.run, phase: 'forming' } };
+    expect(boardOf(lobby).roster.map((p) => p.teamId)).toEqual(['t1', 't1', 't3']);
+    expect(hostStateOf(v).unassigned).toEqual([]);
+  });
+
   it('placesOf ranks as the screen’s lanesOf (the shared fixture)', () => {
     const v: RunView = {
       ...view(),

@@ -132,6 +132,15 @@ describe('EscapeStore (Redis)', () => {
     expect(changed.get('t2')).toBe(first.get('t2'));
   });
 
+  it('under test, a cached team record is frozen through and through: a change in place throws', async () => {
+    await store.save(id, { teams: [record('t1', ['p1'])] });
+    const rec = (await store.team(id, 't1'))!;
+    expect(Object.isFrozen(rec)).toBe(true);
+    expect(Object.isFrozen(rec.team)).toBe(true);
+    expect(Object.isFrozen(rec.team.members)).toBe(true);
+    expect(() => rec.team.members.push('p9')).toThrow(TypeError);
+  });
+
   it('refuses a record that does not have the stored shape, rather than trusting it', async () => {
     await redis.set(escapeKeys.run(id), JSON.stringify({ ...run, phase: 'dancing' }));
     await expect(store.run(id)).rejects.toThrow();

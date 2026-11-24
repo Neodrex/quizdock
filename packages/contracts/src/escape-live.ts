@@ -440,7 +440,11 @@ export interface EscapeHostState {
 export interface EscapeHostBatch {
   /** Oldest first, as `escape:team-update` gives them in group play. */
   updates: EscapeTeamUpdate[];
-  /** Each changed team once; empty when an `escape:host` (every team) follows. */
+  /**
+   * Each changed team once; empty when an `escape:host` (every team) follows, and
+   * in the finale's time-ups (the teams past their deadline), which `escape:finale`
+   * follows instead.
+   */
   teams: EscapeHostTeam[];
 }
 

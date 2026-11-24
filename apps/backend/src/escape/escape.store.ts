@@ -7,6 +7,7 @@ import {
 } from '@quiz-dock/contracts';
 import { z } from 'zod';
 import { gameKeys, type GameId } from '../game/game.keys';
+import { envSource } from '../admin/settings/settings.service';
 import { RedisService } from '../redis/redis.service';
 import type { EscapeRun, EscapeSession, EscapeSnapshot, TeamRecord } from './escape-live.types';
 import { ESCAPE_TTL_S, escapeKeys, escapeRoomKeys } from './escape.keys';
@@ -17,7 +18,9 @@ import type { Same, TeamState } from './escape.types';
 const SNAPSHOT_CACHE_MAX = 50;
 /**
  * Team records parsed, by their stored JSON (M9 Task 9.4): every view reads all
- * of a run's teams, and most did not change since the last read. A few MB at most.
+ * of a run's teams, and most did not change since the last read. Measured: about
+ * 5 MB of heap when full (stored records of the local load runs, median 408 B of
+ * JSON), 7 MB with the largest (1 KB).
  */
 const TEAM_CACHE_MAX = 4096;
 
@@ -176,12 +179,23 @@ export interface EscapeWrite {
   drop?: string[];
 }
 
+/** `value` and everything in it, frozen. */
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const v of Object.values(value)) deepFreeze(v);
+  }
+  return value;
+}
+
 /** An escape run's records in Redis, under its game id (M3 plan §1.4). */
 @Injectable()
 export class EscapeStore {
   private readonly snapshots = new Map<GameId, EscapeSnapshot>();
   /** Parsed team records by their JSON; records are never changed in place. */
   private readonly parsedTeams = new Map<string, TeamRecord>();
+  /** NODE_ENV (read through the settings module): tests freeze the cached records. */
+  private readonly freezeTeams = envSource.read('NODE_ENV') === 'test';
 
   constructor(private readonly redis: RedisService) {}
 
@@ -269,7 +283,9 @@ export class EscapeStore {
   private teamOf(json: string): TeamRecord {
     const known = this.parsedTeams.get(json);
     if (known) return known;
-    const rec = teamRecordSchema.parse(JSON.parse(json)) as TeamRecord;
+    const parsed = teamRecordSchema.parse(JSON.parse(json)) as TeamRecord;
+    // Shared by every view that reads it: under test, a change in place throws.
+    const rec = this.freezeTeams ? deepFreeze(parsed) : parsed;
     this.parsedTeams.set(json, rec);
     if (this.parsedTeams.size > TEAM_CACHE_MAX) {
       this.parsedTeams.delete(this.parsedTeams.keys().next().value as string);

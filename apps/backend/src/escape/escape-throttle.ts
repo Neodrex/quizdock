@@ -85,7 +85,8 @@ export class HeldSends<V> {
       e.held = mergeHeld(e.held, what);
       return;
     }
-    this.io.send(pin, lane, v, what);
+    // Nothing went out (news of another run, say): no period to wait for.
+    if (!this.io.send(pin, lane, v, what)) return;
     const fresh: Entry = { pin, lane, everyMs, held: nothing(), flushing: null };
     this.entries.set(key, fresh);
     this.arm(key, fresh);
