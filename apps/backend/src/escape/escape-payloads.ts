@@ -144,6 +144,13 @@ function membersOf(v: RunView, team: TeamState): EscapeMember[] {
 
 const recOf = (v: RunView, playerId: string) => recsByPlayer(v).get(playerId) ?? null;
 
+/**
+ * The scheduled start phones and screens count down to. None once the race has
+ * started: a re-run in the room is started by the host, never by the schedule.
+ */
+const pendingStart = (s: EscapeSession): number | null =>
+  s.race && !s.race.started ? s.race.startsAt : null;
+
 /** The session for one phone: its type and race, and whether it is the phone host. */
 export function playerSessionOf(v: RunView, playerId: string): EscapePlayerSession | null {
   const s = v.session;
@@ -152,7 +159,7 @@ export function playerSessionOf(v: RunView, playerId: string): EscapePlayerSessi
   return {
     type: s.type,
     raceFormat: s.race?.format ?? null,
-    startsAt: s.race?.startsAt ?? null,
+    startsAt: pendingStart(s),
     isPhoneHost:
       s.phoneHostUserId !== null &&
       (userId === s.phoneHostUserId || (!!s.phoneHostPlayerId && playerId === s.phoneHostPlayerId)),
@@ -288,7 +295,7 @@ export function boardOf(v: RunView): EscapeBoard {
     gameId: v.id,
     session: v.session && {
       type: v.session.type,
-      startsAt: v.session.race?.startsAt ?? null,
+      startsAt: pendingStart(v.session),
       totals: {
         teams: v.teams.length,
         players: v.players.length,

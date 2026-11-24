@@ -1563,7 +1563,12 @@ export class EscapeEngine implements OnModuleDestroy {
     if (was?.id !== id) return;
     const meta = await this.game.getMeta(pin);
     // The lobby the stop opened holds no quiz: one the room's selection picked stays.
-    if (!meta || meta.quizId) return;
+    if (!meta || meta.quizId) {
+      this.log.log(
+        `reopen ${pin}: ${meta ? 'the room picked a quiz' : 'the room is gone'}, left as is`,
+      );
+      return;
+    }
     await this.openNext(pin, meta.hostUserId, { templateId: was.templateId });
   }
 

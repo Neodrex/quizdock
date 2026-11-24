@@ -526,6 +526,14 @@ describe('playerSessionOf (M7 §1.4)', () => {
       startsAt: 123,
       isPhoneHost: false,
     });
+    // Once started, a re-run in the room is the host's: nobody counts down to it.
+    const rerun = {
+      ...race,
+      session: { ...race.session, race: { ...race.session.race, started: true } },
+    };
+    expect(playerSessionOf(rerun, 'p1')?.startsAt).toBeNull();
+    expect(boardOf(rerun).session?.startsAt).toBeNull();
+    expect(boardOf(race).session?.startsAt).toBe(123);
     expect(playerStateOf(view(), 'p1').session).toBeNull();
   });
 
