@@ -331,6 +331,14 @@ export interface EscapeBrand {
   intro: string | null;
 }
 
+/**
+ * escape:closed: the host stopped the run before its end. It is discarded: no
+ * finale, no results. Every client drops it and shows the room's lobby.
+ */
+export interface EscapeClosed {
+  gameId: string;
+}
+
 /** escape:look: the room's colours and brand, static per room. null/null: unbranded. */
 export interface EscapeLook {
   theme: ThemeValues | null;
@@ -690,4 +698,6 @@ export interface EscapeServerToClientEvents {
   'escape:screen-finale': (p: EscapeScreenFinale) => void;
   /** To every synced socket (console, phone, screen, follow copy), once per sync. */
   'escape:look': (p: EscapeLook) => void;
+  /** To the whole PIN room: the host stopped the run, which is discarded. */
+  'escape:closed': (p: EscapeClosed) => void;
 }

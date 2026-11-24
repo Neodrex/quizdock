@@ -7,6 +7,7 @@ import {
   useLicences,
   useStaticLicenceSource,
 } from '../../test/escape/escape-harness';
+import { banTests, stopTests } from '../../test/escape/ban-stop';
 import { brandTests } from '../../test/escape/brand';
 import { capTests } from '../../test/escape/caps';
 import { clockTests } from '../../test/escape/clock';
@@ -68,4 +69,6 @@ describe('EscapeGateway (socket integration)', () => {
   describe('site licences', () => siteLicenceTests(ctx));
   describe('site races', () => siteRaceTests(ctx));
   describe('site hosts', () => siteHostTests(ctx));
+  describe('ban', () => banTests(ctx));
+  describe('stop', () => stopTests(ctx));
 });

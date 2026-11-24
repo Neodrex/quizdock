@@ -9,6 +9,7 @@ import {
 import { EscapeEngine } from '../../src/escape/escape.engine';
 import { EscapeTimings } from '../../src/escape/escape-timings';
 import { EscapeStore } from '../../src/escape/escape.store';
+import { GameEngine } from '../../src/game/game.engine';
 import { GameService } from '../../src/game/game.service';
 import { gameKeys } from '../../src/game/game.keys';
 import { gameHash } from '../../src/game/game-hash';
@@ -371,16 +372,12 @@ export function raceSessionTests(ctx: EscapeContext): void {
     const timings = () => ctx.h.app.get(EscapeTimings);
     const engine = () => ctx.h.app.get(EscapeEngine);
     const metaOf = async (pin: string) => (await ctx.h.app.get(GameService).getMeta(pin))!;
-    let saved: { raceMinLeadMs: number; raceTouchEveryMs: number; raceRetryMs: number };
+    let saved: { raceMinLeadMs: number; raceTouchEveryMs: number };
 
     beforeAll(() => {
       const t = timings();
-      saved = {
-        raceMinLeadMs: t.raceMinLeadMs,
-        raceTouchEveryMs: t.raceTouchEveryMs,
-        raceRetryMs: t.raceRetryMs,
-      };
-      Object.assign(t, { raceMinLeadMs: 500, raceTouchEveryMs: 100, raceRetryMs: 300 });
+      saved = { raceMinLeadMs: t.raceMinLeadMs, raceTouchEveryMs: t.raceTouchEveryMs };
+      Object.assign(t, { raceMinLeadMs: 500, raceTouchEveryMs: 100 });
     });
     afterAll(() => Object.assign(timings(), saved));
 
@@ -453,24 +450,67 @@ export function raceSessionTests(ctx: EscapeContext): void {
       await running;
     });
 
-    /** The room's game state, written by hand (the host's absence, or its return). */
-    const setState = async (pin: string, state: GameState) => {
+    /** The host away from the lobby, written by hand as GameEngine does after its grace. */
+    const hostAway = async (pin: string) => {
       const meta = await metaOf(pin);
-      await ctx.h.app.get(RedisService).hset(gameKeys.game(meta.id), gameHash({ state }));
+      await ctx.h.app
+        .get(RedisService)
+        .hset(
+          gameKeys.game(meta.id),
+          gameHash({ state: GameState.HostDisconnected, prevState: GameState.Lobby }),
+        );
+    };
+    /** GameEngine.endOrphaned: the 15-minute host window, run now (as its timer would). */
+    const windowEnds = async (pin: string) => {
+      const meta = await metaOf(pin);
+      const game = ctx.h.app.get(GameEngine) as unknown as {
+        endOrphaned(ref: { pin: string; id: string }, hostUserId: string): Promise<void>;
+      };
+      await game.endOrphaned({ pin, id: meta.id }, meta.hostUserId);
     };
 
-    it('the host away at startsAt: it is tried again until the host is back, then starts', async () => {
-      const { pin } = await scheduled(600);
+    it('the host away at startsAt: the race starts on schedule; the run is what the host comes back to', async () => {
+      const { pin, startsAt } = await scheduled(600);
       const a = await joinAndSync(ctx.h, pin, 'Ann');
       const meta = await metaOf(pin);
-      await setState(pin, GameState.HostDisconnected);
-      await settle(1_000);
-      expect(a.last().phase).toBe('forming');
-      expect(engine().inProcess(meta.id, pin).scheduled).toBe(true);
-      const running = stateWhere(a.socket, (s) => s.phase === 'running', 5_000);
-      await setState(pin, GameState.Lobby);
-      await running;
+      await hostAway(pin);
+      const s = await stateWhere(a.socket, (st) => st.phase === 'running', 5_000);
+      expect(Math.abs(s.clock.serverNow - s.clock.elapsedMs - startsAt)).toBeLessThan(300);
       expect(engine().inProcess(meta.id, pin).scheduled).toBe(false);
+      expect(await metaOf(pin)).toMatchObject({
+        state: GameState.HostDisconnected,
+        prevState: GameState.Escape,
+      });
+      // The existing rule from here: the host window never cuts the run short.
+      await windowEnds(pin);
+      expect((await metaOf(pin)).state).toBe(GameState.HostDisconnected);
+      // Nothing stays armed behind the test.
+      await ctx.h.app.get(GameEngine).end(pin, ctx.h.hostUserId);
+    });
+
+    it('the host window does not close a race waiting for its scheduled start; it closes one with no start to wait for', async () => {
+      const { pin } = await scheduled(10_000);
+      const a = await joinAndSync(ctx.h, pin, 'Ann');
+      let ended = 0;
+      a.socket.on('game:ended', () => ended++);
+      await hostAway(pin);
+      await windowEnds(pin);
+      await settle(100);
+      expect(ended).toBe(0);
+      expect((await metaOf(pin)).state).toBe(GameState.HostDisconnected);
+      expect(engine().inProcess((await metaOf(pin)).id, pin).scheduled).toBe(true);
+
+      // No scheduled start: the window closes the forming room, as before.
+      const other = await raceRoom('solo');
+      const b = await joinAndSync(ctx.h, other.pin, 'Bob');
+      const gone = nextEvent(b.socket, 'game:ended');
+      await hostAway(other.pin);
+      await windowEnds(other.pin);
+      await gone;
+      // The first room goes the same way once ended by hand (nothing stays armed).
+      const first = nextEvent(a.socket, 'game:ended');
+      await ctx.h.app.get(GameEngine).end(pin, ctx.h.hostUserId);
+      await first;
     });
 
     it('a host console back after startsAt starts the race on its sync', async () => {

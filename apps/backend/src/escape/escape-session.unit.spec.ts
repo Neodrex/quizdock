@@ -1,6 +1,8 @@
 import { ESCAPE_SESSION_TYPES, ESCAPE_TOOLS, toolsOf } from '@quiz-dock/contracts';
 import {
   GROUP_MAX_PLAYERS,
+  LICENCE_USE_WINDOW_MS,
+  licenceUseKey,
   RACE_MAX_PLAYERS,
   SESSION_RULES,
   capOf,
@@ -10,6 +12,13 @@ import {
 } from './escape-session';
 
 describe('escape session rules (M7 §1.1)', () => {
+  it('a licence use covers 12 hours; the first key is the room id, later ones are numbered', () => {
+    expect(LICENCE_USE_WINDOW_MS).toBe(12 * 3_600_000);
+    expect(licenceUseKey('room', 1)).toBe('room');
+    expect(licenceUseKey('room', 2)).toBe('room:2');
+    expect(licenceUseKey('a'.repeat(32), 12).length).toBeLessThanOrEqual(64);
+  });
+
   it('caps: 6 for group play, 500 for a race, the licence for a hosted event', () => {
     expect(capOf('group')).toBe(6);
     expect(GROUP_MAX_PLAYERS).toBe(6);

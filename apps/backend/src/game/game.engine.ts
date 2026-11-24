@@ -213,6 +213,12 @@ export class GameEngine {
    * the host window), so the run's finale goes out before `game:ended`.
    */
   beforeEnd?: (ref: { pin: string; id: GameId }, meta: GameMeta) => Promise<void>;
+  /** Set by EscapeEngine: a player banned from an escape game's room leaves its run too. */
+  afterBan?: (ref: { pin: string; id: GameId }, playerId: string) => Promise<void>;
+  /** Set by EscapeEngine: awaited before `host:back-to-lobby` stops an escape run (it is discarded). */
+  beforeStop?: (ref: { pin: string; id: GameId }) => Promise<void>;
+  /** Set by EscapeEngine: whether the host window leaves an escape room open (a race before its start). */
+  keepOrphaned?: (ref: { pin: string; id: GameId }) => Promise<boolean>;
   /** Per room, when the answer count last went out, and whether one waits (`countAnswers`). */
   private readonly answerCounts = new Map<string, { at: number; waiting: boolean }>();
 
@@ -1521,6 +1527,8 @@ export class GameEngine {
         await s.leave(pin);
       }
     }
+    if (meta.kind === 'escape')
+      await this.runHook('afterBan', this.afterBan?.(refOf(pin, meta), playerId));
     this.server
       .to(pin)
       .emit('player:left', { playerId, playerCount: await this.game.connectedCount(pin) });
@@ -1624,7 +1632,12 @@ export class GameEngine {
     if (!meta || meta.state !== GameState.HostDisconnected) return; // repris entre-temps
     // Owner decision 1: an escape run still playing is never cut short; the window
     // waits again. Its finale (time limit or last team out) leaves PODIUM to resume.
-    if (meta.kind === 'escape' && meta.prevState === GameState.Escape) {
+    // The same for a race still waiting for its scheduled start (`keepOrphaned`).
+    if (
+      meta.kind === 'escape' &&
+      (meta.prevState === GameState.Escape ||
+        (await this.runHook('keepOrphaned', this.keepOrphaned?.(ref))))
+    ) {
       this.timers.arm('hostWindow', pin, ESCAPE_HOST_WINDOW_MS, () =>
         this.endOrphaned(ref, hostUserId),
       );
@@ -1722,6 +1735,14 @@ export class GameEngine {
     );
   }
 
+  /** An escape hook, best effort like `beforeEnd`: a failure is logged, never thrown. */
+  private async runHook<T>(name: string, hook: Promise<T> | undefined): Promise<T | undefined> {
+    return hook?.catch((err: Error) => {
+      this.log.warn(`${name}: ${err.message}`);
+      return undefined;
+    });
+  }
+
   /** `host:end` : termine la partie (tout état → ENDED) et invalide le PIN (§7). */
   async end(pin: string, hostUserId: string, archive = false): Promise<void> {
     const meta = await this.requireHost(pin, hostUserId);
@@ -1802,6 +1823,8 @@ export class GameEngine {
         // Stopped before its end. Archived first: a failed write throws with nothing
         // moved (the quiz goes on, the host can retry); then no answer is scored any more.
         if (archive) await this.archiveAsked(pin, meta, true);
+        if (meta.kind === 'escape')
+          await this.runHook('beforeStop', this.beforeStop?.(refOf(pin, meta)));
         this.timers.cancelAll(pin);
         this.answerCounts.delete(pin);
         await this.redis.hset(gameKeys.game(meta.id), gameHash({ state: GameState.Ended }));

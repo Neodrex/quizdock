@@ -13,6 +13,7 @@ import type { EscapeTemplate } from '../../src/escape/escape.types';
 import { GameService } from '../../src/game/game.service';
 import { EscapeStore } from '../../src/escape/escape.store';
 import { EscapeTimings } from '../../src/escape/escape-timings';
+import { LICENCE_USE_WINDOW_MS } from '../../src/escape/escape-session';
 import {
   ACME_LICENCE,
   DEV_LICENCE,
@@ -447,6 +448,90 @@ export function sessionTests(ctx: EscapeContext): void {
     expect(await createAs(c, library, 'hosted', { licenceId: 'acme' })).toMatchObject(
       refused('escape.licence_no_events_left'),
     );
+  });
+
+  /** The room's run ended and a new one of the same template formed, ready to start. */
+  const again = async ({ host, pin }: { host: Socket; pin: string }) => {
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
+    expect(await host.emitWithAck('escape:open', { pin, templateId: library })).toEqual({
+      ok: true,
+    });
+    await joinAndSync(ctx.h, pin, `P${Date.now() % 100_000}`);
+    expect(await host.emitWithAck('escape:teams', { pin, mode: 'auto', count: 1 })).toEqual({
+      ok: true,
+    });
+  };
+  /** The current use's window began `ms` ago. */
+  const ageUse = async (pin: string, ms: number) => {
+    const s = (await store().session(pin))!;
+    await store().writeSession(pin, { ...s, licenceUsedAt: Date.now() - ms });
+  };
+
+  it('a use covers the room for 12 hours from its first start; a start after that is a new use, checked again', async () => {
+    useLicences(ctx.h, DEV_LICENCES);
+    const a = await readyRoom('hosted', { licenceId: 'acme' });
+    const { roomId } = (await ctx.h.app.get(GameService).getMeta(a.pin))!;
+    const recordUse = jest.spyOn(port(), 'recordUse');
+    try {
+      const t0 = Date.now();
+      expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toEqual({ ok: true });
+      expect(recordUse).toHaveBeenLastCalledWith(
+        'acme',
+        expect.objectContaining({ useKey: roomId }),
+      );
+      const first = (await store().session(a.pin))!;
+      expect(first.licenceUses).toBe(1);
+      expect(first.licenceUsedAt).toBeGreaterThanOrEqual(t0);
+
+      // Just inside the window: free, and the window does not move.
+      await again(a);
+      await ageUse(a.pin, LICENCE_USE_WINDOW_MS - 60_000);
+      const before = (await store().session(a.pin))!.licenceUsedAt;
+      expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toEqual({ ok: true });
+      expect(recordUse).toHaveBeenCalledTimes(1);
+      expect((await store().session(a.pin))!.licenceUsedAt).toBe(before);
+      expect(await eventsLeft('acme')).toBe(1);
+
+      // Past it: a new use under the room's second key.
+      await again(a);
+      await ageUse(a.pin, LICENCE_USE_WINDOW_MS + 1);
+      expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toEqual({ ok: true });
+      expect(recordUse).toHaveBeenLastCalledWith(
+        'acme',
+        expect.objectContaining({ useKey: `${roomId}:2` }),
+      );
+      expect(await eventsLeft('acme')).toBe(0);
+      expect((await store().session(a.pin))!.licenceUses).toBe(2);
+
+      // Past it again with the licence expired: refused, the room keeps forming.
+      await again(a);
+      await ageUse(a.pin, LICENCE_USE_WINDOW_MS + 1);
+      useLicences(ctx.h, [{ ...ACME_LICENCE, expiresAt: Date.now() - 1 }]);
+      expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toMatchObject(
+        refused('escape.licence_expired'),
+      );
+      expect(await phaseOf(a.pin)).toBe('forming');
+      expect((await store().session(a.pin))!.licenceUses).toBe(2);
+    } finally {
+      recordUse.mockRestore();
+    }
+  });
+
+  it('a use stored without its time (an older room) starts its window at the next start', async () => {
+    useLicences(ctx.h, DEV_LICENCES);
+    const a = await readyRoom('hosted', { licenceId: 'acme' });
+    const s = (await store().session(a.pin))!;
+    await store().writeSession(a.pin, { ...s, licenceUsed: true });
+    const recordUse = jest.spyOn(port(), 'recordUse');
+    try {
+      const t0 = Date.now();
+      expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toEqual({ ok: true });
+      expect(recordUse).not.toHaveBeenCalled();
+      expect((await store().session(a.pin))!.licenceUsedAt).toBeGreaterThanOrEqual(t0);
+    } finally {
+      recordUse.mockRestore();
+    }
   });
 
   it('a licence expired since the create refuses the start; the room keeps forming', async () => {

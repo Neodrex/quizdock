@@ -83,6 +83,10 @@ export interface EscapeSession {
   licence: FrozenLicence | null;
   /** Owner question 4: the licence is used at the room's first start. */
   licenceUsed: boolean;
+  /** When the current use's window began (its first start); absent on older rooms. */
+  licenceUsedAt?: number;
+  /** Uses recorded for this room so far (absent: one, once `licenceUsed`). */
+  licenceUses?: number;
   /** Group play: the creator, who also plays (owner question 1). */
   phoneHostUserId: string | null;
   /**

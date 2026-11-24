@@ -49,10 +49,13 @@ import type {
   TeamRecord,
 } from './escape-live.types';
 import {
+  LICENCE_USE_WINDOW_MS,
   RACE_LEAD_SLACK_MS,
   RACE_MAX_LEAD_MIN,
+  RACE_START_GRACE_MS,
   SESSION_RULES,
   capOf,
+  licenceUseKey,
   limitsOf,
   modeAllowed,
   toolAllowed,
@@ -291,8 +294,11 @@ export class EscapeEngine implements OnModuleDestroy {
   bindServer(server: EscapeServer): void {
     this.server = server;
     // E3: before a room ends under its run (host:end, the host window), the finale goes out.
-    this.modules.get(GameEngine, { strict: false }).beforeEnd = (ref) =>
-      this.closing(ref.pin, ref.id);
+    const game = this.modules.get(GameEngine, { strict: false });
+    game.beforeEnd = (ref) => this.closing(ref.pin, ref.id);
+    game.afterBan = (ref, playerId) => this.banned(ref.pin, ref.id, playerId);
+    game.beforeStop = (ref) => this.stopping(ref.pin, ref.id);
+    game.keepOrphaned = (ref) => this.waitsForStart(ref.pin, ref.id);
     this.recover().catch((err: Error) => this.log.error(`recover: ${err.message}`));
   }
 
@@ -738,12 +744,66 @@ export class EscapeEngine implements OnModuleDestroy {
         throw new BadRequestException('escape.not_in_session');
       }
       if (ref.run.phase !== 'forming') throw new BadRequestException('escape.wrong_phase');
-      const left = teamOf(this.teamsOf(v), me.playerId)?.id;
-      if (!left) return;
-      const moved = await this.applyMove(ref, v, me.playerId, null);
-      const out = await this.dropEmptied(ref, moved, left);
+      const out = await this.takeOut(ref, v, me.playerId, true);
+      if (out.v === v) return;
       await this.broadcast(out.ref, out.v, this.formationPhones(v, out.v, me.playerId));
     });
+  }
+
+  /**
+   * A player banned from the room (GameEngine.afterBan, after `kicked`) leaves
+   * the run too, in its queue: out of their team and its index, their sockets
+   * out of the team room and no longer a player's, so a client that ignores
+   * `kicked` cannot act or sync back in. A team left empty goes while the run
+   * plays (any session) and in a forming race; a run left with no team, or with
+   * only teams that are done, ends. After the finale the results stay as they are.
+   */
+  private async banned(pin: string, id: GameId, playerId: string): Promise<void> {
+    await this.queue.run(id, async () => {
+      // GameEngine took them out of the PIN room: found by their data.
+      for (const s of await this.server.fetchSockets()) {
+        if (s.data.pin !== pin || s.data.playerId !== playerId) continue;
+        for (const room of s.rooms) {
+          if (room.startsWith(TEAM_ROOM_PREFIX)) void s.leave(room);
+        }
+        delete s.data.playerId;
+      }
+      const ref = await this.requireRun(pin).catch(() => null);
+      if (ref?.id !== id || ref.run.phase === 'finale') return;
+      this.gone.get(id)?.delete(playerId);
+      const v = await this.viewOf(ref);
+      const race = v.session?.type === 'race';
+      const running = ref.run.phase === 'running';
+      const out = await this.takeOut(ref, v, playerId, race || running);
+      await this.broadcast(
+        out.ref,
+        out.v,
+        race ? this.formationPhones(v, out.v, playerId) : undefined,
+      );
+      if (!running || out.v === v) return;
+      // T4: an emptied team no longer holds the run open.
+      const { clock } = out.ref.run;
+      if (!out.v.teams.length || allDone(clock, out.v.teams, runElapsed(clock, Date.now()))) {
+        await this.finale(out.ref);
+      }
+    });
+  }
+
+  /**
+   * Takes a player out of their team (roles dealt again, F4). With `drop`, a
+   * team left empty is deleted. The run and view after; the same view when the
+   * player was in no team.
+   */
+  private async takeOut(
+    ref: RunRef,
+    v: RunView,
+    playerId: string,
+    drop: boolean,
+  ): Promise<{ ref: RunRef; v: RunView }> {
+    const left = teamOf(this.teamsOf(v), playerId)?.id;
+    if (!left) return { ref, v };
+    const moved = await this.applyMove(ref, v, playerId, null);
+    return drop ? this.dropEmptied(ref, moved, left) : { ref, v: moved };
   }
 
   /** A team race, forming, or running for a player without a team. */
@@ -757,9 +817,10 @@ export class EscapeEngine implements OnModuleDestroy {
   }
 
   /**
-   * M7 §1.7: the race team `teamId` (the one a player just left) is deleted
-   * when nobody is left in it: out of the run's teams, its record and its code
-   * gone. The run and view after.
+   * M7 §1.7: the team `teamId` (a race's, the one a player just left; any
+   * team emptied by a ban while the run plays) is deleted when nobody is left
+   * in it: out of the run's teams, its record and its code gone. The run and
+   * view after.
    */
   private async dropEmptied(
     ref: RunRef,
@@ -800,13 +861,26 @@ export class EscapeEngine implements OnModuleDestroy {
    * nobody in, the race keeps forming and the host may start it later.
    */
   async startRace(pin: string): Promise<void> {
-    const held = await this.startRun(pin, undefined).catch((err: Error) => {
-      this.log.warn(`scheduled start ${pin}: ${err.message}`);
-      return false;
-    });
-    // The host is away (its room waits in HOST_DISCONNECTED): try again a little
-    // later, until the race starts or the room ends (`closing` disarms it).
-    if (held) this.armRace(pin, Date.now() + this.timings.raceRetryMs);
+    await this.startRun(pin, undefined).catch((err: Error) =>
+      this.log.warn(`scheduled start ${pin}: ${err.message}`),
+    );
+  }
+
+  /**
+   * Owner decision (GameEngine.keepOrphaned): the host window does not close a
+   * race still forming before its scheduled start (plus a short grace for the
+   * start itself). One found empty at its start waits for nobody.
+   */
+  private async waitsForStart(pin: string, id: GameId): Promise<boolean> {
+    const [run, session] = await Promise.all([this.store.run(id), this.store.session(pin)]);
+    const race = session?.race;
+    return (
+      run?.phase === 'forming' &&
+      !!race?.startsAt &&
+      !race.started &&
+      !race.noPlayers &&
+      Date.now() < race.startsAt + RACE_START_GRACE_MS
+    );
   }
 
   /** A forming race whose scheduled start is due, not started yet nor found empty. */
@@ -893,10 +967,12 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /**
    * M7 Task 7.11: a hosted room not started yet checks its licence again, then
-   * records the use (idempotent by the room's id) and stores `licenceUsed` at
-   * once, so a start that fails later does not use another event. Fails closed:
-   * a refusal, the source unavailable or no host included, refuses the start.
-   * The session to start with.
+   * records the use (idempotent by its key) and stores it at once, so a start
+   * that fails later does not use another event. Fails closed: a refusal, the
+   * source unavailable or no host included, refuses the start. Owner decision:
+   * a use covers the room's starts for LICENCE_USE_WINDOW_MS from its first; a
+   * start after that is a new use, checked and recorded the same way (keys
+   * `<roomId>`, `<roomId>:2`, …). The session to start with.
    */
   private async useLicence(
     ref: RunRef,
@@ -905,9 +981,19 @@ export class EscapeEngine implements OnModuleDestroy {
     teams: readonly TeamState[],
   ): Promise<EscapeSession | null> {
     const s = v.session;
-    if (s?.type !== 'hosted' || !s.licence || s.licenceUsed) return s;
-    if (!host) throw new ForbiddenException(LICENCE_REQUIRED);
+    if (s?.type !== 'hosted' || !s.licence) return s;
     const now = Date.now();
+    if (s.licenceUsed) {
+      // A use stored before the window existed has no time: its window starts now.
+      if (s.licenceUsedAt === undefined) {
+        const timed = { ...s, licenceUsedAt: now };
+        await this.store.writeSession(ref.pin, timed);
+        return timed;
+      }
+      if (now - s.licenceUsedAt < LICENCE_USE_WINDOW_MS) return s;
+    }
+    if (!host) throw new ForbiddenException(LICENCE_REQUIRED);
+    const n = s.licenceUsed ? (s.licenceUses ?? 1) + 1 : 1;
     const checked = await this.licences.check(host, s.licence.id, now);
     // No event left may be this room's own use, recorded by a start whose answer
     // was lost: the idempotent use below finds it, and refuses any other room.
@@ -915,14 +1001,14 @@ export class EscapeEngine implements OnModuleDestroy {
       throw new ForbiddenException(licenceErrorCode(checked.reason));
     }
     const use = await this.licences.recordUse(s.licence.id, {
-      useKey: ref.meta.roomId,
+      useKey: licenceUseKey(ref.meta.roomId, n),
       pin: ref.pin,
       gameId: ref.id,
       startedAt: now,
       players: teams.reduce((n, t) => n + t.members.length, 0),
     });
     if (!use.ok) throw new ForbiddenException(licenceErrorCode(use.reason));
-    const used = { ...s, licenceUsed: true };
+    const used = { ...s, licenceUsed: true, licenceUsedAt: now, licenceUses: n };
     await this.store.writeSession(ref.pin, used);
     return used;
   }
@@ -934,15 +1020,21 @@ export class EscapeEngine implements OnModuleDestroy {
   }
 
   /**
-   * S1–S3, by the host or (`host` undefined) by the race's schedule.
-   * True when a scheduled start was held back by the host's absence.
+   * S1–S3, by the host or (`host` undefined) by the race's schedule. Owner
+   * decision: a scheduled start does not wait for an absent host; the run is
+   * then what the host comes back to (prevState).
    */
-  private async startRun(pin: string, host: LicenceHost | undefined): Promise<boolean> {
+  private async startRun(pin: string, host: LicenceHost | undefined): Promise<void> {
     const hostUserId = host?.userId;
     return this.mutate(pin, hostUserId, async (ref) => {
-      if (hostUserId === undefined && ref.run.phase !== 'forming') return false;
-      if (hostUserId === undefined && ref.meta.state === GameState.HostDisconnected) return true;
-      if (ref.run.phase !== 'forming' || ref.meta.state !== GameState.Lobby) {
+      if (hostUserId === undefined && ref.run.phase !== 'forming') return;
+      const { state, prevState } = ref.meta;
+      const lobby =
+        state === GameState.Lobby ||
+        (hostUserId === undefined &&
+          state === GameState.HostDisconnected &&
+          prevState === GameState.Lobby);
+      if (ref.run.phase !== 'forming' || !lobby) {
         throw new BadRequestException('escape.wrong_phase');
       }
       const v = await this.viewOf(ref);
@@ -1015,7 +1107,6 @@ export class EscapeEngine implements OnModuleDestroy {
       }
       await this.broadcast({ ...ref, run }, { ...v, run, teams: recs, now, session });
       this.startTicker(pin, ref.id);
-      return false;
     });
   }
 
@@ -1333,6 +1424,30 @@ export class EscapeEngine implements OnModuleDestroy {
       const ref = await this.requireRun(pin).catch(() => null);
       if (ref?.id !== id || ref.run.phase !== 'running') return;
       await this.finale(ref, true);
+    });
+  }
+
+  /**
+   * Owner decision: the host's Stop while the run plays is an abort
+   * (GameEngine.beforeStop, awaited by `host:back-to-lobby` before the room
+   * goes to its lobby). In its queue the run is discarded: no finale, no
+   * results, nothing to the Site; what this process keeps for it goes, and the
+   * room is told (`escape:closed`). A licence use already recorded stays, and
+   * a Site race's room keeps its claim. A run already in its finale is left.
+   */
+  private async stopping(pin: string, id: GameId): Promise<void> {
+    await this.queue.run(id, async () => {
+      const ref = await this.requireRun(pin).catch(() => null);
+      if (ref?.id !== id || ref.run.phase === 'finale') return;
+      this.forget(id);
+      for (const lane of ['all', 'screens', 'host'] as const) this.held.take(pin, lane);
+      await this.store.discard(id);
+      for (const s of await this.server.in(pin).fetchSockets()) {
+        for (const room of s.rooms) {
+          if (room.startsWith(TEAM_ROOM_PREFIX)) void s.leave(room);
+        }
+      }
+      this.server.to(pin).emit('escape:closed', { gameId: id });
     });
   }
 

@@ -18,6 +18,15 @@ export const RACE_FINALE_TOP = 20;
 export const RACE_MAX_LEAD_MIN = 180;
 /** Slack on both bounds of a race's lead, for the trip from the dialog to the server. */
 export const RACE_LEAD_SLACK_MS = 5_000;
+/** Past its scheduled start, a race not started yet still holds its room open this long. */
+export const RACE_START_GRACE_MS = 60_000;
+/** Owner decision: one licence use covers the room's starts for 12 hours from its first. */
+export const LICENCE_USE_WINDOW_MS = 12 * 60 * 60_000;
+
+/** The idempotent key of a room's nth licence use: the room id alone for the first. */
+export function licenceUseKey(roomId: string, n: number): string {
+  return n <= 1 ? roomId : `${roomId}:${n}`;
+}
 
 type TeamworkMode = EscapeTemplate['mode'];
 

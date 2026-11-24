@@ -137,6 +137,8 @@ const sessionSchema = z.object({
     })
     .nullable(),
   licenceUsed: z.boolean(),
+  licenceUsedAt: ms.optional(),
+  licenceUses: z.number().int().min(1).optional(),
   phoneHostUserId: z.string().nullable(),
   phoneHostPlayerId: z.string().nullable().optional(),
 });
@@ -363,6 +365,20 @@ export class EscapeStore {
       pipe.expire(key, ESCAPE_TTL_S);
     }
     await pipe.exec();
+  }
+
+  /** An aborted run (the host's Stop): every record of it goes, so nothing revives or reads it. */
+  async discard(id: GameId): Promise<void> {
+    await this.redis.del(
+      escapeKeys.room(id),
+      escapeKeys.host(id),
+      escapeKeys.template(id),
+      escapeKeys.run(id),
+      escapeKeys.teams(id),
+      escapeKeys.members(id),
+      escapeKeys.results(id),
+    );
+    this.snapshots.delete(id);
   }
 
   /** The final ranking and awards (null until the finale). */
