@@ -170,20 +170,43 @@ type SiteRaceSession = EscapeSession & {
   race: NonNullable<EscapeSession['race']> & { siteRaceId: string };
 };
 
-/** M9 Task 9.6: a Site race, not started, whose room the Site does not know yet. */
+/**
+ * M9 Task 9.6: a Site race, not started, whose room the Site does not know yet
+ * and a retry may still fix (not lost to another room, not unknown to the Site).
+ */
 function siteWaiting(s: EscapeSession | null | undefined): s is SiteRaceSession {
   const race = s?.race;
-  return !!race?.siteRaceId && race.siteLinked === false && !race.siteLost && !race.started;
+  return (
+    !!race?.siteRaceId &&
+    race.siteLinked === false &&
+    !race.siteLost &&
+    !race.siteMissing &&
+    !race.started
+  );
 }
 
-/** The session after the Site's answer to `opened`: `not-open` means another room won. */
+/**
+ * The session after the Site's answer to `opened`: `not-open` means another room
+ * won, `not-found` that the Site does not know the race (stored, so no restart
+ * retries it).
+ */
 function withOpened(s: EscapeSession, opened: RaceOpened): EscapeSession {
   if (!s.race) return s;
   const race = { ...s.race };
   delete race.siteLost;
+  delete race.siteMissing;
   if (opened.ok) return { ...s, race: { ...race, siteLinked: true } };
   const lost = opened.reason === 'not-open';
-  return { ...s, race: { ...race, siteLinked: false, ...(lost && { siteLost: true }) } };
+  const missing = opened.reason === 'not-found';
+  return {
+    ...s,
+    race: {
+      ...race,
+      siteLinked: false,
+      ...(lost && { siteLost: true }),
+      ...(missing && { siteMissing: true }),
+    },
+  };
 }
 
 /** The same roles per member, whatever the key and role order. */
@@ -830,14 +853,15 @@ export class EscapeEngine implements OnModuleDestroy {
     if (!siteWaiting(before)) return;
     const opened = await this.races.opened(before.race.siteRaceId, pin);
     const again = await this.queue.run(meta.id, async () => {
-      const ref = await this.requireRun(pin).catch(() => null);
-      if (ref?.id !== meta.id) return false;
       const session = await this.store.session(pin);
-      // Settled meanwhile (by the start's own try).
-      if (!session?.race || session.race.siteLinked !== false || session.race.siteLost) {
-        return false;
-      }
-      if (!opened.ok && opened.reason === 'unavailable') return siteWaiting(session);
+      // Settled meanwhile (by the start's own try), or the room is gone.
+      if (!siteWaiting(session)) return false;
+      const ref = await this.requireRun(pin).catch(() => null);
+      if (!ref) return false;
+      // The room opened its next run meanwhile (the session is the room's):
+      // not this queue's to write; ask again under the new run.
+      if (ref.id !== meta.id) return true;
+      if (!opened.ok && opened.reason === 'unavailable') return true;
       await this.store.writeSession(pin, withOpened(session, opened));
       this.toHost(ref, await this.viewOf(ref));
       return false;

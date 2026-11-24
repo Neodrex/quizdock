@@ -135,13 +135,40 @@ export function siteRaceTests(ctx: EscapeContext): void {
 
     it('an opened refused as not-found: logged, the room stays open, unlinked, no retry', async () => {
       site.answers.set(openedPath, { ok: false, reason: 'not-found' });
-      const { pin } = await siteRace();
+      const { pin, hostSeen } = await siteRace();
       expect((await store().session(pin))?.race).toMatchObject({
         siteRaceId: RACE,
         siteLinked: false,
+        siteMissing: true,
       });
       const meta = (await ctx.h.app.get(GameService).getMeta(pin))!;
-      expect(ctx.h.app.get(EscapeEngine).inProcess(meta.id, pin).siteRetry).toBe(false);
+      const engine = ctx.h.app.get(EscapeEngine);
+      expect(engine.inProcess(meta.id, pin).siteRetry).toBe(false);
+      // The reason survives a restart: recover does not retry it either.
+      await (engine as unknown as { recoverRoom(pin: string): Promise<void> }).recoverRoom(pin);
+      expect(engine.inProcess(meta.id, pin).siteRetry).toBe(false);
+      await eventually(async () =>
+        expect(
+          (hostSeen.filter(([e]) => e === 'escape:host').at(-1)?.[1] as EscapeHostState)?.session
+            ?.race,
+        ).toMatchObject({ siteLinked: false, siteMissing: true }),
+      );
+      expect(sessionLeaksIn(hostSeen, { siteRaceId: RACE, host: true })).toEqual([]);
+    });
+
+    it('a not-found room starts without asking the Site again', async () => {
+      site.answers.set(openedPath, { ok: false, reason: 'not-found' });
+      const { host, pin } = await siteRace();
+      const phone = await joinAndSync(ctx.h, pin, 'Ann');
+      const running = stateWhere(phone.socket, (s) => s.phase === 'running');
+      expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+      await running;
+      expect(calls(openedPath)).toHaveLength(1);
+      expect((await store().session(pin))?.race).toMatchObject({
+        started: true,
+        siteLinked: false,
+        siteMissing: true,
+      });
     });
 
     describe('the Site unreachable at the open (M9 Task 9.6)', () => {
@@ -228,15 +255,101 @@ export function siteRaceTests(ctx: EscapeContext): void {
       });
 
       it('the room ending stops the retries', async () => {
-        const { host, pin } = await siteRace();
-        const id = await idOf(pin);
-        const ended = nextEvent(host, 'game:ended');
-        host.emit('host:end', { pin });
-        await ended;
-        expect(engine().inProcess(id, pin).siteRetry).toBe(false);
-        const n = calls(openedPath).length;
-        await settle(450);
-        expect(calls(openedPath)).toHaveLength(n);
+        // A period the test never reaches: only the end can clear the timer.
+        timings().siteRetryMs = 60_000;
+        try {
+          const { host, pin } = await siteRace();
+          const id = await idOf(pin);
+          expect(engine().inProcess(id, pin).siteRetry).toBe(true);
+          const ended = nextEvent(host, 'game:ended');
+          host.emit('host:end', { pin });
+          await ended;
+          expect(engine().inProcess(id, pin).siteRetry).toBe(false);
+        } finally {
+          timings().siteRetryMs = 150;
+        }
+      });
+
+      type Inner = { disarmSiteRetry(pin: string): void; recoverRoom(pin: string): Promise<void> };
+      const inner = () => engine() as unknown as Inner;
+
+      it('recover re-arms a waiting room, whose retry then links it', async () => {
+        timings().siteRetryMs = 60_000;
+        let pin = '';
+        try {
+          ({ pin } = await siteRace());
+          const id = await idOf(pin);
+          // What a restart loses: the timer.
+          inner().disarmSiteRetry(pin);
+          expect(engine().inProcess(id, pin).siteRetry).toBe(false);
+          timings().siteRetryMs = 150;
+          await inner().recoverRoom(pin);
+          expect(engine().inProcess(id, pin).siteRetry).toBe(true);
+          site.answers.set(openedPath, { ok: true });
+          await eventually(async () =>
+            expect((await store().session(pin))?.race?.siteLinked).toBe(true),
+          );
+          expect(engine().inProcess(id, pin).siteRetry).toBe(false);
+        } finally {
+          timings().siteRetryMs = 150;
+        }
+      });
+
+      it('recover does not re-arm a started or a lost room', async () => {
+        timings().siteRetryMs = 60_000;
+        try {
+          // Started: the session says so, the run is running.
+          const a = await siteRace();
+          const phone = await joinAndSync(ctx.h, a.pin, 'Ann');
+          const running = stateWhere(phone.socket, (s) => s.phase === 'running');
+          expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toEqual({ ok: true });
+          await running;
+          await inner().recoverRoom(a.pin);
+          expect(engine().inProcess(await idOf(a.pin), a.pin).siteRetry).toBe(false);
+          // Lost: another room won on the Site; the room is still forming.
+          const b = await siteRace();
+          inner().disarmSiteRetry(b.pin);
+          const session = (await store().session(b.pin))!;
+          await store().writeSession(b.pin, {
+            ...session,
+            race: { ...session.race!, siteLinked: false, siteLost: true },
+          });
+          await inner().recoverRoom(b.pin);
+          expect(engine().inProcess(await idOf(b.pin), b.pin).siteRetry).toBe(false);
+        } finally {
+          timings().siteRetryMs = 150;
+        }
+      });
+
+      it('a re-open during a retry in flight keeps the retries going', async () => {
+        timings().siteRetryMs = 60_000;
+        try {
+          const { host, pin } = await siteRace();
+          inner().disarmSiteRetry(pin);
+          // The Site answers only once the room has a new run.
+          let release!: () => void;
+          const held = new Promise<void>((r) => (release = r));
+          const slow = jest.spyOn(engine()['races'], 'opened').mockImplementationOnce(async () => {
+            await held;
+            return { ok: false, reason: 'unavailable' };
+          });
+          try {
+            const retry = (
+              engine() as unknown as { retrySite(pin: string): Promise<void> }
+            ).retrySite(pin);
+            await eventually(async () => expect(slow).toHaveBeenCalled());
+            expect(
+              await host.emitWithAck('escape:open', { pin, templateId: library }),
+            ).toMatchObject({ ok: true });
+            release();
+            await retry;
+          } finally {
+            slow.mockRestore();
+          }
+          expect(engine().inProcess(await idOf(pin), pin).siteRetry).toBe(true);
+        } finally {
+          timings().siteRetryMs = 150;
+        }
       });
 
       it('not-open on a retry: another room won; this one keeps running, with the second notice', async () => {

@@ -119,10 +119,11 @@ describe('SiteRaces', () => {
     expect(await races.opened(RACE, '123456')).toEqual({ ok: false, reason: 'unavailable' });
   });
 
-  it('Live PINs (6 digits) match what the Site takes; anything else is not sent', async () => {
+  it('Live PINs (6 digits) match what the Site takes; anything else is not sent, never retried', async () => {
     expect(SITE_PIN.test('012345')).toBe(true);
     const { races, post, log } = fakeSite({ raw: { ok: true } });
-    expect(await races.opened(RACE, 'a b')).toEqual({ ok: false, reason: 'unavailable' });
+    // A retry cannot fix the PIN: not-found, like a race the Site does not know.
+    expect(await races.opened(RACE, 'a b')).toEqual({ ok: false, reason: 'not-found' });
     expect(post).not.toHaveBeenCalled();
     expect(log.warn).toHaveBeenCalledTimes(1);
   });

@@ -419,6 +419,8 @@ export interface EscapeHostSession {
     siteLinked?: boolean;
     /** A Site race only: another room opened the race on the Site; results stay here. */
     siteLost?: boolean;
+    /** A Site race only: the Site does not know the race (`opened` not-found); no retry. */
+    siteMissing?: boolean;
   } | null;
   licence: {
     /** The brand's name; null for a licence without a brand. */

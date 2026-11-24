@@ -524,7 +524,9 @@
       "copied": "連結已複製",
       "copyByHand": "請複製此連結：{{url}}",
       "siteUnlinked": "網站還不知道這個房間。如果開始前仍未解決，請將 PIN {{pin}} 貼到 /admin/races。",
-      "siteLost": "另一個房間已在網站上開啟這場競賽；本房間的結果不會進入存檔。"
+      "siteLost": "另一個房間已在網站上開啟這場競賽；本房間的結果不會進入存檔。",
+      "siteMissing": "網站不知道這場比賽；請在網站上檢查該比賽。",
+      "siteUnlinkedStarted": "網站不知道這個房間。請將 PIN {{pin}} 貼到 /admin/races。"
     },
     "phone": {
       "alone": "你將獨自參賽",

@@ -538,7 +538,9 @@
       "copied": "Link kopiert",
       "copyByHand": "Kopiere diesen Link: {{url}}",
       "siteUnlinked": "Die Site kennt diesen Raum noch nicht. Wenn sich das bis zum Start nicht klärt, füge die PIN {{pin}} unter /admin/races ein.",
-      "siteLost": "Ein anderer Raum hat dieses Rennen auf der Site eröffnet; seine Ergebnisse gelangen nicht ins Archiv."
+      "siteLost": "Ein anderer Raum hat dieses Rennen auf der Site eröffnet; seine Ergebnisse gelangen nicht ins Archiv.",
+      "siteMissing": "Die Site kennt dieses Rennen nicht; prüfe das Rennen auf der Site.",
+      "siteUnlinkedStarted": "Die Site kennt diesen Raum nicht. Füge die PIN {{pin}} in /admin/races ein."
     },
     "phone": {
       "alone": "Du spielst allein",

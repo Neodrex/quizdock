@@ -552,7 +552,9 @@
       "copied": "Link copiato",
       "copyByHand": "Copia questo link: {{url}}",
       "siteUnlinked": "Il Sito non conosce ancora questa stanza. Se non si risolve prima della partenza, incolla il PIN {{pin}} in /admin/races.",
-      "siteLost": "Un'altra stanza ha aperto questa gara sul Sito; i suoi risultati non arriveranno all'archivio."
+      "siteLost": "Un'altra stanza ha aperto questa gara sul Sito; i suoi risultati non arriveranno all'archivio.",
+      "siteMissing": "Il Sito non conosce questa gara; controlla la gara sul Sito.",
+      "siteUnlinkedStarted": "Il Sito non conosce questa stanza. Incolla il PIN {{pin}} in /admin/races."
     },
     "phone": {
       "alone": "Gareggi da solo",

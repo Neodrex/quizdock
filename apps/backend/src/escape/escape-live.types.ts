@@ -74,6 +74,8 @@ export interface EscapeSession {
     siteLinked?: boolean;
     /** A Site race whose `opened` retry got `not-open`: another room won. Host only. */
     siteLost?: boolean;
+    /** A Site race only: the Site does not know the race (`opened` not-found); no retry. */
+    siteMissing?: boolean;
     /** M8: the Site race's channel brand, frozen at create; only its look goes out. */
     brand: LicenceBrand | null;
   } | null;

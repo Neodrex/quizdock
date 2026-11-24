@@ -30,6 +30,21 @@ describe('RaceSiteNotice (M9 Task 9.6)', () => {
     expect(screen.queryByText(/paste the PIN/)).toBeNull();
   });
 
+  it('the Site does not know the race: check it on the Site; no PIN to paste, no retry', () => {
+    drawEn(<RaceSiteNotice pin={PIN} session={race({ siteLinked: false, siteMissing: true })} />);
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'The Site does not know this race; check the race on the Site.',
+    );
+    expect(screen.queryByText(/paste the PIN|yet/)).toBeNull();
+  });
+
+  it('after the start, the unlinked notice says nothing about the start or a retry', () => {
+    drawEn(<RaceSiteNotice pin={PIN} session={race({ siteLinked: false, started: true })} />);
+    const note = screen.getByRole('status');
+    expect(note).toHaveTextContent(`Paste the PIN ${PIN} in /admin/races`);
+    expect(note).not.toHaveTextContent(/before the start|yet/);
+  });
+
   it('nothing for a linked Site race or a race not from the Site', () => {
     for (const session of [race({ siteLinked: true }), race()]) {
       const { container, unmount } = drawEn(<RaceSiteNotice pin={PIN} session={session} />);

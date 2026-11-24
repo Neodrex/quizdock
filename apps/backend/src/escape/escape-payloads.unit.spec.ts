@@ -448,6 +448,11 @@ describe('host payloads', () => {
       siteLinked: false,
       siteLost: true,
     });
+    expect(raceSession({ siteRaceId: 's', siteLinked: false, siteMissing: true })).toMatchObject({
+      siteLinked: false,
+      siteMissing: true,
+    });
+    expect(raceSession({ siteRaceId: 's', siteLinked: false })).not.toHaveProperty('siteMissing');
   });
 
   it('the template itself trips the checker (positive control)', () => {
@@ -950,6 +955,7 @@ describe('race scale (M7 §1.7)', () => {
         siteRaceId: 'site-1',
         siteLinked: false,
         siteLost: true,
+        siteMissing: true,
       },
     });
     const outside = JSON.stringify([
@@ -958,8 +964,12 @@ describe('race scale (M7 §1.7)', () => {
       boardOf(v),
       lookOf(v.session),
     ]);
-    expect(outside).not.toMatch(/siteLinked|siteLost|site-1/);
-    expect(hostStateOf(v).session?.race).toMatchObject({ siteLinked: false, siteLost: true });
+    expect(outside).not.toMatch(/siteLinked|siteLost|siteMissing|site-1/);
+    expect(hostStateOf(v).session?.race).toMatchObject({
+      siteLinked: false,
+      siteLost: true,
+      siteMissing: true,
+    });
   });
 
   it('a host state walks the players and the teams a few times, not once per team (M9 Task 9.4)', () => {

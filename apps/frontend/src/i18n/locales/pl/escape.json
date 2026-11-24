@@ -566,7 +566,9 @@
       "copied": "Skopiowano link",
       "copyByHand": "Skopiuj ten link: {{url}}",
       "siteUnlinked": "Strona jeszcze nie zna tego pokoju. Jeśli to się nie wyjaśni przed startem, wklej PIN {{pin}} w /admin/races.",
-      "siteLost": "Inny pokój otworzył ten wyścig na Stronie; jego wyniki nie trafią do archiwum."
+      "siteLost": "Inny pokój otworzył ten wyścig na Stronie; jego wyniki nie trafią do archiwum.",
+      "siteMissing": "Strona nie zna tego wyścigu; sprawdź wyścig na Stronie.",
+      "siteUnlinkedStarted": "Strona nie zna tego pokoju. Wklej PIN {{pin}} w /admin/races."
     },
     "phone": {
       "alone": "Ścigasz się sam",

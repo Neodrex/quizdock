@@ -230,7 +230,7 @@ const LICENCE_SECRET_KEYS = new Set([
 ]);
 
 /** M9 Task 9.6: a Site race's link, for the host console only. */
-const HOST_ONLY_KEYS = new Set(['siteLinked', 'siteLost']);
+const HOST_ONLY_KEYS = new Set(['siteLinked', 'siteLost', 'siteMissing']);
 
 export interface SessionLeakScope {
   /** The room's licence: its id and organisation id must never appear as a value. */
@@ -246,7 +246,7 @@ export interface SessionLeakScope {
 /**
  * Session leaks in `frames` (M7 Task 7.20), as readable lines (empty when clean):
  * - a key `licenceId`, `organisationId`, `eventsLeft`, `hosts` or `siteRaceId`, at any depth;
- * - outside a host console (`host`), a key `siteLinked` or `siteLost` (M9);
+ * - outside a host console (`host`), a key `siteLinked`, `siteLost` or `siteMissing` (M9);
  * - a string equal to the Site race id (M8), when given;
  * - a string equal to the licence's id or organisation id;
  * - in an escape frame, a `code` not in `ownCodes` (another team's race code;

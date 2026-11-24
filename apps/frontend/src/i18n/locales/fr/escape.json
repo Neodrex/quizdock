@@ -552,7 +552,9 @@
       "copied": "Lien copié",
       "copyByHand": "Copiez ce lien : {{url}}",
       "siteUnlinked": "Le Site ne connaît pas encore cette salle. Si cela ne se règle pas avant le départ, collez le PIN {{pin}} dans /admin/races.",
-      "siteLost": "Une autre salle a ouvert cette course sur le Site ; ses résultats n’arriveront pas aux archives."
+      "siteLost": "Une autre salle a ouvert cette course sur le Site ; ses résultats n’arriveront pas aux archives.",
+      "siteMissing": "Le Site ne connaît pas cette course ; vérifiez la course sur le Site.",
+      "siteUnlinkedStarted": "Le Site ne connaît pas cette salle. Collez le PIN {{pin}} dans /admin/races."
     },
     "phone": {
       "alone": "Vous courez en solo",

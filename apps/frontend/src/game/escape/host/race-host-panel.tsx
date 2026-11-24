@@ -51,8 +51,8 @@ export function RaceBoardLink({ pin, view }: { pin: string; view: Pick<GameView,
 
 /**
  * M9 Task 9.6: a Site race the Site does not know (it was down when the room
- * opened; Live keeps trying), or that another room opened on the Site first.
- * Nothing otherwise.
+ * opened; Live keeps trying until the start), whose race the Site does not know
+ * at all, or that another room opened on the Site first. Nothing otherwise.
  */
 export function RaceSiteNotice({ pin, session }: { pin: string; session: EscapeHostSession }) {
   const { t } = useTranslation('escape');
@@ -64,10 +64,19 @@ export function RaceSiteNotice({ pin, session }: { pin: string; session: EscapeH
       </p>
     );
   }
+  if (race?.siteMissing) {
+    return (
+      <p role="alert" className="text-destructive text-sm">
+        {t('race.console.siteMissing')}
+      </p>
+    );
+  }
   if (race?.siteLinked !== false) return null;
+  // After the start Live no longer retries: no word of "yet" or "before the start".
+  const key = race.started ? 'race.console.siteUnlinkedStarted' : 'race.console.siteUnlinked';
   return (
     <p role="status" className="rounded-md border border-amber-500/50 p-3 text-sm">
-      {t('race.console.siteUnlinked', { pin })}
+      {t(key, { pin })}
     </p>
   );
 }

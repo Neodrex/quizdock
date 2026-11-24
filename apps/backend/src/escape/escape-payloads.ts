@@ -408,6 +408,7 @@ export function hostSessionOf(v: RunView): EscapeHostSession | null {
       ...(s.race.siteRaceId && {
         siteLinked: s.race.siteLinked ?? true,
         ...(s.race.siteLost && { siteLost: true }),
+        ...(s.race.siteMissing && { siteMissing: true }),
       }),
     },
     licence: s.licence && {

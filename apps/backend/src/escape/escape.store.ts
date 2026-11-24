@@ -123,6 +123,7 @@ const sessionSchema = z.object({
       // M9 Task 9.6, Site races only.
       siteLinked: z.boolean().optional(),
       siteLost: z.boolean().optional(),
+      siteMissing: z.boolean().optional(),
     })
     .nullable(),
   licence: z

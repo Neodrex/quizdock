@@ -538,7 +538,9 @@
       "copied": "Link copied",
       "copyByHand": "Copy this link: {{url}}",
       "siteUnlinked": "The Site does not know this room yet. If it does not clear before the start, paste the PIN {{pin}} in /admin/races.",
-      "siteLost": "Another room opened this race on the Site; its results will not reach the archive."
+      "siteLost": "Another room opened this race on the Site; its results will not reach the archive.",
+      "siteMissing": "The Site does not know this race; check the race on the Site.",
+      "siteUnlinkedStarted": "The Site does not know this room. Paste the PIN {{pin}} in /admin/races."
     },
     "phone": {
       "alone": "You race alone",

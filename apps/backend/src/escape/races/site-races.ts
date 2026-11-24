@@ -61,7 +61,8 @@ export class SiteRaces implements RacePort {
   async opened(siteRaceId: string, pin: string): Promise<RaceOpened> {
     if (!SITE_PIN.test(pin)) {
       this.log.warn(`site race ${siteRaceId}: PIN ${pin} is not one the Site takes; not reported`);
-      return { ok: false, reason: 'unavailable' };
+      // No retry can change the PIN: as final as a race the Site does not know.
+      return { ok: false, reason: 'not-found' };
     }
     const res = await this.site.post(this.path(siteRaceId, 'opened'), { pin }, openedAnswer);
     if (!res.ok) return { ok: false, reason: 'unavailable' };
