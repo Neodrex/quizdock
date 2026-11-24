@@ -176,6 +176,45 @@ describe('EscapeStore (Redis)', () => {
     await redis.del(escapeRoomKeys.session(pin));
   });
 
+  it('a session restored from the room copy never replaces one written meanwhile', async () => {
+    const pin = `8${String(n).padStart(5, '0')}`;
+    const old: EscapeSession = {
+      type: 'hosted',
+      cap: 8,
+      race: null,
+      licence: null,
+      licenceUsed: false,
+      phoneHostUserId: null,
+    };
+    const used: EscapeSession = { ...old, licenceUsed: true, licenceUsedAt: 1_000 };
+    await redis.hset(gameKeys.room(pin), 'hostUserId', 'host-1');
+    try {
+      await store.writeSession(pin, old);
+      await redis.del(escapeRoomKeys.session(pin));
+      // A reader outside the queue holds the older copy while the start writes.
+      const hget = redis.hget.bind(redis);
+      jest.spyOn(redis, 'hget').mockImplementationOnce(async (key, field) => {
+        const copy = await hget(key, field);
+        await store.writeSession(pin, used);
+        return copy;
+      });
+      expect(await store.session(pin)).toEqual(used);
+      expect(await store.session(pin)).toEqual(used);
+      // The key and its copy are written together.
+      const multi = jest.spyOn(redis, 'multi');
+      const set = jest.spyOn(redis, 'set');
+      await store.writeSession(pin, old);
+      expect(multi).not.toHaveBeenCalled();
+      expect(set).not.toHaveBeenCalled();
+      expect(await store.session(pin)).toEqual(old);
+      await redis.del(escapeRoomKeys.session(pin));
+      expect(await store.session(pin)).toEqual(old);
+      expect(await redis.get(gameKeys.roomCap(pin))).toBe('8');
+    } finally {
+      await redis.del(gameKeys.room(pin), escapeRoomKeys.session(pin), gameKeys.roomCap(pin));
+    }
+  });
+
   it('gives every key it writes the game TTL', async () => {
     await store.writeOpen(id, '123456', 'host-1', snapshot, run);
     await store.save(id, {

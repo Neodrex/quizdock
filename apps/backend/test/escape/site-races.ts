@@ -264,6 +264,51 @@ export function siteRaceTests(ctx: EscapeContext): void {
         expect(engine().inProcess(await idOf(pin), pin).siteRetry).toBe(false);
       });
 
+      it('a run opened again in the room: the Site answering at its start is stored too', async () => {
+        timings().siteRetryMs = 60_000;
+        // The first finale's report gives up at once: only the second start can link the room.
+        const waits = timings().siteResultsRetryMs;
+        timings().siteResultsRetryMs = [];
+        try {
+          const { host, pin, hostSeen } = await siteRace();
+          const phone = await joinAndSync(ctx.h, pin, 'Ann');
+          const running = stateWhere(phone.socket, (s) => s.phase === 'running');
+          expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+          await running;
+          const first = await idOf(pin);
+          expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+          expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
+          expect(await host.emitWithAck('escape:open', { pin, templateId: library })).toEqual({
+            ok: true,
+          });
+          await settle(100);
+          expect((await store().session(pin))?.race).toMatchObject({
+            started: true,
+            siteLinked: false,
+          });
+          site.answers.set(openedPath, { ok: true });
+          const again = stateWhere(
+            phone.socket,
+            (s) => s.gameId !== first && s.phase === 'running',
+          );
+          expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+          await again;
+          expect((await store().session(pin))?.race).toMatchObject({
+            started: true,
+            siteLinked: true,
+          });
+          await eventually(async () =>
+            expect(lastRace(hostSeen)).toMatchObject({ started: true, siteLinked: true }),
+          );
+          await settle(100);
+          expect(lastRace(hostSeen)).toMatchObject({ siteLinked: true });
+          expect(engine().inProcess(await idOf(pin), pin).siteRetry).toBe(false);
+        } finally {
+          timings().siteRetryMs = 150;
+          timings().siteResultsRetryMs = waits;
+        }
+      });
+
       it('a definitive refusal after the start stops the retries (not-found: never asked again)', async () => {
         const { host, pin } = await siteRace();
         const phone = await joinAndSync(ctx.h, pin, 'Ann');
@@ -543,6 +588,26 @@ export function siteRaceTests(ctx: EscapeContext): void {
         expect(told).toBe(true);
         expect((await store().session(pin))?.race).toMatchObject({ siteLinked: true });
         ctx.h.connectHost().emit('host:end', { pin });
+      });
+
+      it('the room failing to store the Site’s answer is a failed try: tried again, and the results go', async () => {
+        timings().siteRetryMs = 60_000;
+        site.answers.delete(openedPath);
+        const inner = ctx.h.app.get(EscapeEngine) as unknown as { settleSite(): Promise<void> };
+        const settleSite = jest
+          .spyOn(inner, 'settleSite')
+          .mockRejectedValueOnce(new Error('redis away'));
+        try {
+          const { pin } = await ranToFinale({
+            beforeEnd: () => site.answers.set(openedPath, { ok: true }),
+          });
+          await eventually(async () => expect(calls(resultsPath)).toHaveLength(1));
+          expect(settleSite).toHaveBeenCalledTimes(2);
+          expect((await store().session(pin))?.race).toMatchObject({ siteLinked: true });
+          ctx.h.connectHost().emit('host:end', { pin });
+        } finally {
+          settleSite.mockRestore();
+        }
       });
 
       it('the Site still down at the finale: opened and the results are both tried again; a room the Site does not know sends its results once, with no opened', async () => {

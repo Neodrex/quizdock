@@ -176,6 +176,28 @@ if redis.call('EXISTS', KEYS[1]) == 1 then redis.call('HSET', KEYS[1], ARGV[1], 
 return 1`;
 
 /**
+ * The session key and its copy in the room hash, written together: no reader
+ * finds one without the other. KEYS the session key, the room hash; ARGV the
+ * JSON, the TTL, the copy's field.
+ */
+const WRITE_SESSION_SCRIPT = `
+redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])
+if redis.call('EXISTS', KEYS[2]) == 1 then redis.call('HSET', KEYS[2], ARGV[3], ARGV[1]) end
+return 1`;
+
+/**
+ * The session key back from the room hash's copy, unless it was written
+ * meanwhile (a reader runs outside the run's queue); the cap key comes back
+ * with it. The session as stored after. KEYS the session key, the cap key;
+ * ARGV the copy, the TTL, the cap.
+ */
+const RESTORE_SESSION_SCRIPT = `
+if redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2], 'NX') then
+  redis.call('SET', KEYS[2], ARGV[3], 'EX', ARGV[2])
+end
+return redis.call('GET', KEYS[1])`;
+
+/**
  * A game's state, set unless the room moved meanwhile: under HOST_DISCONNECTED it
  * becomes the state the host comes back to (prevState); an ENDED game keeps
  * ENDED; a game hash that is gone gets nothing. The state before, or nil.
@@ -263,11 +285,17 @@ export class EscapeStore {
     const copy = await this.redis.hget(gameKeys.room(pin), SESSION_COPY_FIELD);
     const session = copy === null ? null : readSession(copy);
     if (!session) return null;
-    const pipe = this.redis.multi();
-    pipe.set(escapeRoomKeys.session(pin), copy!, 'EX', ESCAPE_TTL_S);
-    pipe.set(gameKeys.roomCap(pin), String(session.cap), 'EX', ESCAPE_TTL_S);
-    await pipe.exec();
-    return session;
+    // SET NX: a session written since the GET above wins over the older copy.
+    const stored = (await this.redis.eval(
+      RESTORE_SESSION_SCRIPT,
+      2,
+      escapeRoomKeys.session(pin),
+      gameKeys.roomCap(pin),
+      copy!,
+      ESCAPE_TTL_S,
+      String(session.cap),
+    )) as string | null;
+    return stored === null || stored === copy ? session : parseJson(sessionSchema, stored);
   }
 
   /**
@@ -280,9 +308,15 @@ export class EscapeStore {
 
   /** Rewrites the room's session (its race and licence flags); the cap key is left as it is. */
   async writeSession(pin: string, session: EscapeSession): Promise<void> {
-    const json = JSON.stringify(session);
-    await this.redis.set(escapeRoomKeys.session(pin), json, 'EX', ESCAPE_TTL_S);
-    await this.copySession(pin, json);
+    await this.redis.eval(
+      WRITE_SESSION_SCRIPT,
+      2,
+      escapeRoomKeys.session(pin),
+      gameKeys.room(pin),
+      JSON.stringify(session),
+      ESCAPE_TTL_S,
+      SESSION_COPY_FIELD,
+    );
   }
 
   private async copySession(pin: string, json: string): Promise<void> {

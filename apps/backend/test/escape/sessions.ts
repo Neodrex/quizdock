@@ -39,7 +39,7 @@ import {
   useLicences,
 } from './escape-harness';
 import { hostLeaks } from './leaks';
-import { nextEvent } from '../game-harness';
+import { nextEvent, settle } from '../game-harness';
 
 const MIN = 60_000;
 
@@ -819,6 +819,108 @@ export function phoneHostTests(ctx: EscapeContext): void {
     await running;
   });
 
+  it('a group room that runs again deals under the new run: a phone syncing meanwhile waits its turn', async () => {
+    const { host, pin, other, playerId } = await groupRoom();
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    expect(await host.emitWithAck('host:back-to-lobby', { pin })).toMatchObject({ ok: true });
+    const first = await gameIdOf(pin);
+    const engine = ctx.h.app.get(EscapeEngine) as unknown as {
+      dealGroup(...args: unknown[]): Promise<unknown>;
+    };
+    const deal = engine.dealGroup.bind(engine);
+    let order = '';
+    const spy = jest.spyOn(engine, 'dealGroup').mockImplementationOnce(async (...args) => {
+      // The phone's own deal runs in the new run's queue: not before this one is done.
+      const synced = other.socket.emitWithAck('escape:sync', { pin }).then(() => 'sync');
+      order = await Promise.race([synced, settle(200).then(() => 'deal')]);
+      return deal(...args);
+    });
+    try {
+      expect(await host.emitWithAck('escape:open', { pin, templateId: library })).toEqual({
+        ok: true,
+      });
+      expect(order).toBe('deal');
+      expect(await other.socket.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+      const id = await gameIdOf(pin);
+      expect(id).not.toBe(first);
+      const teams = [...(await ctx.h.app.get(EscapeStore).teams(id)).values()];
+      expect(teams).toHaveLength(1);
+      expect([...teams[0].team.members].sort()).toEqual([playerId, other.playerId].sort());
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  /** Nothing a player has not seen yet: no clue, unlock text or hint text. */
+  const expectPlayingOutline = (outline: EscapeHostOutline) => {
+    expect(outline.stages).toHaveLength(tpl.stages.length);
+    expect(outline.stages[0].locks).toHaveLength(tpl.stages[0].locks.length);
+    const json = JSON.stringify(outline);
+    for (const s of tpl.stages) {
+      expect(json).not.toContain(JSON.stringify(s.intro).slice(1, -1));
+      expect(json).not.toContain(JSON.stringify(s.unlockText).slice(1, -1));
+      for (const c of s.clues) expect(json).not.toContain(JSON.stringify(c.body).slice(1, -1));
+      for (const h of s.hints) expect(json).not.toContain(JSON.stringify(h.text).slice(1, -1));
+    }
+  };
+
+  it('a group room’s console gets the playing outline from its first sync, before its host joins', async () => {
+    const host = ctx.h.connectHost();
+    const { pin } = await createAs(host, library, 'group');
+    const outline = nextEvent<EscapeHostOutline>(host, 'escape:outline');
+    expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    expectPlayingOutline(await outline);
+  });
+
+  it('group play: another team’s unlock text never reaches the host; its own team’s does, once', async () => {
+    const host = ctx.h.connectHost();
+    const { pin } = await createAs(host, library, 'group');
+    expect(await host.emitWithAck('player:join', { pin, nickname: 'Hostess' })).toMatchObject({
+      playerId: expect.any(String),
+    });
+    expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    const other = await joinAndSync(ctx.h, pin!, 'Friend');
+    const split = stateWhere(other.socket, (s) => s.formation.teams.length === 2 && !!s.team);
+    expect(await host.emitWithAck('escape:teams', { pin, mode: 'auto', count: 2 })).toEqual({
+      ok: true,
+    });
+    const theirs = (await split).team!.id;
+    const running = stateWhere(other.socket, (s) => s.phase === 'running');
+    expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+    await running;
+    const cleared = (seen: [string, unknown][]) =>
+      seen
+        .filter(([e]) => e === 'escape:team-update')
+        .map(([, u]) => u as { teamId: string; kind: string; unlockText?: string })
+        .filter((u) => u.kind === 'stage-cleared');
+    const hostSeen = record(host);
+    const otherSeen = record(other.socket);
+    const text = tpl.stages[0].unlockText;
+    const clear = async (s: Socket) => {
+      for (const [lockId, input] of [
+        ['catalogue', '42'],
+        ['librarian', 'silence'],
+      ]) {
+        expect(await s.emitWithAck('escape:submit', { pin, lockId, input })).toMatchObject({
+          ok: true,
+        });
+      }
+    };
+    await clear(other.socket);
+    await settle(100);
+    expect(cleared(otherSeen)).toMatchObject([{ teamId: theirs, unlockText: text }]);
+    expect(cleared(hostSeen)).toMatchObject([{ teamId: theirs, unlockText: '' }]);
+    expect(JSON.stringify(hostSeen.filter(([e]) => e === 'escape:team-update'))).not.toContain(
+      JSON.stringify(text).slice(1, -1),
+    );
+    await clear(host);
+    await settle(100);
+    const mine = cleared(hostSeen).filter((u) => u.teamId !== theirs);
+    expect(mine).toMatchObject([{ unlockText: text }]);
+    expect(cleared(otherSeen)).toHaveLength(1);
+  });
+
   it('a host that joins its group room as a player gets the host payloads and its phone state', async () => {
     const { host, pin, seen, other, teamId } = await groupRoom();
     const events = seen.map(([e]) => e);
@@ -836,14 +938,7 @@ export function phoneHostTests(ctx: EscapeContext): void {
     expect(await console2.emitWithAck('host:attach', { pin })).toMatchObject({ ok: true });
     // The phone's own socket, and the same user's console opened next to it.
     for (const [outline] of [await outlines(host), await outlines(console2)]) {
-      expect(outline.stages).toHaveLength(tpl.stages.length);
-      expect(outline.stages[0].locks).toHaveLength(tpl.stages[0].locks.length);
-      const json = JSON.stringify(outline);
-      for (const s of tpl.stages) {
-        expect(json).not.toContain(JSON.stringify(s.unlockText).slice(1, -1));
-        for (const c of s.clues) expect(json).not.toContain(JSON.stringify(c.body).slice(1, -1));
-        for (const h of s.hints) expect(json).not.toContain(JSON.stringify(h.text).slice(1, -1));
-      }
+      expectPlayingOutline(outline);
     }
     const id = await gameIdOf(pin);
     expect(await inRoom(escapeRooms.host(pin), host.id)).toBe(true);

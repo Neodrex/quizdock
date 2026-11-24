@@ -406,7 +406,7 @@ export class EscapeEngine implements OnModuleDestroy {
   async open(pin: string, host: LicenceHost, dto: EscapeOpen): Promise<void> {
     const hostUserId = host.userId;
     const first = await this.requireHostMeta(pin, hostUserId);
-    await this.queue.run(first.id, async () => {
+    const next = await this.queue.run(first.id, async () => {
       const meta = await this.requireHostMeta(pin, hostUserId);
       if (meta.state !== GameState.Lobby) {
         throw new BadRequestException('session.next_quiz_from_lobby');
@@ -431,7 +431,14 @@ export class EscapeEngine implements OnModuleDestroy {
       // hosted, or a room running again, whose clients dropped the look with the
       // podium): the look goes to the whole room now (M7 §1.9).
       this.server.to(pin).emit('escape:look', lookOf(session ?? kept));
-      const opened = await this.requireRun(pin);
+      return id;
+    });
+    // The deal writes the new run's teams, as a phone's sync does: in the new
+    // run's queue, entered once the lobby game's is left (never one inside the other).
+    await this.queue.run(next, async () => {
+      const opened = await this.requireRun(pin).catch(() => null);
+      // The room moved on meanwhile: not this run's to deal.
+      if (opened?.id !== next) return;
       const { ref, v } = await this.dealGroup(opened, await this.viewOf(opened));
       await this.broadcast(ref, v);
       // A host command outside `mutate`: its result before its ack, as there.
@@ -468,11 +475,9 @@ export class EscapeEngine implements OnModuleDestroy {
       if (hostConsole) {
         await socket.join(escapeRooms.host(pin));
         const v = await this.viewOf(ref);
-        // Group play: the host competes. Once it plays (this socket, or its phone
-        // already synced), its outline holds nothing a player has not seen yet.
-        const plays =
-          v.session?.type === 'group' &&
-          (!!me || (!!v.session.phoneHostPlayerId && v.session.phoneHostUserId === data.user?.id));
+        // Group play: the host competes (owner decision), joined as a player yet or
+        // not: its outline never holds what a player has not seen yet.
+        const plays = v.session?.type === 'group';
         socket.emit('escape:outline', hostOutlineOf(ref.snap, ref.id, plays));
         socket.emit('escape:host', hostStateOf(v));
         socket.emit('escape:board', boardOf(v));
@@ -1128,7 +1133,8 @@ export class EscapeEngine implements OnModuleDestroy {
         throw new BadRequestException('escape.no_players');
       }
       // Owner question 4: a hosted event uses its licence at the room's first start.
-      const stored = await this.siteAtStart(pin, await this.useLicence(ref, v, host, teams));
+      const used = await this.useLicence(ref, v, host, teams);
+      const stored = await this.siteAtStart(pin, used);
       const live = this.pruneAndGetHolders(ref.id, v);
       // The same deal as the lobby preview, so every phone keeps its lobby role card.
       const codes = new Map(v.teams.map((r) => [r.team.id, r.code]));
@@ -1158,8 +1164,9 @@ export class EscapeEngine implements OnModuleDestroy {
       let session = stored;
       if (session?.race && !session.race.started) {
         session = { ...session, race: { ...session.race, started: true } };
-        await this.store.writeSession(pin, session);
       }
+      // Also the Site's answer alone: a run opened again in a race already started.
+      if (session && session !== used) await this.store.writeSession(pin, session);
       await this.keepAlive(pin, ref.id);
       // S3.
       if (this.wrote(was)) {
@@ -1675,8 +1682,14 @@ export class EscapeEngine implements OnModuleDestroy {
       if (waiting) {
         const opened = await this.races.opened(siteRaceId, pin);
         if (opened.ok || opened.reason !== 'unavailable') {
-          waiting = false;
-          await this.settleSite(pin, finale.gameId as GameId, opened);
+          // An answer the room could not store is a failed try: asked again.
+          waiting = await this.settleSite(pin, finale.gameId as GameId, opened).then(
+            () => false,
+            (err: Error) => {
+              this.log.warn(`site race ${siteRaceId}: ${err.message}`);
+              return true;
+            },
+          );
         }
       }
       const sent = waiting ? 'unavailable' : await this.races.finished(siteRaceId, results);
@@ -2118,8 +2131,19 @@ export class EscapeEngine implements OnModuleDestroy {
         s.emit('escape:state', playerStateOf(v, playerId));
       }
       const team = escapeRooms.team(ref.id, teamId);
-      const to = this.server.to(now ? [team, host] : team);
-      for (const u of updates) to.emit('escape:team-update', u);
+      // Group play: the host competes, so another team's unlock text stays with
+      // that team (the console shows none); its own team's comes by the team room.
+      const group = now && v.session?.type === 'group';
+      const to = this.server.to(now && !group ? [team, host] : team);
+      for (const u of updates) {
+        to.emit('escape:team-update', u);
+        if (group) {
+          this.server
+            .to(host)
+            .except(team)
+            .emit('escape:team-update', 'unlockText' in u ? { ...u, unlockText: '' } : u);
+        }
+      }
     }
     if (now) this.server.to(host).emit('escape:host-team', hostTeamOf(v, rec));
     for (const kind of announce) {
