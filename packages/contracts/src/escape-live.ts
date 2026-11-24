@@ -10,7 +10,9 @@ import type { ThemeValues } from './theme';
 
 const pin = z.string().regex(/^\d{6}$/); // allocatePin: 6 digits
 const id = z.string().min(1).max(64);
-const lockInput = z.union([z.string().max(200), z.array(id).max(12)]);
+/** The longest typed answer `escape:submit` takes: the phone's inputs stop there. */
+export const ESCAPE_ANSWER_MAX = 200;
+const lockInput = z.union([z.string().max(ESCAPE_ANSWER_MAX), z.array(id).max(12)]);
 const durationMin = z.number().int().min(5).max(180);
 
 // ── Session types (M7 §1.1) ──

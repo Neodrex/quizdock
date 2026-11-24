@@ -93,7 +93,9 @@ describe('EscapeTimings', () => {
       touchEveryMs: 300_000,
       raceMinLeadMs: 60_000,
       raceTouchEveryMs: 300_000,
+      raceRetryMs: 5_000,
       siteRetryMs: 30_000,
+      siteResultsRetryMs: [5_000, 15_000, 40_000, 60_000],
     });
   });
 });

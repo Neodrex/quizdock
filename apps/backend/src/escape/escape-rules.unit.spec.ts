@@ -199,6 +199,48 @@ describe('submit', () => {
     expect(r.result).toEqual({ outcome: 'lock-solved', lockId: 'duo' });
   });
 
+  it('combined lock: an id named like an Object member (constructor, toString) works as any other', () => {
+    for (const id of ['constructor', 'toString', '__proto__']) {
+      const lock = tpl.stages
+        .flatMap((s) => s.locks)
+        .find((l): l is CombinedLock => l.kind === 'combined')!;
+      const stageIndex = tpl.stages.findIndex((s) => s.locks.includes(lock));
+      const named: EscapeTemplate = {
+        ...tpl,
+        stages: tpl.stages.map((s) => ({
+          ...s,
+          locks: s.locks.map((l) => (l === lock ? { ...lock, id } : l)),
+        })),
+      };
+      const [first, second] = lock.parts;
+      const team: TeamState = {
+        ...newTeam(named, 'a', 'A', ['p1', 'p2']),
+        stageIndex,
+        roles: { p1: [first.roleId], p2: lock.parts.slice(1).map((p) => p.roleId) },
+      };
+      expect(playerView(named, team, 'p1', 'run').locks.find((l) => l.id === id)).toMatchObject({
+        partsDone: [],
+      });
+      const one = submit(
+        named,
+        team,
+        { playerId: 'p1', lockId: id, roleId: first.roleId, input: first.answer },
+        1000,
+      );
+      expect(one.result).toMatchObject({ outcome: 'part-accepted' });
+      const two = submit(
+        named,
+        one.team,
+        { playerId: 'p2', lockId: id, roleId: second.roleId, input: second.answer },
+        2000,
+      );
+      expect(two.result.outcome).not.toBe('refused');
+      expect(playerView(named, one.team, 'p2', 'run').locks.find((l) => l.id === id)).toMatchObject(
+        { partsDone: [first.roleId] },
+      );
+    }
+  });
+
   it('combined lock: a part already entered is refused and not credited again', () => {
     const t = submit(
       tpl,

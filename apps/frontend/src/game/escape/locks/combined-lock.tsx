@@ -1,4 +1,4 @@
-import type { EscapePlayerState } from '@quiz-dock/contracts';
+import { ESCAPE_ANSWER_MAX, type EscapePlayerState } from '@quiz-dock/contracts';
 import { Check, Hourglass } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -85,6 +85,7 @@ function PartForm({
           aria-label={t('lock.partFor', { role: roleName })}
           placeholder={t('lock.partFor', { role: roleName })}
           autoComplete="off"
+          maxLength={ESCAPE_ANSWER_MAX}
           spellCheck={false}
           className={ANSWER_INPUT}
         />

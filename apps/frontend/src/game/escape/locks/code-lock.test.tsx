@@ -8,6 +8,7 @@ describe('CodeLock', () => {
     const submit = vi.fn().mockResolvedValue({ ok: true, outcome: 'lock-solved' });
     drawEn(<CodeLock lock={lock()} block={null} submit={submit} />);
     const input = screen.getByRole('textbox');
+    expect(input).toHaveAttribute('maxlength', '200');
     expect(screen.getByRole('button', { name: 'Open' })).toBeDisabled();
     fireEvent.change(input, { target: { value: '  ab 12 ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Open' }));

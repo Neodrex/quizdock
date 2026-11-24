@@ -1,3 +1,4 @@
+import { ESCAPE_ANSWER_MAX } from '@quiz-dock/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ export function PhraseLock({ lock, block, submit }: LockProps) {
             disabled={disabled}
             aria-label={t('lock.answerFor', { lock: lock.label })}
             autoComplete="off"
+            maxLength={ESCAPE_ANSWER_MAX}
             className={ANSWER_INPUT}
           />
         )}

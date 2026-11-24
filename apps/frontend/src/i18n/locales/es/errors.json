@@ -285,6 +285,7 @@
   },
   "escape_template": {
     "invalid": "Esta plantilla de juego de escape no es válida.",
+    "not_published": "Esta plantilla de escape es un borrador. Publícala antes de abrir una sala con ella.",
     "not_found": "Plantilla de juego de escape no encontrada."
   }
 }

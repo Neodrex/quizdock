@@ -8,6 +8,7 @@ import {
   type RaceClaim,
   type RaceOpened,
   type RacePort,
+  type RaceReported,
   type RaceResults,
   type SiteRace,
 } from './race.port';
@@ -28,7 +29,8 @@ const openedAnswer = z.union([
 /**
  * Site races (M8 Task 8.14): claimed at create, then `opened` with the PIN and
  * `finished` with the top teams. The claim fails closed (`unavailable`); the
- * two reports are best effort: a refusal is logged and the room carries on.
+ * two reports are best effort: a refusal is logged and the room carries on,
+ * and the engine tries an unavailable Site again.
  */
 export class SiteRaces implements RacePort {
   private readonly claimAnswer: z.ZodType<RaceClaim>;
@@ -72,16 +74,13 @@ export class SiteRaces implements RacePort {
     return res.value;
   }
 
-  async finished(siteRaceId: string, results: RaceResults): Promise<void> {
+  async finished(siteRaceId: string, results: RaceResults): Promise<RaceReported> {
     const body = { ...results, top: results.top.slice(0, RACE_RESULTS_TOP) };
-    const path = this.path(siteRaceId, 'results');
-    let res = await this.site.post(path, body, answer);
-    if (!res.ok) res = await this.site.post(path, body, answer);
-    if (!res.ok) {
-      this.log.warn(`site race ${siteRaceId}: results not delivered; record them on the Site`);
-    } else if (!res.value.ok) {
-      this.log.warn(`site race ${siteRaceId}: results refused (${res.value.reason})`);
-    }
+    const res = await this.site.post(this.path(siteRaceId, 'results'), body, answer);
+    if (!res.ok) return 'unavailable';
+    if (res.value.ok) return 'ok';
+    this.log.warn(`site race ${siteRaceId}: results refused (${res.value.reason})`);
+    return 'refused';
   }
 
   private path(siteRaceId: string, what: string): string {

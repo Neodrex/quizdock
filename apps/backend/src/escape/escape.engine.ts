@@ -176,18 +176,14 @@ type SiteRaceSession = EscapeSession & {
 };
 
 /**
- * M9 Task 9.6: a Site race, not started, whose room the Site does not know yet
- * and a retry may still fix (not lost to another room, not unknown to the Site).
+ * M9 Task 9.6: a Site race whose room the Site does not know yet and a retry
+ * may still fix (not lost to another room, not unknown to the Site), started
+ * or not: a Site down from the create to the start must still learn the PIN,
+ * or it refuses the results.
  */
 function siteWaiting(s: EscapeSession | null | undefined): s is SiteRaceSession {
   const race = s?.race;
-  return (
-    !!race?.siteRaceId &&
-    race.siteLinked === false &&
-    !race.siteLost &&
-    !race.siteMissing &&
-    !race.started
-  );
+  return !!race?.siteRaceId && race.siteLinked === false && !race.siteLost && !race.siteMissing;
 }
 
 /**
@@ -350,14 +346,15 @@ export class EscapeEngine implements OnModuleDestroy {
     const meta = await this.game.getMeta(pin);
     if (meta?.kind !== 'escape') return;
     const run = await this.store.run(meta.id);
-    if (run?.phase === 'forming') {
-      const session = await this.store.session(pin);
+    if (!run) return;
+    const session = await this.store.session(pin);
+    if (siteWaiting(session)) this.armSiteRetry(pin);
+    if (run.phase === 'forming') {
       const race = session?.race;
       if (race?.startsAt && !race.started) this.armRace(pin, race.startsAt);
-      if (siteWaiting(session)) this.armSiteRetry(pin);
       return;
     }
-    if (run?.phase !== 'running') return;
+    if (run.phase !== 'running') return;
     // R4: every member counts as gone since boot until they sync again.
     this.gone.set(meta.id, new Map());
     this.startTicker(pin, meta.id);
@@ -531,7 +528,17 @@ export class EscapeEngine implements OnModuleDestroy {
           ref.run.phase === 'running' &&
           ref.run.formation === 'auto' &&
           !teamOf(this.teamsOf(v), me.playerId);
-        const to = late ? smallestTeam(this.teamsOf(v), ref.run.maxSize) : null;
+        // Only into a team still playing: one that escaped or ran out of time is done.
+        const elapsed = runElapsed(ref.run.clock, v.now);
+        const open = v.teams
+          .filter(
+            (r) =>
+              r.team.escapedAt === null &&
+              !r.timedOut &&
+              !isTimedOut(ref.run.clock, r.team, elapsed),
+          )
+          .map((r) => r.team);
+        const to = late ? smallestTeam(open, ref.run.maxSize) : null;
         if (to) {
           await this.broadcast(ref, await this.applyMove(ref, v, me.playerId, to.id));
           return;
@@ -966,7 +973,8 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /**
    * M9 Task 9.6: a Site race room the Site does not know tells it the PIN again,
-   * until it succeeds, the race starts or the room ends. The Site is asked
+   * until the Site answers (linked, or a refusal that is final) or the room ends;
+   * the race's start does not stop it. The Site is asked
    * outside the queue; its answer is applied inside, to the session as it is
    * then, and the host gets the state. `not-open`: another room won; this one
    * keeps running (players may be in it) and the console says so.
@@ -1144,7 +1152,9 @@ export class EscapeEngine implements OnModuleDestroy {
       // Atomic: a host gone meanwhile comes back to the run (prevState).
       const was = await this.store.setGameState(ref.id, GameState.Escape);
       this.scheduler.disarm(pin);
-      this.disarmSiteRetry(pin);
+      // A Site race the Site still does not know keeps telling it (B9); one settled is done.
+      if (!siteWaiting(stored)) this.disarmSiteRetry(pin);
+      else if (!this.siteRetries.has(pin)) this.armSiteRetry(pin);
       let session = stored;
       if (session?.race && !session.race.started) {
         session = { ...session, race: { ...session.race, started: true } };
@@ -1649,14 +1659,50 @@ export class EscapeEngine implements OnModuleDestroy {
 
   /**
    * M8: a Site race's top teams go back to the Site after its finale. Not
-   * awaited: the port retries once and logs, and the finale never waits.
+   * awaited: the finale never waits. A room the Site still does not know tells
+   * it the PIN once more first (the Site takes results from the room that
+   * opened the race only), and a Site that cannot answer is tried again after
+   * each of `siteResultsRetryMs`, then the results are given up with a log line.
+   * A refusal is final. The session is the finale's: the room may be gone.
    */
   private reportRace(pin: string, session: EscapeSession | null, finale: EscapeFinale): void {
     const siteRaceId = session?.race?.siteRaceId;
     if (!siteRaceId) return;
-    void this.races
-      .finished(siteRaceId, raceResultsOf(finale, pin, Date.now()))
-      .catch((err: Error) => this.log.warn(`site race ${siteRaceId}: ${err.message}`));
+    const results = raceResultsOf(finale, pin, Date.now());
+    const waits = this.timings.siteResultsRetryMs;
+    let waiting = siteWaiting(session);
+    const attempt = async (n: number): Promise<void> => {
+      if (waiting) {
+        const opened = await this.races.opened(siteRaceId, pin);
+        if (opened.ok || opened.reason !== 'unavailable') {
+          waiting = false;
+          await this.settleSite(pin, finale.gameId as GameId, opened);
+        }
+      }
+      const sent = waiting ? 'unavailable' : await this.races.finished(siteRaceId, results);
+      if (sent !== 'unavailable') return;
+      if (n >= waits.length) {
+        this.log.warn(`site race ${siteRaceId}: results not delivered; record them on the Site`);
+        return;
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, waits[n]).unref?.());
+      return attempt(n + 1);
+    };
+    void attempt(0).catch((err: Error) => this.log.warn(`site race ${siteRaceId}: ${err.message}`));
+  }
+
+  /**
+   * The Site's answer to an `opened` sent with the results, applied to the
+   * room's session if it is still there and still waiting (in the run's queue).
+   */
+  private async settleSite(pin: string, id: GameId, opened: RaceOpened): Promise<void> {
+    await this.queue.run(id, async () => {
+      const session = await this.store.session(pin);
+      if (!siteWaiting(session)) return;
+      await this.store.writeSession(pin, withOpened(session, opened));
+      const ref = await this.requireRun(pin).catch(() => null);
+      if (ref?.id === id) this.toHost(ref, await this.viewOf(ref));
+    });
   }
 
   /** The room's keys and the run's get their TTL again. */
@@ -1773,13 +1819,17 @@ export class EscapeEngine implements OnModuleDestroy {
 
   // ── Helpers ──
 
-  /** O3/O4: the host's template, checked and frozen with its version. */
+  /** O3/O4: the host's published template, checked and frozen with its version. */
   private async freeze(
     hostUserId: string,
     templateId: string,
     type: EscapeSession['type'],
   ): Promise<EscapeSnapshot> {
     const row = await this.templates.get(hostUserId, templateId);
+    // Owner decision (M5): a room opens from a published template only.
+    if (row.status !== 'published') {
+      throw new BadRequestException('escape_template.not_published');
+    }
     const template = { id: row.id, ...row.content };
     const problems = validateTemplate(template);
     if (problems.length) {

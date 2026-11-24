@@ -283,6 +283,7 @@
   },
   "escape_template": {
     "invalid": "此密室逃脱模板无效。",
+    "not_published": "此密室逃脱模板是草稿。请先发布，再用它开房间。",
     "not_found": "未找到密室逃脱模板。"
   }
 }

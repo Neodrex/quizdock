@@ -35,6 +35,7 @@ describe('CombinedLock', () => {
     );
     const look = screen.getByRole('textbox', { name: 'Lookout part' });
     const hack = screen.getByRole('textbox', { name: 'Hacker part' });
+    for (const input of [look, hack]) expect(input).toHaveAttribute('maxlength', '200');
     fireEvent.change(hack, { target: { value: ' 77 ' } });
     fireEvent.change(look, { target: { value: 'north' } });
     const [openLook, openHack] = screen.getAllByRole('button', { name: 'Open' });

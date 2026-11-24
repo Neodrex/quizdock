@@ -138,20 +138,17 @@ describe('SiteRaces', () => {
     expect(body.top).toHaveLength(20);
   });
 
-  it('finished retries once when the Site cannot answer, then logs; never throws', async () => {
-    const twice = fakeSite(down);
-    await expect(twice.races.finished(RACE, results(2))).resolves.toBeUndefined();
-    expect(twice.post).toHaveBeenCalledTimes(2);
-    expect(twice.log.warn).toHaveBeenCalledTimes(1);
-    const again = fakeSite(down, { raw: { ok: true } });
-    await again.races.finished(RACE, results(2));
-    expect(again.post).toHaveBeenCalledTimes(2);
-    expect(again.log.warn).not.toHaveBeenCalled();
+  it('finished is one try: unavailable when the Site cannot answer (the engine retries); never throws', async () => {
+    const once = fakeSite(down);
+    await expect(once.races.finished(RACE, results(2))).resolves.toBe('unavailable');
+    expect(once.post).toHaveBeenCalledTimes(1);
+    const fine = fakeSite({ raw: { ok: true } });
+    await expect(fine.races.finished(RACE, results(2))).resolves.toBe('ok');
   });
 
   it('a refused result is logged and not retried', async () => {
     const { races, post, log } = fakeSite({ raw: { ok: false, reason: 'not-open' } });
-    await races.finished(RACE, results(2));
+    await expect(races.finished(RACE, results(2))).resolves.toBe('refused');
     expect(post).toHaveBeenCalledTimes(1);
     expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('not-open'));
   });

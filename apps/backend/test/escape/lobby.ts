@@ -131,17 +131,17 @@ export function lobbyTests(ctx: EscapeContext): void {
     });
   });
 
-  it('refuses an unknown template, an unfinishable draft and a bad payload', async () => {
+  it('refuses an unknown template, an unfinishable one and a bad payload', async () => {
     const host = ctx.h.connectHost();
     expect(await host.emitWithAck('escape:create', { templateId: 'nope' })).toMatchObject({
       ok: false,
       error: { code: 'escape_template.not_found' },
     });
-    const draft = await seedTemplate(
-      ctx.h,
-      { ...vaultHeist, title: 'Too short', stages: vaultHeist.stages.slice(0, 1) },
-      'draft',
-    );
+    const draft = await seedTemplate(ctx.h, {
+      ...vaultHeist,
+      title: 'Too short',
+      stages: vaultHeist.stages.slice(0, 1),
+    });
     expect(await host.emitWithAck('escape:create', { templateId: draft })).toMatchObject({
       ok: false,
       error: { code: 'escape_template.invalid' },
@@ -152,10 +152,16 @@ export function lobbyTests(ctx: EscapeContext): void {
     });
   });
 
-  it('a valid draft opens (for testing it)', async () => {
+  it('a draft opens no room: published templates only (escape:create and escape:open)', async () => {
     const draft = await seedTemplate(ctx.h, { ...vaultHeist, title: 'Draft heist' }, 'draft');
     const host = ctx.h.connectHost();
-    expect(await createEscape(host, draft)).toMatch(/^\d{6}$/);
+    const refused = { ok: false, error: { code: 'escape_template.not_published' } };
+    expect(await host.emitWithAck('escape:create', { templateId: draft })).toMatchObject(refused);
+    const quiz = await ctx.h.seedQuiz();
+    const pin = await ctx.h.createGame(host, quiz.id);
+    expect(await host.emitWithAck('escape:open', { pin, templateId: draft })).toMatchObject(
+      refused,
+    );
   });
 
   it('six players join and sync: each gets its state, with no team', async () => {
@@ -415,6 +421,21 @@ export function lobbyTests(ctx: EscapeContext): void {
     expect(late.last().view?.roles.length).toBeGreaterThan(0);
     expect(membersOf(await update)[1]).toEqual(['P1', 'Late']);
     expect(leaksIn(late.last(), ctx.vault, { roles: late.last().view!.roles })).toEqual([]);
+  });
+
+  it('a late joiner is dealt into a team still playing, never one that escaped, however small', async () => {
+    const { host, pin } = await room(3);
+    await hostAfter(host, 'escape:teams', { pin, mode: 'auto', count: 2 });
+    await hostAfter(host, 'escape:start', { pin });
+    // t2, the smaller team (P1 alone), escapes.
+    for (const lockId of ctx.vault.stages.flatMap((st) => st.locks.map((l) => l.id))) {
+      expect(await host.emitWithAck('escape:unlock', { pin, teamId: 't2', lockId })).toEqual({
+        ok: true,
+      });
+    }
+    const late = await joinAndSync(ctx.h, pin, 'Late');
+    expect(late.last()).toMatchObject({ phase: 'running', team: { id: 't1', escaped: false } });
+    expect(late.last().team!.members).toHaveLength(3);
   });
 
   it('host:start on an escape lobby gives session.quiz_required', async () => {

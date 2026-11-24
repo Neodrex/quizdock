@@ -284,6 +284,7 @@
   },
   "escape_template": {
     "invalid": "Bu kaçış oyunu şablonu geçerli değil.",
+    "not_published": "Bu kaçış şablonu bir taslak. Onunla oda açmadan önce yayımlayın.",
     "not_found": "Kaçış oyunu şablonu bulunamadı."
   }
 }

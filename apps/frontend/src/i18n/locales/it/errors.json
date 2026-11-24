@@ -285,6 +285,7 @@
   },
   "escape_template": {
     "invalid": "Questo modello di gioco di fuga non è valido.",
+    "not_published": "Questo modello di escape è una bozza. Pubblicalo prima di aprire una sala con esso.",
     "not_found": "Modello di gioco di fuga non trovato."
   }
 }

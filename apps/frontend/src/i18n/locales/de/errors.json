@@ -284,6 +284,7 @@
   },
   "escape_template": {
     "invalid": "Diese Escape-Vorlage ist ungültig.",
+    "not_published": "Diese Escape-Vorlage ist ein Entwurf. Veröffentliche sie, bevor du einen Raum damit öffnest.",
     "not_found": "Escape-Vorlage nicht gefunden."
   }
 }

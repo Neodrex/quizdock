@@ -207,7 +207,7 @@ export function submit(
     if (!part || !(own(team.roles, s.playerId) ?? []).includes(s.roleId)) {
       return refuse('not-your-part');
     }
-    const entered = team.parts[lock.id] ?? [];
+    const entered = own(team.parts, lock.id) ?? [];
     // A part already entered must not be credited (or counted wrong) again.
     if (entered.includes(s.roleId)) return refuse('already-solved');
     if (normalizeAnswer(part.answer) !== normalizeAnswer(s.input)) return wrong();
@@ -400,7 +400,7 @@ export function playerView(
             ...base,
             partRoles: l.parts.map((p) => p.roleId),
             myParts: l.parts.map((p) => p.roleId).filter((r) => roles.includes(r)),
-            partsDone: [...(team.parts[l.id] ?? [])],
+            partsDone: [...(own(team.parts, l.id) ?? [])],
           };
         default:
           return base;

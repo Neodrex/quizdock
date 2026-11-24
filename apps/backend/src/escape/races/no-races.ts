@@ -1,4 +1,4 @@
-import type { RaceClaim, RaceOpened, RacePort } from './race.port';
+import type { RaceClaim, RaceOpened, RacePort, RaceReported } from './race.port';
 
 /** No Site (`ESCAPE_SITE_URL` empty): no Site race exists; races made on Live still work. */
 export class NoRaces implements RacePort {
@@ -10,7 +10,7 @@ export class NoRaces implements RacePort {
     return Promise.resolve({ ok: true });
   }
 
-  finished(): Promise<void> {
-    return Promise.resolve();
+  finished(): Promise<RaceReported> {
+    return Promise.resolve('ok');
   }
 }

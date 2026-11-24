@@ -22,6 +22,9 @@ export type RaceOpened =
   | { ok: true }
   | { ok: false; reason: 'not-found' | 'not-open' | 'unavailable' };
 
+/** How a results report went. */
+export type RaceReported = 'ok' | 'refused' | 'unavailable';
+
 export type RaceClaim = { ok: true; race: SiteRace } | { ok: false; reason: RaceRefusal };
 
 /** One row of a finished race, by place: a team's name, never a player id. */
@@ -54,6 +57,9 @@ export interface RacePort {
    * caller closes its room on `not-open` (another room opened the race first).
    */
   opened(siteRaceId: string, pin: string): Promise<RaceOpened>;
-  /** Best effort, one retry: a refusal or failure is logged, never thrown. */
-  finished(siteRaceId: string, results: RaceResults): Promise<void>;
+  /**
+   * One try, never thrown: `refused` is the Site's answer (logged, final),
+   * `unavailable` a failure the caller may try again.
+   */
+  finished(siteRaceId: string, results: RaceResults): Promise<RaceReported>;
 }

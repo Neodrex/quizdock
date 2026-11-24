@@ -37,4 +37,6 @@ export class EscapeTimings {
   raceRetryMs = 5_000;
   /** A Site race room the Site could not be told about tries `opened` again this often (M9 Task 9.6). */
   siteRetryMs = 30_000;
+  /** A Site race's results the Site could not take are sent again after each of these waits, then given up. */
+  siteResultsRetryMs: readonly number[] = [5_000, 15_000, 40_000, 60_000];
 }

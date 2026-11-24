@@ -65,6 +65,25 @@ describe('validateTemplate', () => {
     expectError({ ...tpl, mode: 'parallel', roles: [] }, 'combined locks need roles mode');
   });
 
+  it('parallel mode rejects a clue bound to a role: no role is dealt, so nobody would see it', () => {
+    const [first, ...rest] = tpl.stages[0].clues;
+    const bound = { ...first, roleId: tpl.roles[0].id };
+    const parallel: EscapeTemplate = {
+      ...tpl,
+      mode: 'parallel',
+      stages: tpl.stages.map((s, i) => ({
+        ...s,
+        locks: s.locks.filter((l) => l.kind !== 'combined'),
+        clues: i === 0 ? [bound, ...rest] : s.clues.map((c) => ({ ...c, roleId: null })),
+      })),
+    };
+    expect(validateTemplate(parallel)).toEqual([
+      `Stage "${tpl.stages[0].title}": clue for role "${bound.roleId}": role clues need roles mode`,
+    ]);
+    // The same clue in roles mode is fine.
+    expect(validateTemplate({ ...parallel, mode: 'roles' })).toEqual([]);
+  });
+
   it('rejects clues and combined parts naming an unknown role', () => {
     expectError(
       withStage({ clues: [{ id: 'c1', roleId: 'ghost', kind: 'text', body: '' }] }),

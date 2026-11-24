@@ -284,6 +284,7 @@
   },
   "escape_template": {
     "invalid": "This escape template is not valid.",
+    "not_published": "This escape template is a draft. Publish it before opening a room with it.",
     "not_found": "Escape template not found."
   }
 }

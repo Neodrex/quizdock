@@ -15,6 +15,8 @@ describe('PhraseLock', () => {
     );
     const input = screen.getByRole('textbox', { name: 'Answer for Door' });
     expect(input.className).toMatch(/text-base/);
+    // The contract's limit: a longer answer would fail validation as a generic "send failed".
+    expect(input).toHaveAttribute('maxlength', '200');
     fireEvent.change(input, { target: { value: ' Open Sesame! ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Open' }));
     expect(submit).toHaveBeenCalledWith('door', ' Open Sesame! ');

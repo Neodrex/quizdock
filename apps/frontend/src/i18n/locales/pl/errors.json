@@ -286,6 +286,7 @@
   },
   "escape_template": {
     "invalid": "Ten szablon gry escape jest nieprawidłowy.",
+    "not_published": "Ten szablon escape roomu jest szkicem. Opublikuj go, zanim otworzysz z nim pokój.",
     "not_found": "Nie znaleziono szablonu gry escape."
   }
 }

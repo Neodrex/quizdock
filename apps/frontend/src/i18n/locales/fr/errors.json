@@ -285,6 +285,7 @@
   },
   "escape_template": {
     "invalid": "Ce modèle de jeu d’évasion n’est pas valide.",
+    "not_published": "Ce modèle de jeu d’évasion est un brouillon. Publiez-le avant d’ouvrir une salle avec.",
     "not_found": "Modèle de jeu d’évasion introuvable."
   }
 }

@@ -103,6 +103,10 @@ export function validateTemplate(t: EscapeTemplate): string[] {
       if (c.roleId !== null && !roleIds.has(c.roleId)) {
         stage(`clue for unknown role "${c.roleId}"`);
       }
+      // Parallel mode deals no role: the clue would show to nobody.
+      if (c.roleId !== null && t.mode !== 'roles') {
+        stage(`clue for role "${c.roleId}": role clues need roles mode`);
+      }
     }
     for (const h of s.hints) {
       if (dup(h.id)) stage(`duplicate id "${h.id}"`);

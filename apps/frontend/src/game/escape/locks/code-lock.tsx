@@ -1,3 +1,4 @@
+import { ESCAPE_ANSWER_MAX } from '@quiz-dock/contracts';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
@@ -26,6 +27,7 @@ export function CodeLock({ lock, block, submit }: LockProps) {
             aria-label={t('lock.answerFor', { lock: lock.label })}
             inputMode={lock.digits ? 'numeric' : 'text'}
             autoComplete="off"
+            maxLength={ESCAPE_ANSWER_MAX}
             autoCapitalize="characters"
             autoCorrect="off"
             spellCheck={false}
