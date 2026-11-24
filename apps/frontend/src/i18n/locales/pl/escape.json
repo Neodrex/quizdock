@@ -344,7 +344,11 @@
       "end": "Zakończ grę",
       "endTitle": "Zakończyć teraz grę dla wszystkich drużyn?",
       "endDescription": "Każda drużyna zatrzymuje się tam, gdzie jest, i pojawiają się wyniki.",
-      "endConfirm": "Zakończ teraz"
+      "endConfirm": "Zakończ teraz",
+      "stop": "Przerwij grę",
+      "stopTitle": "Przerwać grę i ją odrzucić?",
+      "stopDescription": "Gra zatrzymuje się teraz dla wszystkich drużyn i nic z niej nie zostaje: ani finału, ani wyników. Wszyscy wracają do lobby. Aby zakończyć wcześniej i zachować wyniki, użyj „Zakończ grę”.",
+      "stopConfirm": "Przerwij i odrzuć"
     },
     "results": {
       "title": "Wyniki",
@@ -599,6 +603,7 @@
     "board": {
       "notARace": "Ta tablica jest dla wyścigów",
       "notFound": "Brak wyścigu z tym PIN-em.",
+      "stopped": "Prowadzący przerwał ten wyścig. Czekamy na następny.",
       "waitingStart": "Czekamy na start"
     }
   },

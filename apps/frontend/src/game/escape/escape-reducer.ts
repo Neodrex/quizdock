@@ -45,6 +45,8 @@ export type EscapeAction =
   | { type: 'teamUpdate'; update: EscapeTeamUpdate; me: string | null }
   | { type: 'finale'; finale: EscapeFinale }
   | { type: 'gameEnded' }
+  /** `escape:closed`: the host stopped the run, which is discarded. */
+  | { type: 'stopped' }
   | { type: 'finaleTimeout' }
   | { type: 'submitAck'; lockId: string; ack: EscapeSubmitAck }
   | { type: 'hintAck'; ack: EscapeAskHintAck }
@@ -181,6 +183,8 @@ export function escapeReducer(ui: EscapeUi, a: EscapeAction): EscapeUi {
       const played = ui.state?.phase === 'running' || ui.state?.phase === 'finale';
       return { ...ui, ended: played ? 'waiting' : 'final' };
     }
+    case 'stopped':
+      return initialEscapeUi;
     case 'finaleTimeout':
       return ui.ended === 'waiting' ? { ...ui, ended: 'final' } : ui;
     case 'submitAck':

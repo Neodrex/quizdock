@@ -1,6 +1,7 @@
 import type {
   EscapeAnnounce,
   EscapeBoard,
+  EscapeClosed,
   EscapeFinale,
   EscapeHostBatch,
   EscapeHostOutline,
@@ -17,7 +18,7 @@ import { emitWithAckOrError, ensureGameSocket, type GameSocket } from '../../gam
 import type { GameView } from '../../use-game-session';
 import { useEscapeMode, useEscapeSync } from '../escape-sync';
 import { type HostEvent, type HostPayload, hostCommand } from './host-client';
-import { loadHostRecord, saveHostRecord } from './host-record';
+import { clearHostRecord, loadHostRecord, saveHostRecord } from './host-record';
 import {
   type CommandKey,
   type EscapeHostAction,
@@ -78,6 +79,8 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
   const pendingRef = useRef(new Set<CommandKey>());
   // Between host:back-to-lobby and escape:open, the lobby's re-sync would be refused.
   const holdRef = useRef(false);
+  // A run was stopped: the room's next run comes with no sync, so no outline.
+  const stoppedRef = useRef(false);
   const [resync, setResync] = useState(0);
 
   useEffect(() => {
@@ -95,6 +98,10 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
         gameRef.current = state.gameId;
         finaleRef.current = false;
         saveHostRecord({ pin, gameId: state.gameId });
+        if (stoppedRef.current) {
+          stoppedRef.current = false;
+          setResync((n) => n + 1);
+        }
       }
       act({ type: 'host', state, now: serverNow() });
     };
@@ -109,6 +116,18 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
       finaleRef.current = true;
       act({ type: 'finale', finale });
     };
+    // The host stopped the run (this console or another): nothing of it is kept,
+    // and the room's lobby shows, ready for a new run.
+    const onClosed = ({ gameId }: EscapeClosed) => {
+      if (gameRef.current && gameRef.current !== gameId) return;
+      gameRef.current = null;
+      outlineRef.current = null;
+      finaleRef.current = false;
+      stoppedRef.current = true;
+      if (loadHostRecord(pin)?.gameId === gameId) clearHostRecord();
+      act({ type: 'stopped' });
+      setActive(false);
+    };
     const events: [string, Listener][] = [
       ['escape:outline', onOutline as Listener],
       ['escape:host', onHost as Listener],
@@ -118,6 +137,7 @@ export function useEscapeHost(pin: string, session: EscapeHostSeam) {
       ['escape:team-update', onUpdate as Listener],
       ['escape:announce', onAnnounce as Listener],
       ['escape:finale', onFinale as Listener],
+      ['escape:closed', onClosed as Listener],
     ];
     void ensureGameSocket('host', pin).then((sock) => {
       if (!live) return;

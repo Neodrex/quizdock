@@ -51,6 +51,8 @@ export function EscapeRaceBoardPage() {
   let body;
   if (board && board.session?.type !== 'race' && !finale) {
     body = <Notice>{t('race.board.notARace')}</Notice>;
+  } else if (escape.stopped && !escape.active) {
+    body = <Notice>{t('race.board.stopped')}</Notice>;
   } else if (!escape.active) {
     body =
       session.view.status === 'error' ? (

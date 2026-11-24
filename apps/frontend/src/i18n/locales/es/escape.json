@@ -337,7 +337,11 @@
       "end": "Terminar la partida",
       "endTitle": "¿Terminar la partida para todos los equipos ahora?",
       "endDescription": "Cada equipo se queda donde está y se muestran los resultados.",
-      "endConfirm": "Terminar ya"
+      "endConfirm": "Terminar ya",
+      "stop": "Detener la partida",
+      "stopTitle": "¿Detener la partida y descartarla?",
+      "stopDescription": "La partida se detiene ahora para todos los equipos y no se conserva nada: ni final ni resultados. Todos vuelven a la sala de espera. Para terminar antes y conservar los resultados, usa «Terminar la partida».",
+      "stopConfirm": "Detener y descartar"
     },
     "results": {
       "title": "Resultados",
@@ -585,6 +589,7 @@
     "board": {
       "notARace": "Este marcador es solo para carreras",
       "notFound": "No hay ninguna carrera con este PIN.",
+      "stopped": "El anfitrión detuvo esta carrera. Esperando la siguiente.",
       "waitingStart": "Esperando la salida"
     }
   },

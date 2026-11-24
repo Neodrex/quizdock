@@ -1,5 +1,6 @@
 import {
   type EscapeAskHintAck,
+  type EscapeClosed,
   type EscapeFinale,
   type EscapePlayerState,
   type EscapeSubmitAck,
@@ -88,11 +89,21 @@ export function useEscapeSession(pin: string, session: EscapeSessionSeam) {
       dispatch({ type: 'teamUpdate', update, me: me() });
     const onFinale = (finale: EscapeFinale) => dispatch({ type: 'finale', finale });
     const onEnded = () => dispatch({ type: 'gameEnded' });
+    // The host stopped the run: nothing of it is kept, and the room's lobby shows.
+    const onClosed = ({ gameId }: EscapeClosed) => {
+      const known = stateRef.current?.gameId;
+      if (known && known !== gameId) return;
+      stateRef.current = null;
+      if (loadEscapeRecord(pin)?.gameId === gameId) clearEscapeRecord();
+      dispatch({ type: 'stopped' });
+      setActive(false);
+    };
     const events: [string, Listener][] = [
       ['escape:state', onState as Listener],
       ['escape:team-update', onUpdate as Listener],
       ['escape:finale', onFinale as Listener],
       ['game:ended', onEnded as Listener],
+      ['escape:closed', onClosed as Listener],
     ];
     void ensureGameSocket('guest', pin).then((sock) => {
       if (!live) return;

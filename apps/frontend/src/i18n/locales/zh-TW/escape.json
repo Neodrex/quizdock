@@ -323,7 +323,11 @@
       "end": "結束遊戲",
       "endTitle": "現在為所有隊伍結束遊戲？",
       "endDescription": "每個隊伍停在目前位置，並顯示結果。",
-      "endConfirm": "立即結束"
+      "endConfirm": "立即結束",
+      "stop": "中止遊戲",
+      "stopTitle": "中止並放棄本局遊戲？",
+      "stopDescription": "遊戲將立即對所有隊伍停止，且不保留任何內容：沒有終場，也沒有結果。所有人返回大廳。如需提前結束並保留結果，請使用「結束遊戲」。",
+      "stopConfirm": "中止並放棄"
     },
     "results": {
       "title": "結果",
@@ -557,6 +561,7 @@
     "board": {
       "notARace": "此排行榜僅用於競賽",
       "notFound": "沒有使用此 PIN 的競賽。",
+      "stopped": "主持人已中止本場比賽。正在等待下一場。",
       "waitingStart": "等待開始"
     }
   },

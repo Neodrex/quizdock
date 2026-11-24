@@ -161,6 +161,24 @@ describe('useEscapeScreen', () => {
       expect(sent('escape:sync')).toHaveLength(2);
     });
 
+    it('escape:closed drops the run: off and stopped, no finale kept, no sync; the next board turns it on', async () => {
+      const { result, rerender } = mount(at(GameState.Escape));
+      await flush();
+      fire('escape:board', boardOf());
+      expect(result.current.stopped).toBe(false);
+      fire('escape:closed', { gameId: GAME });
+      expect(result.current.active).toBe(false);
+      expect(result.current.stopped).toBe(true);
+      expect(result.current.ui).toMatchObject({ board: null, finale: null });
+      rerender(at(GameState.Lobby));
+      await flush();
+      expect(sent('escape:sync')).toHaveLength(1);
+      expect(loadScreenRecord(PIN)).toBeNull();
+      fire('escape:board', boardOf({ gameId: 'a'.repeat(32), phase: 'forming' }));
+      expect(result.current.active).toBe(true);
+      expect(result.current.stopped).toBe(false);
+    });
+
     it('the host leaving changes nothing', async () => {
       const { result, rerender } = mount(at(GameState.Escape));
       await flush();
@@ -308,12 +326,13 @@ describe('useEscapeScreen', () => {
     });
   });
 
-  it('listens for escape:board, escape:announce, escape:screen-finale and escape:look only, and lets them go', async () => {
+  it('listens for escape:board, escape:announce, escape:screen-finale, escape:closed and escape:look only, and lets them go', async () => {
     const { unmount } = mount(seam({ attachSeq: 1 }));
     await flush();
     expect([...listeners.keys()].sort()).toEqual([
       'escape:announce',
       'escape:board',
+      'escape:closed',
       'escape:look',
       'escape:screen-finale',
     ]);

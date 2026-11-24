@@ -330,7 +330,11 @@
       "end": "Oyunu bitir",
       "endTitle": "Oyun tüm takımlar için şimdi bitirilsin mi?",
       "endDescription": "Her takım olduğu yerde durur ve sonuçlar görünür.",
-      "endConfirm": "Şimdi bitir"
+      "endConfirm": "Şimdi bitir",
+      "stop": "Oyunu durdur",
+      "stopTitle": "Oyun durdurulup silinsin mi?",
+      "stopDescription": "Oyun şimdi tüm takımlar için durur ve ondan hiçbir şey saklanmaz: final yok, sonuç yok. Herkes lobiye döner. Erken bitirip sonuçları saklamak için “Oyunu bitir”i kullanın.",
+      "stopConfirm": "Durdur ve sil"
     },
     "results": {
       "title": "Sonuçlar",
@@ -571,6 +575,7 @@
     "board": {
       "notARace": "Bu tablo yalnızca yarışlar içindir",
       "notFound": "Bu PIN ile bir yarış yok.",
+      "stopped": "Sunucu bu yarışı durdurdu. Bir sonraki bekleniyor.",
       "waitingStart": "Başlangıç bekleniyor"
     }
   },

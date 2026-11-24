@@ -1,6 +1,7 @@
 import {
   type EscapeAnnounce,
   type EscapeBoard,
+  type EscapeClosed,
   type EscapeScreenFinale,
   GameState,
 } from '@quiz-dock/contracts';
@@ -50,6 +51,8 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
   // The run the last board was for: a kept finale of another run is not this room's now.
   const runRef = useRef<string | null>(null);
   const [resync, setResync] = useState(0);
+  // The host stopped the run (`escape:closed`), until the room's next board.
+  const [stopped, setStopped] = useState(false);
 
   const { socket } = session;
   // The room's brand and colours (M7 §1.9).
@@ -58,6 +61,7 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
     if (!socket) return;
     const onBoard = (board: EscapeBoard) => {
       heardRef.current += 1;
+      setStopped(false);
       if (!quizOnRef.current) setActive(true);
       if (runRef.current !== board.gameId) {
         runRef.current = board.gameId;
@@ -78,10 +82,22 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
       saveScreenRecord(pin, { gameId: finale.gameId, replayed: true, finale });
       dispatch({ type: 'screenFinale', finale, record });
     };
+    // The run is discarded: no finale; the lobby (or the board's waiting line) shows.
+    const onClosed = ({ gameId }: EscapeClosed) => {
+      if (runRef.current && runRef.current !== gameId) return;
+      runRef.current = null;
+      finaleRef.current = false;
+      syncedRef.current = false;
+      if (loadScreenRecord(pin)?.gameId === gameId) clearScreenRecord(pin);
+      dispatch({ type: 'stopped' });
+      setStopped(true);
+      setActive(false);
+    };
     const events: [string, Listener][] = [
       ['escape:board', onBoard as Listener],
       ['escape:announce', onAnnounce as Listener],
       ['escape:screen-finale', onFinale as Listener],
+      ['escape:closed', onClosed as Listener],
     ];
     const on = socket.on as unknown as (e: string, h: Listener) => void;
     for (const [e, h] of events) on.call(socket, e, h);
@@ -153,7 +169,7 @@ export function useEscapeScreen(pin: string, session: EscapeScreenSeam) {
     dispatch({ type: 'replay', replay: 'done' });
   }, [pin, gameId]);
 
-  return { active: active || closedWithRecord, ui, replayDone, look };
+  return { active: active || closedWithRecord, ui, replayDone, look, stopped };
 }
 
 export type EscapeScreenSession = ReturnType<typeof useEscapeScreen>;

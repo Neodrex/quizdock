@@ -337,7 +337,11 @@
       "end": "Termina la partita",
       "endTitle": "Terminare ora la partita per tutte le squadre?",
       "endDescription": "Ogni squadra si ferma dov’è e compaiono i risultati.",
-      "endConfirm": "Termina ora"
+      "endConfirm": "Termina ora",
+      "stop": "Interrompi la partita",
+      "stopTitle": "Interrompere la partita e scartarla?",
+      "stopDescription": "La partita si ferma ora per tutte le squadre e non ne resta nulla: né finale né risultati. Tutti tornano alla lobby. Per finire prima e conservare i risultati, usa «Termina la partita».",
+      "stopConfirm": "Interrompi e scarta"
     },
     "results": {
       "title": "Risultati",
@@ -585,6 +589,7 @@
     "board": {
       "notARace": "Questa classifica è per le gare",
       "notFound": "Nessuna gara con questo PIN.",
+      "stopped": "L’host ha interrotto questa gara. In attesa della prossima.",
       "waitingStart": "In attesa della partenza"
     }
   },

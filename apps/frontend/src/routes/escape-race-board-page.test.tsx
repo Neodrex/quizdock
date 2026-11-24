@@ -201,6 +201,20 @@ describe('/race/$pin, the public race board', () => {
     expect(screen.queryByRole('button', { name: /son|sound/i })).toBeNull();
   });
 
+  it('a race the host stopped: the board drops it and waits, then shows the next one', async () => {
+    await load();
+    const board = boardOf({ phase: 'running', session: raceOf() });
+    await sync(board);
+    await waitFor(() => expect(screen.queryByTestId('race-board-notice')).toBeNull());
+    fire('escape:closed', { gameId: board.gameId });
+    fire('game:state', lobbyRoom);
+    const notice = await screen.findByTestId('race-board-notice');
+    expect(notice.querySelector('.motion-safe\\:animate-spin')).toBeNull();
+    expect(notice.textContent).not.toBe('');
+    fire('escape:board', boardOf({ gameId: 'a'.repeat(32), phase: 'forming', session: raceOf() }));
+    expect(await screen.findByTestId('race-lobby')).toBeInTheDocument();
+  });
+
   it('?sound=1 offers the sound', async () => {
     await load(`/race/${PIN}?sound=1`);
     await sync(boardOf({ phase: 'forming', session: raceOf() }), lobbyRoom);

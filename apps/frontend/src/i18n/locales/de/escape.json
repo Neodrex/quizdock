@@ -330,7 +330,11 @@
       "end": "Spiel beenden",
       "endTitle": "Das Spiel jetzt für alle Teams beenden?",
       "endDescription": "Jedes Team stoppt, wo es gerade ist, und die Ergebnisse erscheinen.",
-      "endConfirm": "Jetzt beenden"
+      "endConfirm": "Jetzt beenden",
+      "stop": "Spiel abbrechen",
+      "stopTitle": "Spiel abbrechen und verwerfen?",
+      "stopDescription": "Das Spiel stoppt jetzt für alle Teams und nichts davon bleibt erhalten: kein Finale, keine Ergebnisse. Alle kehren in die Lobby zurück. Um vorzeitig zu beenden und die Ergebnisse zu behalten, nutze „Spiel beenden“.",
+      "stopConfirm": "Abbrechen und verwerfen"
     },
     "results": {
       "title": "Ergebnisse",
@@ -571,6 +575,7 @@
     "board": {
       "notARace": "Diese Tafel ist für Rennen",
       "notFound": "Kein Rennen mit dieser PIN.",
+      "stopped": "Der Host hat dieses Rennen abgebrochen. Warten auf das nächste.",
       "waitingStart": "Warten auf den Start"
     }
   },

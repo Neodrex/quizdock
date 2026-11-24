@@ -1,5 +1,5 @@
 import type { EscapeHostOutline, EscapeHostTeam, EscapePhase } from '@quiz-dock/contracts';
-import { Flag, KeyRound, Lightbulb, Pause, Play } from 'lucide-react';
+import { Flag, KeyRound, Lightbulb, Pause, Play, Square } from 'lucide-react';
 import { type ReactNode, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { GameSocket } from '../../game-client';
-import { BackToLobbyButton } from '../../room-components';
+import { emitWithAckOrError, type GameSocket } from '../../game-client';
 import { formatDelta } from '../escape-reducer';
 import { can, type ToolSet } from '../session/session-tools';
 import { type EscapeHostUi, type HostLockView, nextHintOf } from './host-reducer';
@@ -426,8 +425,57 @@ function EndButton({ commands }: { commands: Pick<HostCommands, 'end' | 'pending
 }
 
 /**
+ * Stop (`host:back-to-lobby` while the run plays): owner decision, an abort. The
+ * run and its results are discarded, and the confirmation says so; "End the run"
+ * is the way to end early and keep them.
+ */
+function StopButton({ pin, socket }: { pin: string; socket: GameSocket | null }) {
+  const { t } = useTranslation('escape');
+  const { error, run } = useRun();
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const stop = async () => {
+    if (!socket || busy) return;
+    setBusy(true);
+    try {
+      await run(() => emitWithAckOrError(socket, 'host:back-to-lobby', { pin, archive: false }));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-1">
+      <Button
+        type="button"
+        variant="outline"
+        className="min-h-12"
+        disabled={busy || !socket}
+        aria-busy={busy}
+        onClick={() => setAsking(true)}
+      >
+        <Square className="size-4" aria-hidden />
+        {t('host.actions.stop')}
+      </Button>
+      <Alert text={error} />
+      <ConfirmDialog
+        open={asking}
+        title={t('host.actions.stopTitle')}
+        description={t('host.actions.stopDescription')}
+        confirmLabel={t('host.actions.stopConfirm')}
+        destructive
+        onConfirm={() => {
+          setAsking(false);
+          void stop();
+        }}
+        onCancel={() => setAsking(false)}
+      />
+    </div>
+  );
+}
+
+/**
  * The run-wide bar while the run is on: pause, a hint to all, time for all, end,
- * and stop (back to the lobby). Nothing of it once the finale is on: the results
+ * and stop (the run discarded, back to the lobby). Nothing of it once the finale is on: the results
  * have their own actions.
  */
 export function RunBar({
@@ -457,7 +505,7 @@ export function RunBar({
         {can(commands.tools, 'pause') ? <PauseToggle paused={paused} commands={commands} /> : null}
         <HintAllButton commands={commands} />
         {can(commands.tools, 'end') ? <EndButton commands={commands} /> : null}
-        <BackToLobbyButton pin={pin} socket={socket} mode="stop" offerArchive={false} />
+        <StopButton pin={pin} socket={socket} />
         {extra}
       </div>
       {can(commands.tools, 'adjust-all') ? <TimeControls commands={commands} /> : null}

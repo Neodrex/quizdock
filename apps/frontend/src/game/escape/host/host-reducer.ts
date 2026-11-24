@@ -78,6 +78,8 @@ export type EscapeHostAction =
   | { type: 'announce'; announce: EscapeAnnounce }
   | { type: 'finale'; finale: EscapeFinale }
   | { type: 'closed'; finale: EscapeFinale }
+  /** `escape:closed`: the run was stopped and discarded. */
+  | { type: 'stopped' }
   | { type: 'pending'; key: CommandKey; on: boolean }
   | { type: 'feed'; key: string; now: number };
 
@@ -318,6 +320,8 @@ export function escapeHostReducer(ui: EscapeHostUi, a: EscapeHostAction): Escape
       return { ...ui, finale: a.finale };
     case 'closed':
       return { ...ui, finale: a.finale, ended: 'final' };
+    case 'stopped':
+      return initialEscapeHostUi;
     case 'pending':
       return { ...ui, pending: { ...ui.pending, [a.key]: a.on } };
     case 'feed':

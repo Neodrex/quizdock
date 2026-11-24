@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { I18nextProvider } from 'react-i18next';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { errorText } from '@/api/error-text';
-import { refusalError } from '../../game-client';
+import { type GameSocket, refusalError } from '../../game-client';
 import { drawEn, en } from '../test-fixtures';
 import { hostTeamOf, outlineOf } from './host-fixtures';
 import {
@@ -13,13 +13,6 @@ import {
   TimeControls,
   UnlockButton,
 } from './host-actions';
-
-// The quiz console's stop button: its own tests; here only that it is offered.
-vi.mock('../../room-components', () => ({
-  BackToLobbyButton: ({ mode }: { mode: string }) => (
-    <button type="button">back-to-lobby {mode}</button>
-  ),
-}));
 
 const red = hostTeamOf();
 
@@ -52,12 +45,12 @@ const dialog = () => screen.getByRole('dialog');
 
 function bar(
   commands = commandsOf(),
-  over: { phase?: 'running' | 'finale'; paused?: boolean } = {},
+  over: { phase?: 'running' | 'finale'; paused?: boolean; socket?: GameSocket } = {},
 ) {
   drawEn(
     <RunBar
       pin="123456"
-      socket={null}
+      socket={over.socket ?? null}
       phase={over.phase ?? 'running'}
       paused={over.paused ?? false}
       commands={commands}
@@ -345,9 +338,36 @@ describe('host actions', () => {
       await waitFor(() => expect(commands.end).toHaveBeenCalledTimes(1));
     });
 
-    it('offers stop and back to the lobby', () => {
-      bar();
-      expect(screen.getByRole('button', { name: 'back-to-lobby stop' })).toBeInTheDocument();
+    /** A socket whose `host:back-to-lobby` is answered with `res`. */
+    const stopSocket = (res: unknown = { ok: true }) => {
+      const emit = vi.fn((_e: string, _p: unknown, ack: (r: unknown) => void) => ack(res));
+      return { emit, socket: { emit } as unknown as GameSocket };
+    };
+
+    it('Stop asks first, saying the run and its results are discarded, then sends host:back-to-lobby', async () => {
+      const { emit, socket } = stopSocket();
+      bar(commandsOf(), { socket });
+      fireEvent.click(screen.getByRole('button', { name: 'Stop the run' }));
+      expect(dialog()).toHaveTextContent('Stop the run and discard it?');
+      expect(dialog()).toHaveTextContent('no finale, no results');
+      expect(emit).not.toHaveBeenCalled();
+      fireEvent.click(within(dialog()).getByRole('button', { name: 'Stop and discard' }));
+      await waitFor(() => expect(emit).toHaveBeenCalledTimes(1));
+      expect(emit.mock.calls[0].slice(0, 2)).toEqual([
+        'host:back-to-lobby',
+        { pin: '123456', archive: false },
+      ]);
+    });
+
+    it('Stop cancelled sends nothing; a refusal shows its text', async () => {
+      const { emit, socket } = stopSocket({ ok: false, error: { code: 'host.forbidden' } });
+      bar(commandsOf(), { socket });
+      fireEvent.click(screen.getByRole('button', { name: 'Stop the run' }));
+      fireEvent.click(within(dialog()).getByRole('button', { name: 'Cancel' }));
+      expect(emit).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Stop the run' }));
+      fireEvent.click(within(dialog()).getByRole('button', { name: 'Stop and discard' }));
+      expect(await screen.findByRole('alert')).toBeInTheDocument();
     });
   });
 

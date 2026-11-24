@@ -64,6 +64,7 @@ const escapeOf = (
   look: EscapeLook = NO_LOOK,
 ): EscapeScreenSession => ({
   active: true,
+  stopped: false,
   ui: { ...initialScreenUi, ...ui },
   replayDone: vi.fn(),
   look,

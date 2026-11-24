@@ -371,6 +371,25 @@ describe('useEscapeSession', () => {
     });
   });
 
+  it('escape:closed drops the run: off, no state, no record; the room’s next run comes in', async () => {
+    saveEscapeRecord({ pin: PIN, gameId: GAME, playerId: 'p1', sessionToken: 'tok', teamId: 't1' });
+    const { result } = mount(seam({ attachSeq: 1 }));
+    await flush();
+    fire('escape:state', state());
+    expect(result.current.active).toBe(true);
+    // Another run's close is not this one's.
+    fire('escape:closed', { gameId: 'f'.repeat(32) });
+    expect(result.current.ui.state).not.toBeNull();
+    fire('escape:closed', { gameId: GAME });
+    expect(result.current.active).toBe(false);
+    expect(result.current.ui).toMatchObject({ state: null, finale: null, ended: 'none' });
+    expect(loadEscapeRecord(PIN)).toBeNull();
+    const next = 'a'.repeat(32);
+    fire('escape:state', state({ gameId: next, phase: 'forming', team: null }));
+    expect(result.current.active).toBe(true);
+    expect(result.current.ui.state?.gameId).toBe(next);
+  });
+
   it('a state in the finale phase with no finale fetches it once', async () => {
     acks.set('escape:results', () => ({ ok: true, finale }));
     const { result } = mount();
@@ -462,6 +481,7 @@ describe('useEscapeSession', () => {
     const { unmount } = mount(seam({ attachSeq: 1 }));
     await flush();
     expect([...listeners.keys()].sort()).toEqual([
+      'escape:closed',
       'escape:finale',
       // The room's brand (M7): static, public, for every synced socket.
       'escape:look',

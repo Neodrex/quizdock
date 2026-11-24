@@ -337,7 +337,11 @@
       "end": "Terminer la partie",
       "endTitle": "Terminer la partie pour toutes les équipes maintenant ?",
       "endDescription": "Chaque équipe s’arrête où elle en est, et les résultats s’affichent.",
-      "endConfirm": "Terminer maintenant"
+      "endConfirm": "Terminer maintenant",
+      "stop": "Arrêter la partie",
+      "stopTitle": "Arrêter la partie et l’abandonner ?",
+      "stopDescription": "La partie s’arrête maintenant pour toutes les équipes et rien n’en est conservé : ni finale, ni résultats. Tout le monde revient au salon. Pour terminer plus tôt en gardant les résultats, utilisez « Terminer la partie ».",
+      "stopConfirm": "Arrêter et abandonner"
     },
     "results": {
       "title": "Résultats",
@@ -585,6 +589,7 @@
     "board": {
       "notARace": "Ce tableau est réservé aux courses",
       "notFound": "Aucune course avec ce PIN.",
+      "stopped": "L’hôte a arrêté cette course. En attente de la prochaine.",
       "waitingStart": "En attente du départ"
     }
   },

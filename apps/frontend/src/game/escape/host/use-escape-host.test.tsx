@@ -81,6 +81,7 @@ const HOST_EVENTS = [
   'escape:team-update',
   'escape:announce',
   'escape:finale',
+  'escape:closed',
   // The room's look (M7 §1.9): the console's colours and brand.
   'escape:look',
 ];
@@ -233,6 +234,37 @@ describe('useEscapeHost', () => {
     expect(result.current.ui.host!.teams[0].wrong).toBe(5);
     expect(result.current.ui.feed.at(-1)?.key).toBe('host.feed.timeUp');
     expect(result.current.ui.finale).toBe(finale);
+  });
+
+  it('escape:closed drops the run: off, nothing kept, no sync; the room’s next run is read again', async () => {
+    const { result, rerender } = mount(withState(GameState.Escape));
+    await flush();
+    fire('escape:outline', outlineOf());
+    fire('escape:host', hostStateOf());
+    fire('escape:board', boardOf({ phase: 'running' }));
+    expect(loadHostRecord(PIN)?.gameId).toBe(GAME);
+    // Another run's close is not this one's.
+    fire('escape:closed', { gameId: 'f'.repeat(32) });
+    expect(result.current.active).toBe(true);
+    fire('escape:closed', { gameId: GAME });
+    expect(result.current.active).toBe(false);
+    expect(result.current.ui).toMatchObject({
+      outline: null,
+      host: null,
+      board: null,
+      finale: null,
+    });
+    expect(loadHostRecord(PIN)).toBeNull();
+    rerender(withState(GameState.Lobby));
+    await flush();
+    expect(sent('escape:sync')).toHaveLength(1);
+    // escape:open by this host: its state comes with no sync, so the outline is asked for.
+    const next = 'a'.repeat(32);
+    fire('escape:host', hostStateOf({ gameId: next }));
+    await flush();
+    expect(result.current.active).toBe(true);
+    expect(result.current.ui.host?.gameId).toBe(next);
+    expect(sent('escape:sync')).toHaveLength(2);
   });
 
   it('back in the lobby after a podium syncs again; a refusal hands back to the quiz', async () => {

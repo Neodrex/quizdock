@@ -330,7 +330,11 @@
       "end": "End the run",
       "endTitle": "End the run for every team now?",
       "endDescription": "Every team stops where it is, and the results show.",
-      "endConfirm": "End now"
+      "endConfirm": "End now",
+      "stop": "Stop the run",
+      "stopTitle": "Stop the run and discard it?",
+      "stopDescription": "The run stops for every team now and nothing of it is kept: no finale, no results. Everyone goes back to the lobby. To end early and keep the results, use “End the run”.",
+      "stopConfirm": "Stop and discard"
     },
     "results": {
       "title": "Results",
@@ -571,6 +575,7 @@
     "board": {
       "notARace": "This board is for races",
       "notFound": "No race with this PIN.",
+      "stopped": "The host stopped this race. Waiting for the next one.",
       "waitingStart": "Waiting for the start"
     }
   },
