@@ -290,6 +290,14 @@ async function main() {
   await dialog.getByRole('button', { name: 'Get the hint' }).click();
   for (const p of phones) {
     check(await visible(p.page.getByText(hint.text)), `${p.name}: the hint shows`);
+    // The `hint` team-update carries `penaltyS`: both phones tag the hint as paid.
+    if (hint.penaltyS > 0) {
+      const item = p.page.locator('li').filter({ hasText: hint.text });
+      check(
+        await visible(item.getByText('Paid', { exact: true })),
+        `${p.name}: the hint is tagged "Paid"`,
+      );
+    }
     check(
       await visible(p.page.getByText(/^Hints: \+/)),
       `${p.name}: the hint total ("Hints: +…") shows`,

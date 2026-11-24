@@ -5,7 +5,8 @@
  * the console in Chrome picks the room and opens it, two phones and two socket bots
  * join, the console forms the teams, moves a player, starts, gives a hint, adds and
  * takes time, pauses, opens a lock, reloads, leaves and comes back, ends the run and
- * downloads the CSV, then runs the room again. It prints OK or FAIL per check, writes
+ * downloads the CSV, runs the room again, then stops that second run (a confirmation,
+ * `escape:closed`, everyone back in the lobby, no results). It prints OK or FAIL per check, writes
  * screenshots to OUT/host-<viewport>-*.png, and lets the host seat go if it took it.
  *
  * Setup and servers: as two-phones.mjs (devenv.sh, compose postgres/redis, backend
@@ -548,6 +549,70 @@ async function main() {
   }, 15_000);
   check(!!again, `run again: forming, four unassigned (${again?.join(', ') ?? 'not seen'})`);
   await shot(cpage, 'again');
+  await keepConsoleText();
+
+  // ── 14b. Stop during the second run: a confirmation, then an abort. Every client
+  // gets `escape:closed` and is back in the lobby; no finale, no results. ──
+  const makeTeams = cpage.getByRole('button', { name: 'Make teams' });
+  if (!(await visible(makeTeams, 1500))) {
+    await cpage.getByRole('button', { name: 'I make the teams' }).click();
+  }
+  await cpage.getByLabel('Number of teams').fill('2');
+  await makeTeams.click();
+  await until(async () => {
+    const cols = (await boardLayout()).filter((c) => c.name !== 'Unassigned');
+    return cols.length === 2 && cols.every((c) => c.players.length === 2);
+  });
+  const closedBots = bots.map((x) => new Promise((ok) => x.socket.once('escape:closed', ok)));
+  const framesBefore = phonesAll.map((p) => p.frames.length);
+  await cpage.getByRole('button', { name: /Start the game/ }).click();
+  const anyway2 = cpage.getByRole('dialog', { name: 'Start anyway?' });
+  if (await visible(anyway2, 1500)) await anyway2.getByRole('button', { name: 'Start' }).click();
+  check(
+    await visible(cpage.getByRole('heading', { name: 'Live teams' }), 15_000),
+    'second run: the live grid shows',
+  );
+  for (const p of phonesAll) {
+    check(
+      await visible(p.page.getByRole('heading', { name: lobby.title })),
+      `${p.name}: second run on stage "${lobby.title}"`,
+    );
+  }
+  await closeDetail();
+  await cpage.getByRole('button', { name: 'Stop the run' }).click();
+  const stopDialog = cpage.getByRole('dialog', { name: 'Stop the run and discard it?' });
+  check(await visible(stopDialog), 'stop: the console asks before it discards the run');
+  await shot(cpage, 'stop-confirm');
+  await stopDialog.getByRole('button', { name: 'Stop and discard' }).click();
+  check(
+    await visible(cpage.getByText('The lobby is waiting: choose the quiz it plays next.'), 15_000),
+    'stop: the console is back in the lobby',
+  );
+  check(
+    !(await visible(cpage.getByRole('button', { name: 'Download CSV' }), 1000)),
+    'stop: no results on the console',
+  );
+  const botsClosed = await Promise.race([
+    Promise.all(closedBots).then(() => true),
+    sleep(5000).then(() => false),
+  ]);
+  check(botsClosed, 'stop: both bots got escape:closed');
+  for (const [i, p] of phonesAll.entries()) {
+    check(
+      p.frames.slice(framesBefore[i]).some((f) => f.includes('"escape:closed"')),
+      `${p.name}: escape:closed frame`,
+    );
+    check(
+      await visible(p.page.getByText('Waiting for the host…')),
+      `${p.name}: back in the lobby after the stop`,
+    );
+    check(
+      !(await visible(p.page.getByRole('heading', { name: lobby.title }), 500)),
+      `${p.name}: no stage after the stop`,
+    );
+  }
+  await shot(cpage, 'stopped');
+  await shot(a.page, 'a-stopped');
   await keepConsoleText();
 }
 
