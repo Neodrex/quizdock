@@ -47,6 +47,7 @@ import {
   parseProcStat,
   parsePs,
   stats,
+  timeUpAt,
   wrongFor,
 } from './load-lib.mjs';
 
@@ -149,6 +150,8 @@ const m = {
   doneAt: [],
   hintMs: [],
   reconnectMs: [],
+  // Planned drops that were not back at once, and came back by retrying (no restart).
+  reconnectRetriedMs: [],
   reconnectFailed: 0,
   lost: 0,
   acks: { ok: 0, expected: {}, unexpected: {} },
@@ -175,6 +178,8 @@ const m = {
 };
 /** Set once the run is being ended (time-up, the host's end, or the tool's stop). */
 let ending = false;
+/** The server's time-up of the run clock, local epoch ms, from the phones' states (--sustain). */
+let serverTimeUpAt = null;
 let tookSeat = false;
 const note = (where, e) => {
   if (m.errors.length < 50)
@@ -312,6 +317,7 @@ function newBot(i, pin, content) {
   b.listen = (s) => {
     s.on('escape:state', (st) => {
       b.state = st;
+      if (st.phase === 'running') serverTimeUpAt = timeUpAt(st.clock, Date.now()) ?? serverTimeUpAt;
       if (st.phase === 'running' && !m.startAt.has(i)) m.startAt.set(i, t());
     });
     s.on('escape:finale', () => {
@@ -382,20 +388,29 @@ async function formTeam(b, leader) {
   return null;
 }
 
-/** A new socket for the bot, back in its seat with its session token and synced; why not, or null. */
+/**
+ * A new socket for the bot, back in its seat with its session token and synced;
+ * why not, or null. A socket that did not get back is closed, so no half-joined
+ * socket stays open beside the next try.
+ */
 async function rejoin(b) {
   const s = connect();
   b.socket = s;
   b.listen(s);
+  const drop = (why) => {
+    s.disconnect();
+    sockets.delete(s);
+    return why;
+  };
   try {
     await connected(s);
   } catch (e) {
-    sockets.delete(s);
-    return e.message;
+    return drop(e.message);
   }
   const re = await ask(s, 'player:reconnect', { sessionToken: b.token });
-  const synced = re?.ok ? await ask(s, 'escape:sync', { pin: b.pin }) : undefined;
-  return synced?.ok ? null : JSON.stringify(re ?? 'lost');
+  if (!re?.ok) return drop(JSON.stringify(re ?? 'lost'));
+  const synced = await ask(s, 'escape:sync', { pin: b.pin });
+  return synced?.ok ? null : drop(`sync: ${JSON.stringify(synced ?? 'lost')}`);
 }
 
 /** A planned drop: the bot's socket closed, then back after half a second. */
@@ -407,7 +422,7 @@ async function reconnect(b) {
   const t0 = t();
   const why = await rejoin(b);
   if (why === null) m.reconnectMs.push(t() - t0);
-  else if (!(await recover(b))) {
+  else if (!(await recover(b, { planned: true }))) {
     // Not back at once (the server away meanwhile), nor by retrying: a failure.
     m.reconnectFailed++;
     note(`bot${b.i} reconnect`, why);
@@ -429,11 +444,15 @@ const progressOf = (st) =>
     out: !!(st.team.escaped || st.team.timedOut),
   };
 
-/** An unplanned drop (the server went away): retry with a backoff for 90 s; whether it is back. */
-async function recover(b) {
+/**
+ * Retry with a backoff for 90 s; whether the bot is back. An unplanned drop (the
+ * server went away) counts for the restart block; a `planned` one (the bot's own
+ * drop, not back at once) counts as a retried reconnect only.
+ */
+async function recover(b, { planned = false } = {}) {
   b.recovering = true;
   const t0 = t();
-  m.dropped.push(t0);
+  if (!planned) m.dropped.push(t0);
   const before = progressOf(b.state);
   sockets.delete(b.socket);
   let why = 'not tried';
@@ -444,14 +463,18 @@ async function recover(b) {
   }
   b.recovering = false;
   if (why !== null) {
-    if (!ending) {
+    // A planned drop's failure is counted by `reconnect`.
+    if (!ending && !planned) {
       m.recoverFailed++;
       note(`bot${b.i} recover`, why);
     }
     return false;
   }
-  m.recoverMs.push(t() - t0);
-  m.recoveredAt.push(t());
+  if (planned) m.reconnectRetriedMs.push(t() - t0);
+  else {
+    m.recoverMs.push(t() - t0);
+    m.recoveredAt.push(t());
+  }
   const after = progressOf(b.state);
   if (
     before &&
@@ -527,13 +550,19 @@ async function play(b) {
   }
 }
 
+/**
+ * --sustain: the server's time-up has come (a second of slack for the clocks'
+ * reading), so the run is ending on the server before the tool knows it.
+ */
+const pastTimeUp = () => SUSTAIN && serverTimeUpAt !== null && Date.now() >= serverTimeUpAt - 1000;
+
 function tally(intended, ack, stale = false) {
   if (!ack) return;
   const c = stale
     ? 'expected'
     : intended === 'sync'
       ? 'unexpected'
-      : classifyAck(intended, ack, { ending: ending || stopAt < Date.now() });
+      : classifyAck(intended, ack, { ending: ending || stopAt < Date.now() || pastTimeUp() });
   if (c === 'ok') m.acks.ok++;
   else count(m.acks[c], `${intended}:${ack.ok ? ack.outcome : ack.reason}`);
 }
@@ -846,6 +875,7 @@ async function main() {
     unexpected,
     teamUpdateFanoutMs: stats(m.fanoutMs),
     reconnectMs: stats(m.reconnectMs),
+    reconnectRetriedMs: stats(m.reconnectRetriedMs),
     reconnectFailed: m.reconnectFailed,
     startSpreadMs: spread(m.startAt),
     phonesStarted: m.startAt.size,
@@ -935,6 +965,7 @@ function report(s, failed) {
     ['unexpected refusals', JSON.stringify(s.acks.unexpected)],
     ['team-update fan-out ms', p(s.teamUpdateFanoutMs)],
     ['reconnect ms', `${p(s.reconnectMs)} (failed ${s.reconnectFailed})`],
+    ['reconnect ms, retried', p(s.reconnectRetriedMs)],
     ['start spread ms', `${p(s.startSpreadMs)} (${s.phonesStarted} phones)`],
     ['finale spread ms', `${p(s.finaleSpreadMs)} (${s.phonesFinale} phones)`],
     ['board interval ms', p(s.boardIntervalMs)],

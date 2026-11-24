@@ -13,6 +13,7 @@ import {
   parsePs,
   pct,
   stats,
+  timeUpAt,
   wrongFor,
 } from './load-lib.mjs';
 
@@ -286,4 +287,12 @@ test('criteriaFailed: the §1.2 thresholds, local and UK', () => {
     ),
     [],
   );
+});
+
+test('timeUpAt: the run clock’s time-up in local epoch ms; none while paused or without a clock', () => {
+  const clock = { serverNow: 5_000_000, paused: false, elapsedMs: 60_000, limitMs: 600_000 };
+  // Read at local 1_000_000: 540 s of the run left.
+  assert.equal(timeUpAt(clock, 1_000_000), 1_540_000);
+  assert.equal(timeUpAt({ ...clock, paused: true }, 1_000_000), null);
+  assert.equal(timeUpAt(undefined, 1_000_000), null);
 });

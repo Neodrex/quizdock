@@ -198,6 +198,16 @@ export function classifyAck(intended, ack, { ending = false } = {}) {
   return EXPECTED_REFUSALS.has(ack.reason) ? 'expected' : 'unexpected';
 }
 
+/**
+ * When the run clock (EscapeClock) reaches its limit, in this machine's epoch ms,
+ * read at local `now`; null while paused or without a clock. The server's time-up
+ * ends a --sustain run, after which `not-running` is the expected refusal.
+ */
+export function timeUpAt(clock, now) {
+  if (!clock || clock.paused) return null;
+  return now + clock.limitMs - clock.elapsedMs;
+}
+
 /** The pass criteria (plan §1.2), per where the run was made. */
 const CRITERIA = {
   local: { submitP95: 100, submitP99: 250, joinP95: 1500, boardP95: 1300, readyP95: 100 },
