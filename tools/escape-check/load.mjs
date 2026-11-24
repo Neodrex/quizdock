@@ -621,7 +621,8 @@ const spread = (map) => {
 async function main() {
   const startedAt = new Date().toISOString();
   log(`${args.scenario}: ${PLAYERS} players on ${URL_BASE}`);
-  tookSeat = await claimSeat();
+  // The host seat exists in local mode only; under OIDC the signed-in host's cookie is the host.
+  tookSeat = args['host-cookie'] ? false : await claimSeat();
   const tpl = await sampleTemplate(TEMPLATE);
   const content = tpl.content;
   const redis = args.redis ? new Redis(args.redis, { lazyConnect: true }) : null;
@@ -653,6 +654,8 @@ async function main() {
   const created = await ask(host, 'escape:create', {
     templateId: tpl.id,
     durationMin,
+    // Under OIDC the bots are guests: open access (PIN and nickname). Ignored in local mode.
+    ...(args['host-cookie'] ? { participantAccess: 'open' } : {}),
     ...(RACE
       ? {
           sessionType: 'race',

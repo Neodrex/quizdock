@@ -424,3 +424,37 @@ Host frames per event, after (frames/s): default `escape:host-batch` 0.66,
   `load-results/2026-11-24-fix-stress-hosted.json`. The A/B JSON files of Task
   9.4 now name their backends by commit (they had the dist folders).
 
+
+### Prod-like rehearsal, container capped at 1 vCPU (Task 9.10, 2026-11-24)
+
+The production compose stack (`deploy/` in the outer repo) on the Mac mini M1
+8 GB: the Live image (`d63626e`) capped at `cpus: 1`, behind a local Traefik v3
+with TLS (`https://live.escapeguild.localhost:8443`), `AUTH_MODE=oidc` with a
+signed-in host (`--host-cookie`; the bots join an open-access room), our own
+Postgres 16 and Redis 7.4 containers. Unlike the runs above, the local Supabase
+stack and the Site container stayed up (Live's sign-in and host sync need
+them), so the machine was shared. `race-teams`, 500 players, `--duration-min 6`
+(all teams escaped; finale 129 s into the run). Raw:
+`load-results/2026-11-24-rehearsal-race-teams-capped.json`.
+
+| race-teams, 500, default pace | rehearsal (capped, TLS, OIDC) |
+|---|--:|
+| Join ack p95 (ms) | 33 |
+| Submit ack p50 / p95 / p99 (ms) | 7 / **206** / **726** |
+| Lost acks, unexpected refusals | 0, 0 |
+| Start / finale spread p95 (ms) | 36 / 39 |
+| Board interval p95 (ms) | 1244 |
+| Host frames/s (escape) | 2.65 (1.80) |
+| `/health/ready` p95 (ms) | 23 |
+| Backend CPU p95, RSS max | 28 %, 346 MB |
+| Local criteria | FAIL: submit p95 ≤ 100, p99 ≤ 250 |
+
+The backend's CPU stayed at 28 % (p95) of its one-core quota, so the slow tail
+is the shared 8 GB machine (Supabase's containers, the Site, Traefik's TLS and
+500 bots on the same cores), not the cap: the uncapped native runs above met
+the criteria with Supabase stopped. Everything else passed. The UK run (Task
+9.16) on the server's own core is the measure that counts.
+
+The load tool needed two fixes for OIDC: no host-seat claim with
+`--host-cookie` (the seat exists in local mode only), and the room is created
+with `participantAccess: 'open'` so the bots join as guests.
