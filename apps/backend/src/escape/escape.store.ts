@@ -155,6 +155,26 @@ export const storedShapesMatch: [
 const parseJson = <T>(schema: z.ZodType<T>, raw: string | null): T | null =>
   raw === null ? null : schema.parse(JSON.parse(raw));
 
+/** The room hash's copy of a session; null when it cannot be read. */
+function readSession(raw: string): EscapeSession | null {
+  try {
+    return parseJson(sessionSchema, raw);
+  } catch {
+    return null;
+  }
+}
+
+/** The room hash's field that keeps a copy of the session: it lives exactly as long as the room. */
+const SESSION_COPY_FIELD = 'escapeSession';
+
+/**
+ * Copies the session into the room hash, unless the room is gone (never a hash
+ * with one field and no TTL). KEYS[1] the room hash; ARGV the field, the JSON.
+ */
+const COPY_SESSION_SCRIPT = `
+if redis.call('EXISTS', KEYS[1]) == 1 then redis.call('HSET', KEYS[1], ARGV[1], ARGV[2]) end
+return 1`;
+
 /**
  * A game's state, set unless the room moved meanwhile: under HOST_DISCONNECTED it
  * becomes the state the host comes back to (prevState); an ENDED game keeps
@@ -227,17 +247,46 @@ export class EscapeStore {
     pipe.set(escapeKeys.template(id), JSON.stringify(snapshot), 'EX', ESCAPE_TTL_S);
     pipe.set(escapeKeys.run(id), JSON.stringify(run), 'EX', ESCAPE_TTL_S);
     await pipe.exec();
+    if (session) await this.copySession(pin, JSON.stringify(session));
     this.remember(id, snapshot);
   }
 
-  /** The room's session (null: a quiz room, or gone). */
+  /**
+   * The room's session (null: a quiz room, or gone). The room's TTL is also
+   * refreshed by GameEngine alone (a quiz question, back to the lobby), so the
+   * session key can expire under a living room: it then comes back from the
+   * room hash's copy, with the cap key, flags and licence use as last written.
+   */
   async session(pin: string): Promise<EscapeSession | null> {
-    return parseJson(sessionSchema, await this.redis.get(escapeRoomKeys.session(pin)));
+    const raw = await this.redis.get(escapeRoomKeys.session(pin));
+    if (raw !== null) return parseJson(sessionSchema, raw);
+    const copy = await this.redis.hget(gameKeys.room(pin), SESSION_COPY_FIELD);
+    const session = copy === null ? null : readSession(copy);
+    if (!session) return null;
+    const pipe = this.redis.multi();
+    pipe.set(escapeRoomKeys.session(pin), copy!, 'EX', ESCAPE_TTL_S);
+    pipe.set(gameKeys.roomCap(pin), String(session.cap), 'EX', ESCAPE_TTL_S);
+    await pipe.exec();
+    return session;
+  }
+
+  /**
+   * Whether the room was given a session, readable or not: with `session()`
+   * null, a room that lost it (the engine then refuses to open or start a run).
+   */
+  async hadSession(pin: string): Promise<boolean> {
+    return (await this.redis.hexists(gameKeys.room(pin), SESSION_COPY_FIELD)) === 1;
   }
 
   /** Rewrites the room's session (its race and licence flags); the cap key is left as it is. */
   async writeSession(pin: string, session: EscapeSession): Promise<void> {
-    await this.redis.set(escapeRoomKeys.session(pin), JSON.stringify(session), 'EX', ESCAPE_TTL_S);
+    const json = JSON.stringify(session);
+    await this.redis.set(escapeRoomKeys.session(pin), json, 'EX', ESCAPE_TTL_S);
+    await this.copySession(pin, json);
+  }
+
+  private async copySession(pin: string, json: string): Promise<void> {
+    await this.redis.eval(COPY_SESSION_SCRIPT, 1, gameKeys.room(pin), SESSION_COPY_FIELD, json);
   }
 
   /** The room's session and cap key get the TTL again. */

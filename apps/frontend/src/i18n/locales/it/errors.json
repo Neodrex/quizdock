@@ -278,6 +278,7 @@
     "race_not_open": "Questa gara non può essere aperta ora: non è nella sua finestra di apertura, oppure un’altra stanza l’ha già aperta.",
     "race_unavailable": "Al momento il Sito non è raggiungibile. Riprova tra poco.",
     "session_mode": "Questa sala richiede i ruoli: solo eventi condotti.",
+    "session_lost": "La sessione di questa sala è scaduta. Chiudi la sala e creane una nuova.",
     "race_start_out_of_range": "Una gara parte tra 1 e 180 minuti da adesso.",
     "team_code_unknown": "Nessuna squadra ha questo codice.",
     "too_many_codes": "Troppi tentativi, aspetta un minuto."

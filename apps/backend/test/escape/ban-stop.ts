@@ -8,6 +8,7 @@ import type { Socket } from 'socket.io-client';
 import { EscapeEngine } from '../../src/escape/escape.engine';
 import { EscapeStore } from '../../src/escape/escape.store';
 import { lostLibrary } from '../../src/escape/samples';
+import { GameEngine } from '../../src/game/game.engine';
 import { GameService } from '../../src/game/game.service';
 import { nextEvent, settle } from '../game-harness';
 import {
@@ -16,6 +17,7 @@ import {
   createAs,
   eventually,
   joinAndSync,
+  record,
   runningRoom,
   seedTemplate,
   stateWhere,
@@ -79,6 +81,35 @@ export function banTests(ctx: EscapeContext): void {
       gone: Map<string, Map<string, number>>;
     };
     expect(engine.gone.get(id)?.has(a.playerId) ?? false).toBe(false);
+  });
+
+  it('a command of the banned player still waiting in the queue does not put them back in a team', async () => {
+    const host = ctx.h.connectHost();
+    const { pin } = await createAs(host, ctx.templateId, 'hosted');
+    if (!pin) throw new Error('create refused');
+    expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
+    const a = await joinAndSync(ctx.h, pin, 'Ann');
+    const b = await joinAndSync(ctx.h, pin, 'Bob');
+    expect(await host.emitWithAck('escape:teams', { pin, mode: 'self', count: 2 })).toEqual({
+      ok: true,
+    });
+    const { id } = await metaOf(pin);
+    const save = store().save.bind(store());
+    let choose: Promise<unknown> | undefined;
+    // Bob's choice holds the queue: Ann is banned, then her own choice arrives
+    // (her socket still a player's until `banned` runs, behind Bob's).
+    jest.spyOn(store(), 'save').mockImplementationOnce(async (...args) => {
+      await save(...args);
+      await ban(host, pin, a);
+      choose = a.socket.emitWithAck('escape:choose-team', { pin, teamId: 't2' });
+      await settle(100);
+    });
+    expect(await b.socket.emitWithAck('escape:choose-team', { pin, teamId: 't1' })).toEqual({
+      ok: true,
+    });
+    expect(await choose).toMatchObject({ ok: false, error: { code: 'escape.not_joined' } });
+    expect(await store().teamOfPlayer(id, a.playerId)).toBeNull();
+    expect((await store().team(id, 't2'))!.team.members).toEqual([]);
   });
 
   it('running: a team the ban empties goes, and no longer holds the run open', async () => {
@@ -211,6 +242,41 @@ export function stopTests(ctx: EscapeContext): void {
       report.mockRestore();
     }
     expect(await store().session(pin)).toMatchObject({ type: 'race', race: { started: true } });
+  });
+
+  it('a Stop that raced the run’s end is a podium’s back to the lobby: the finale and its results stay, no escape:closed, every client ends in the lobby', async () => {
+    const { host, pin, players, screen } = await runningRoom(ctx, { players: 1, teams: 1 });
+    const meta = await metaOf(pin);
+    await settle(100);
+    const seen = [host, players[0].socket, screen].map((s) => record(s));
+    const saveResults = store().saveResults.bind(store());
+    let stop: Promise<void> | undefined;
+    // The finale is in the queue when the host's Stop arrives (the room still plays).
+    jest.spyOn(store(), 'saveResults').mockImplementationOnce(async (...args) => {
+      stop = ctx.h.app.get(GameEngine).backToLobby(pin, meta.hostUserId);
+      await settle(50);
+      await saveResults(...args);
+    });
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    await stop;
+    await settle(150);
+    for (const events of seen) {
+      const names = events.map(([e]) => e);
+      expect(names).not.toContain('escape:closed');
+      const finale = names.findIndex((e) => e === 'escape:finale' || e === 'escape:screen-finale');
+      expect(finale).toBeGreaterThanOrEqual(0);
+      const states = events.flatMap(([e, p], i) =>
+        e === 'game:state' ? [{ i, state: (p as { state: string }).state }] : [],
+      );
+      expect(states.map((s) => s.state)).toEqual([GameState.Podium, GameState.Lobby]);
+      expect(states[1].i).toBeGreaterThan(finale);
+    }
+    expect(await store().results(meta.id)).not.toBeNull();
+    expect((await store().run(meta.id))!.phase).toBe('finale');
+    expect(await host.emitWithAck('escape:results', { gameId: meta.id })).toMatchObject({
+      ok: true,
+    });
+    expect((await metaOf(pin)).id).not.toBe(meta.id);
   });
 
   it('from the finale, back to the lobby keeps the results (not an abort)', async () => {

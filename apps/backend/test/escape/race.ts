@@ -488,6 +488,28 @@ export function raceSessionTests(ctx: EscapeContext): void {
       await ctx.h.app.get(GameEngine).end(pin, ctx.h.hostUserId);
     });
 
+    it('the host away, the scheduled start fails once (not a refusal): it is tried again within its grace, and the race starts', async () => {
+      const t = timings();
+      const retry = t.raceRetryMs;
+      t.raceRetryMs = 150;
+      const { pin } = await scheduled(1_000);
+      const spy = jest
+        .spyOn(engine() as unknown as { startRun(): Promise<void> }, 'startRun')
+        .mockRejectedValueOnce(new Error('redis down'));
+      const a = await joinAndSync(ctx.h, pin, 'Ann');
+      const meta = await metaOf(pin);
+      await hostAway(pin);
+      try {
+        await stateWhere(a.socket, (st) => st.phase === 'running', 5_000);
+        expect(spy).toHaveBeenCalledTimes(2);
+        expect(engine().inProcess(meta.id, pin).scheduled).toBe(false);
+      } finally {
+        spy.mockRestore();
+        t.raceRetryMs = retry;
+        await ctx.h.app.get(GameEngine).end(pin, ctx.h.hostUserId);
+      }
+    });
+
     it('the host window does not close a race waiting for its scheduled start; it closes one with no start to wait for', async () => {
       const { pin } = await scheduled(10_000);
       const a = await joinAndSync(ctx.h, pin, 'Ann');

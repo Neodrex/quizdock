@@ -277,6 +277,7 @@
     "race_not_open": "Dieses Rennen kann jetzt nicht eröffnet werden: Es ist nicht im Eröffnungszeitraum, oder ein anderer Raum hat es schon eröffnet.",
     "race_unavailable": "Die Site ist gerade nicht erreichbar. Versuche es gleich noch einmal.",
     "session_mode": "Dieser Raum braucht Rollen: nur moderierte Events.",
+    "session_lost": "Die Sitzung dieses Raums ist abgelaufen. Beende den Raum und erstelle einen neuen.",
     "race_start_out_of_range": "Ein Rennen startet in 1 bis 180 Minuten ab jetzt.",
     "team_code_unknown": "Kein Team hat diesen Code.",
     "too_many_codes": "Zu viele Versuche, warte eine Minute."

@@ -278,6 +278,7 @@
     "race_not_open": "Cette course ne peut pas être ouverte maintenant : elle n’est pas dans sa fenêtre d’ouverture, ou une autre salle l’a déjà ouverte.",
     "race_unavailable": "Le Site est injoignable pour l’instant. Réessayez dans un moment.",
     "session_mode": "Cette salle a des rôles : événement animé uniquement.",
+    "session_lost": "La session de cette salle a expiré. Fermez la salle et créez-en une nouvelle.",
     "race_start_out_of_range": "Une course démarre entre 1 et 180 minutes à partir de maintenant.",
     "team_code_unknown": "Aucune équipe n’a ce code.",
     "too_many_codes": "Trop d’essais, attendez une minute."

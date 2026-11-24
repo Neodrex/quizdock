@@ -8,7 +8,7 @@ import {
 import type { Socket } from 'socket.io-client';
 import { lostLibrary } from '../../src/escape/samples';
 import { EscapeEngine } from '../../src/escape/escape.engine';
-import { escapeRooms } from '../../src/escape/escape.keys';
+import { escapeRoomKeys, escapeRooms } from '../../src/escape/escape.keys';
 import type { EscapeTemplate } from '../../src/escape/escape.types';
 import { GameService } from '../../src/game/game.service';
 import { EscapeStore } from '../../src/escape/escape.store';
@@ -529,6 +529,79 @@ export function sessionTests(ctx: EscapeContext): void {
       expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toEqual({ ok: true });
       expect(recordUse).not.toHaveBeenCalled();
       expect((await store().session(a.pin))!.licenceUsedAt).toBeGreaterThanOrEqual(t0);
+    } finally {
+      recordUse.mockRestore();
+    }
+  });
+
+  it('the session lives as long as its room: escape:open gives it its TTL again, and one whose key expired comes back as it was (no free or unlicensed run)', async () => {
+    useLicences(ctx.h, DEV_LICENCES);
+    const redis = ctx.h.app.get(RedisService);
+    const a = await readyRoom('hosted', { licenceId: 'acme' });
+    expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toEqual({ ok: true });
+    const used = (await store().session(a.pin))!;
+    expect(used).toMatchObject({ licenceUsed: true, licenceUses: 1 });
+    const recordUse = jest.spyOn(port(), 'recordUse');
+    try {
+      // Idle between two runs: the open that refreshes the room refreshes the session.
+      expect(await a.host.emitWithAck('escape:end', { pin: a.pin })).toEqual({ ok: true });
+      expect(await a.host.emitWithAck('host:back-to-lobby', { pin: a.pin })).toMatchObject({
+        ok: true,
+      });
+      await redis.expire(escapeRoomKeys.session(a.pin), 60);
+      await redis.expire(gameKeys.roomCap(a.pin), 60);
+      expect(await a.host.emitWithAck('escape:open', { pin: a.pin, templateId: library })).toEqual({
+        ok: true,
+      });
+      expect(await redis.ttl(escapeRoomKeys.session(a.pin))).toBeGreaterThan(60);
+      expect(await redis.ttl(gameKeys.roomCap(a.pin))).toBeGreaterThan(60);
+
+      // The key gone under a living room (GameEngine alone kept the room alive).
+      await redis.del(escapeRoomKeys.session(a.pin), gameKeys.roomCap(a.pin));
+      await joinAndSync(ctx.h, a.pin, 'P1');
+      expect(
+        await a.host.emitWithAck('escape:teams', { pin: a.pin, mode: 'auto', count: 1 }),
+      ).toEqual({ ok: true });
+      expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toEqual({ ok: true });
+      expect(await store().session(a.pin)).toEqual(used);
+      expect(await capKey(a.pin)).toBe('8');
+      expect(recordUse).not.toHaveBeenCalled();
+      expect(await eventsLeft('acme')).toBe(1);
+
+      // Gone again between two runs: the open keeps the session, it builds no new one.
+      await redis.del(escapeRoomKeys.session(a.pin));
+      await again(a);
+      expect(await store().session(a.pin)).toEqual(used);
+      expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toEqual({ ok: true });
+      expect(recordUse).not.toHaveBeenCalled();
+    } finally {
+      recordUse.mockRestore();
+    }
+  });
+
+  it('a room whose session is lost for good opens and starts nothing (escape.session_lost); a quiz room still opens hosted', async () => {
+    useLicences(ctx.h, DEV_LICENCES);
+    const redis = ctx.h.app.get(RedisService);
+    const a = await readyRoom('hosted', { licenceId: 'acme' });
+    const lose = async () => {
+      await redis.hset(gameKeys.room(a.pin), { escapeSession: '{"type":"hosted"}' });
+      await redis.del(escapeRoomKeys.session(a.pin));
+    };
+    const recordUse = jest.spyOn(port(), 'recordUse');
+    try {
+      await lose();
+      expect(await a.host.emitWithAck('escape:start', { pin: a.pin })).toMatchObject(
+        refused('escape.session_lost'),
+      );
+      expect(await phaseOf(a.pin)).toBe('forming');
+      expect(await a.host.emitWithAck('host:back-to-lobby', { pin: a.pin })).toMatchObject({
+        ok: true,
+      });
+      expect(
+        await a.host.emitWithAck('escape:open', { pin: a.pin, templateId: library }),
+      ).toMatchObject(refused('escape.session_lost'));
+      expect(recordUse).not.toHaveBeenCalled();
+      expect(await store().session(a.pin)).toBeNull();
     } finally {
       recordUse.mockRestore();
     }

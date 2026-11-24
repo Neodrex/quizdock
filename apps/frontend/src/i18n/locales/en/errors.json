@@ -277,6 +277,7 @@
     "race_not_open": "This race cannot be opened now: it is not in its opening window, or another room already opened it.",
     "race_unavailable": "The Site cannot be reached right now. Try again in a moment.",
     "session_mode": "This room needs roles: hosted events only.",
+    "session_lost": "This room's session has expired. End the room and create a new one.",
     "race_start_out_of_range": "A race starts between 1 and 180 minutes from now.",
     "team_code_unknown": "No team has this code.",
     "too_many_codes": "Too many tries, wait a minute."

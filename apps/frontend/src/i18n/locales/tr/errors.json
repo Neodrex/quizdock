@@ -277,6 +277,7 @@
     "race_not_open": "Bu yarış şu anda açılamaz: açılış aralığında değil ya da başka bir oda onu zaten açtı.",
     "race_unavailable": "Site'ye şu anda ulaşılamıyor. Biraz sonra tekrar deneyin.",
     "session_mode": "Bu oda roller gerektiriyor: yalnızca yönetilen etkinlikler.",
+    "session_lost": "Bu odanın oturumu sona erdi. Odayı kapatıp yenisini oluşturun.",
     "race_start_out_of_range": "Bir yarış şu andan itibaren 1 ile 180 dakika arasında başlar.",
     "team_code_unknown": "Bu koda sahip bir takım yok.",
     "too_many_codes": "Çok fazla deneme, bir dakika bekleyin."

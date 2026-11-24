@@ -162,6 +162,34 @@ export function raceTests(ctx: EscapeContext): void {
     expect(screenLeaksIn(board, ctx.vault)).toEqual([]);
   });
 
+  it('a run the room has left sends no state, board or host view (isCurrent): back to the lobby from the podium takes no queue', async () => {
+    const { host, pin, players, screen } = await runningRoom(ctx, { players: 1, teams: 1 });
+    const meta = await metaOf(pin);
+    await settle(100);
+    const seen = [host, players[0].socket, screen].map((s) => record(s));
+    const store = ctx.h.app.get(EscapeStore);
+    const setGameState = store.setGameState.bind(store);
+    // escape:end puts the room on its podium, and the host leaves it for the lobby
+    // before the finale's own emits: the run is no longer the room's.
+    jest.spyOn(store, 'setGameState').mockImplementationOnce(async (...args) => {
+      const was = await setGameState(...args);
+      await ctx.h.app.get(GameEngine).backToLobby(pin, meta.hostUserId);
+      return was;
+    });
+    expect(await host.emitWithAck('escape:end', { pin })).toEqual({ ok: true });
+    await settle(200);
+    expect((await metaOf(pin)).id).not.toBe(meta.id);
+    for (const events of seen) {
+      const late = events.filter(
+        ([e, p]) =>
+          ['escape:state', 'escape:host', 'escape:board'].includes(e) &&
+          ((p as { phase?: string }).phase === 'finale' ||
+            (p as { gameId?: string }).gameId === meta.id),
+      );
+      expect(late).toEqual([]);
+    }
+  });
+
   it('a board due for a room that is gone meanwhile is skipped quietly', async () => {
     const { pin } = await runningRoom(ctx, { players: 1, teams: 1 });
     const game = ctx.h.app.get(GameService);

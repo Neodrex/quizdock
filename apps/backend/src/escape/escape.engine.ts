@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  HttpException,
   Inject,
   Injectable,
   Logger,
@@ -414,7 +415,7 @@ export class EscapeEngine implements OnModuleDestroy {
       }
       // The room keeps its session (a licence id is then ignored); a quiz room gets
       // a hosted one, under the licence named or the host's only usable one.
-      const kept = await this.store.session(pin);
+      const kept = await this.requireSession(pin);
       // A race opened again before its startsAt keeps its timer (armed per PIN), so
       // the scheduled time starts the new template's run.
       const snap = await this.freeze(hostUserId, dto.templateId, kept?.type ?? 'hosted');
@@ -422,6 +423,8 @@ export class EscapeEngine implements OnModuleDestroy {
         ? undefined
         : await this.newSession(host, 'hosted', { licenceId: dto.licenceId });
       const id = await this.game.openGameWith(pin, null);
+      // The room's keys just got their TTL again: its session and cap go with them.
+      if (kept) await this.store.touchRoom(pin);
       await this.openOn(pin, id, hostUserId, snap, dto.durationMin, session);
       this.server
         .to(pin)
@@ -650,6 +653,7 @@ export class EscapeEngine implements OnModuleDestroy {
     const me = playerOf(socket, pin);
     if (!me) throw new BadRequestException('escape.not_joined');
     await this.mutate(pin, undefined, async (ref) => {
+      this.requireStillIn(socket, pin);
       if (ref.run.formation !== 'self') throw new BadRequestException('escape.self_select_closed');
       const v = await this.viewOf(ref);
       const teams = this.teamsOf(v);
@@ -678,6 +682,7 @@ export class EscapeEngine implements OnModuleDestroy {
     const me = playerOf(socket, pin);
     if (!me) throw new BadRequestException('escape.not_joined');
     return this.mutate(pin, undefined, async (ref) => {
+      this.requireStillIn(socket, pin);
       const v = await this.viewOf(ref);
       this.requireTeamRace(ref, v, me.playerId);
       // At most a team per player of the cap; a team the player leaves empty makes room.
@@ -706,6 +711,7 @@ export class EscapeEngine implements OnModuleDestroy {
     const me = playerOf(socket, pin);
     if (!me) throw new BadRequestException('escape.not_joined');
     return this.mutate(pin, undefined, async (ref) => {
+      this.requireStillIn(socket, pin);
       const v = await this.viewOf(ref);
       this.requireTeamRace(ref, v, me.playerId);
       if (await this.attempts.codesBlocked(ref.id, me.playerId)) {
@@ -806,6 +812,14 @@ export class EscapeEngine implements OnModuleDestroy {
     return drop ? this.dropEmptied(ref, moved, left) : { ref, v: moved };
   }
 
+  /**
+   * Inside the queue: a player banned while their command waited (`banned`
+   * cleared their socket) is not moved back into a team.
+   */
+  private requireStillIn(socket: EscapeSocket, pin: string): void {
+    if (!playerOf(socket, pin)) throw new BadRequestException('escape.not_joined');
+  }
+
   /** A team race, forming, or running for a player without a team. */
   private requireTeamRace(ref: RunRef, v: RunView, playerId: string): void {
     if (v.session?.type !== 'race' || v.session.race?.format !== 'teams') {
@@ -861,9 +875,18 @@ export class EscapeEngine implements OnModuleDestroy {
    * nobody in, the race keeps forming and the host may start it later.
    */
   async startRace(pin: string): Promise<void> {
-    await this.startRun(pin, undefined).catch((err: Error) =>
-      this.log.warn(`scheduled start ${pin}: ${err.message}`),
-    );
+    try {
+      await this.startRun(pin, undefined);
+    } catch (err) {
+      this.log.warn(`scheduled start ${pin}: ${(err as Error).message}`);
+      // A refusal (nobody in, already started, the room gone) is final. Anything
+      // else is tried again while the host window still holds the room open for
+      // the start (`waitsForStart`): with the host away, no sync would start it.
+      if (err instanceof HttpException) return;
+      const startsAt = (await this.store.session(pin).catch(() => null))?.race?.startsAt;
+      const next = Date.now() + this.timings.raceRetryMs;
+      if (startsAt && next < startsAt + RACE_START_GRACE_MS) this.armRace(pin, next);
+    }
   }
 
   /**
@@ -1038,6 +1061,7 @@ export class EscapeEngine implements OnModuleDestroy {
         throw new BadRequestException('escape.wrong_phase');
       }
       const v = await this.viewOf(ref);
+      if (!v.session) await this.requireSession(pin);
       const tpl = ref.snap.template;
       // S1: empty teams go, then the connected unassigned join the smallest; in a
       // race (M7 §1.7) each of them plays solo, as a team of one.
@@ -1433,7 +1457,11 @@ export class EscapeEngine implements OnModuleDestroy {
    * goes to its lobby). In its queue the run is discarded: no finale, no
    * results, nothing to the Site; what this process keeps for it goes, and the
    * room is told (`escape:closed`). A licence use already recorded stays, and
-   * a Site race's room keeps its claim. A run already in its finale is left.
+   * a Site race's room keeps its claim. A run already in its finale is left: a
+   * Stop that raced the run's end (its finale ran first in the queue) is a
+   * podium's back to the lobby, so the results stay, a Site race is reported,
+   * no `escape:closed` goes out and every client follows `game:state` LOBBY
+   * after its finale, as from the podium.
    */
   private async stopping(pin: string, id: GameId): Promise<void> {
     await this.queue.run(id, async () => {
@@ -1660,6 +1688,21 @@ export class EscapeEngine implements OnModuleDestroy {
     if (session && !toolAllowed(session.type, tool)) {
       throw new BadRequestException('escape.not_in_session');
     }
+  }
+
+  /**
+   * The room's session, null for a room never given one (a quiz room). A room
+   * that was given one and lost it (its key and the room hash's copy unreadable)
+   * fails closed with `escape.session_lost`: no run opens or starts in it, so
+   * never a hosted run without its licence, cap and brand. The host ends the
+   * room and creates a new one.
+   */
+  private async requireSession(pin: string): Promise<EscapeSession | null> {
+    const session = await this.store.session(pin);
+    if (!session && (await this.store.hadSession(pin))) {
+      throw new ConflictException('escape.session_lost');
+    }
+    return session;
   }
 
   private async requireHostMeta(pin: string, hostUserId: string): Promise<GameMeta> {

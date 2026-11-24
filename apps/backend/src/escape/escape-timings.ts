@@ -33,6 +33,8 @@ export class EscapeTimings {
   raceMinLeadMs = 60_000;
   /** While a scheduled race waits, its room's keys get their TTL again this often. */
   raceTouchEveryMs = 300_000;
+  /** A scheduled start that failed (not refused) is tried again this much later, within its grace. */
+  raceRetryMs = 5_000;
   /** A Site race room the Site could not be told about tries `opened` again this often (M9 Task 9.6). */
   siteRetryMs = 30_000;
 }

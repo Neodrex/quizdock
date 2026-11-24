@@ -276,6 +276,7 @@
     "race_not_open": "此競賽現在無法開啟：不在開啟時段內，或已有其他房間開啟了它。",
     "race_unavailable": "暫時無法連線到網站，請稍後再試。",
     "session_mode": "此房間需要角色：僅限主持活動。",
+    "session_lost": "此房間的工作階段已過期。請結束房間並新建一個。",
     "race_start_out_of_range": "競賽須在 1 到 180 分鐘後開始。",
     "team_code_unknown": "沒有隊伍使用此代碼。",
     "too_many_codes": "嘗試次數過多，請等待一分鐘。"

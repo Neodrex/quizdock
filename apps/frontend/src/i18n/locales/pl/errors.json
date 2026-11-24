@@ -279,6 +279,7 @@
     "race_not_open": "Tego wyścigu nie można teraz otworzyć: nie jest w oknie otwarcia albo inny pokój już go otworzył.",
     "race_unavailable": "Nie można teraz połączyć się z Serwisem. Spróbuj ponownie za chwilę.",
     "session_mode": "Ten pokój wymaga ról: tylko wydarzenia prowadzone.",
+    "session_lost": "Sesja tego pokoju wygasła. Zakończ pokój i utwórz nowy.",
     "race_start_out_of_range": "Wyścig zaczyna się od 1 do 180 minut od teraz.",
     "team_code_unknown": "Żadna drużyna nie ma tego kodu.",
     "too_many_codes": "Zbyt wiele prób, odczekaj minutę."
