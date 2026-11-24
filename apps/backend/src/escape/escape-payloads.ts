@@ -404,6 +404,11 @@ export function hostSessionOf(v: RunView): EscapeHostSession | null {
       format: s.race.format,
       startsAt: s.race.startsAt,
       started: s.race.started,
+      // M9 Task 9.6: a Site race's link, for the console's notice (host only).
+      ...(s.race.siteRaceId && {
+        siteLinked: s.race.siteLinked ?? true,
+        ...(s.race.siteLost && { siteLost: true }),
+      }),
     },
     licence: s.licence && {
       organisationName: s.licence.brand?.name ?? null,

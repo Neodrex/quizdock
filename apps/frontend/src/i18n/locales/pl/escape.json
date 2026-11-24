@@ -564,7 +564,9 @@
       "boardHint": "Każdy z tym linkiem może oglądać wyścig.",
       "copy": "Kopiuj link",
       "copied": "Skopiowano link",
-      "copyByHand": "Skopiuj ten link: {{url}}"
+      "copyByHand": "Skopiuj ten link: {{url}}",
+      "siteUnlinked": "Strona jeszcze nie zna tego pokoju. Jeśli to się nie wyjaśni przed startem, wklej PIN {{pin}} w /admin/races.",
+      "siteLost": "Inny pokój otworzył ten wyścig na Stronie; jego wyniki nie trafią do archiwum."
     },
     "phone": {
       "alone": "Ścigasz się sam",

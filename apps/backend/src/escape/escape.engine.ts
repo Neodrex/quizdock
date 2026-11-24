@@ -103,7 +103,7 @@ import {
   type LicenceHost,
   type LicencePort,
 } from './licences/licence.port';
-import { RACE_PORT, type RacePort, type SiteRace } from './races/race.port';
+import { RACE_PORT, type RaceOpened, type RacePort, type SiteRace } from './races/race.port';
 import { SerialQueue } from './serial-queue';
 
 type EscapeServer = Server<
@@ -166,6 +166,26 @@ const fresh = (team: TeamState, code?: string): TeamRecord => ({
 /** A race team's name: the nickname, within the team name's 40 characters. */
 const soloName = (nickname: string): string => nickname.slice(0, 40) || 'Solo';
 
+type SiteRaceSession = EscapeSession & {
+  race: NonNullable<EscapeSession['race']> & { siteRaceId: string };
+};
+
+/** M9 Task 9.6: a Site race, not started, whose room the Site does not know yet. */
+function siteWaiting(s: EscapeSession | null | undefined): s is SiteRaceSession {
+  const race = s?.race;
+  return !!race?.siteRaceId && race.siteLinked === false && !race.siteLost && !race.started;
+}
+
+/** The session after the Site's answer to `opened`: `not-open` means another room won. */
+function withOpened(s: EscapeSession, opened: RaceOpened): EscapeSession {
+  if (!s.race) return s;
+  const race = { ...s.race };
+  delete race.siteLost;
+  if (opened.ok) return { ...s, race: { ...race, siteLinked: true } };
+  const lost = opened.reason === 'not-open';
+  return { ...s, race: { ...race, siteLinked: false, ...(lost && { siteLost: true }) } };
+}
+
 /** The same roles per member, whatever the key and role order. */
 function sameRoles(a: Record<string, string[]>, b: Record<string, string[]>): boolean {
   const flat = (r: Record<string, string[]>) =>
@@ -224,6 +244,11 @@ export class EscapeEngine implements OnModuleDestroy {
    * socket count as gone since boot (R4).
    */
   private readonly gone = new Map<GameId, Map<string, number>>();
+  /**
+   * M9 Task 9.6: Site race rooms the Site was not told about, by PIN: the next
+   * `opened` try. In process: `recover()` arms them again after a restart.
+   */
+  private readonly siteRetries = new Map<string, NodeJS.Timeout>();
   /** When the ticker last gave a run's keys their TTL again, by game id. */
   private readonly touched = new Map<GameId, number>();
   private readonly bootAt = Date.now();
@@ -251,6 +276,7 @@ export class EscapeEngine implements OnModuleDestroy {
   onModuleDestroy(): void {
     this.ticker.stopAll();
     this.scheduler.stopAll();
+    for (const pin of [...this.siteRetries.keys()]) this.disarmSiteRetry(pin);
     this.held.clear();
   }
 
@@ -261,12 +287,13 @@ export class EscapeEngine implements OnModuleDestroy {
   inProcess(
     id: GameId,
     pin: string,
-  ): { ticking: boolean; gone: boolean; board: boolean; scheduled: boolean } {
+  ): { ticking: boolean; gone: boolean; board: boolean; scheduled: boolean; siteRetry: boolean } {
     return {
       ticking: this.ticker.has(id),
       gone: this.gone.has(id),
       board: this.held.has(pin),
       scheduled: this.scheduler.has(pin),
+      siteRetry: this.siteRetries.has(pin),
     };
   }
 
@@ -293,8 +320,10 @@ export class EscapeEngine implements OnModuleDestroy {
     if (meta?.kind !== 'escape') return;
     const run = await this.store.run(meta.id);
     if (run?.phase === 'forming') {
-      const race = (await this.store.session(pin))?.race;
+      const session = await this.store.session(pin);
+      const race = session?.race;
       if (race?.startsAt && !race.started) this.armRace(pin, race.startsAt);
+      if (siteWaiting(session)) this.armSiteRetry(pin);
       return;
     }
     if (run?.phase !== 'running') return;
@@ -327,12 +356,18 @@ export class EscapeEngine implements OnModuleDestroy {
     if (!meta) throw new NotFoundException('session.not_found');
     await this.openOn(pin, meta.id, hostUserId, snap, dto.durationMin, session);
     // M8: the Site learns the PIN. Another room that opened the race first wins
-    // (`not-open`): this one closes. Any other failure is best effort (logged).
+    // (`not-open`): this one closes. Any other failure leaves the room open and
+    // the console says so (M9 Task 9.6); `unavailable` is tried again later.
     if (session.race?.siteRaceId) {
       const opened = await this.races.opened(session.race.siteRaceId, pin);
       if (!opened.ok && opened.reason === 'not-open') {
         await this.modules.get(GameEngine, { strict: false }).end(pin, hostUserId);
         throw new ConflictException('escape.race_not_open');
+      }
+      if (!opened.ok) {
+        // Nobody has the PIN yet: no queue needed.
+        await this.store.writeSession(pin, withOpened(session, opened));
+        if (opened.reason === 'unavailable') this.armSiteRetry(pin);
       }
     }
     if (session.race?.startsAt) this.armRace(pin, session.race.startsAt);
@@ -761,6 +796,67 @@ export class EscapeEngine implements OnModuleDestroy {
     );
   }
 
+  /** M9 Task 9.6: `opened` again in `siteRetryMs`, replacing a try already armed. */
+  private armSiteRetry(pin: string): void {
+    this.disarmSiteRetry(pin);
+    const timer = setTimeout(() => {
+      this.siteRetries.delete(pin);
+      this.retrySite(pin).catch((err: Error) =>
+        this.log.warn(`site race retry ${pin}: ${err.message}`),
+      );
+    }, this.timings.siteRetryMs);
+    timer.unref?.();
+    this.siteRetries.set(pin, timer);
+  }
+
+  private disarmSiteRetry(pin: string): void {
+    clearTimeout(this.siteRetries.get(pin));
+    this.siteRetries.delete(pin);
+  }
+
+  /**
+   * M9 Task 9.6: a Site race room the Site does not know tells it the PIN again,
+   * until it succeeds, the race starts or the room ends. The Site is asked
+   * outside the queue; its answer is applied inside, to the session as it is
+   * then, and the host gets the state. `not-open`: another room won; this one
+   * keeps running (players may be in it) and the console says so.
+   */
+  private async retrySite(pin: string): Promise<void> {
+    const meta = await this.game.getMeta(pin);
+    if (meta?.kind !== 'escape') return;
+    const before = await this.store.session(pin);
+    if (!siteWaiting(before)) return;
+    const opened = await this.races.opened(before.race.siteRaceId, pin);
+    const again = await this.queue.run(meta.id, async () => {
+      const ref = await this.requireRun(pin).catch(() => null);
+      if (ref?.id !== meta.id) return false;
+      const session = await this.store.session(pin);
+      // Settled meanwhile (by the start's own try).
+      if (!session?.race || session.race.siteLinked !== false || session.race.siteLost) {
+        return false;
+      }
+      if (!opened.ok && opened.reason === 'unavailable') return siteWaiting(session);
+      await this.store.writeSession(pin, withOpened(session, opened));
+      this.toHost(ref, await this.viewOf(ref));
+      return false;
+    });
+    if (again) this.armSiteRetry(pin);
+  }
+
+  /**
+   * M9 Task 9.6: at the start, a Site race room the Site does not know tries
+   * `opened` once more (under the queue); the session to start with, not written.
+   */
+  private async siteAtStart(
+    pin: string,
+    session: EscapeSession | null,
+  ): Promise<EscapeSession | null> {
+    if (!siteWaiting(session)) return session;
+    const opened = await this.races.opened(session.race.siteRaceId, pin);
+    if (!opened.ok && opened.reason === 'unavailable') return session;
+    return withOpened(session, opened);
+  }
+
   private armRace(pin: string, at: number): void {
     this.scheduler.arm(pin, at, {
       fire: () => this.startRace(pin),
@@ -850,7 +946,7 @@ export class EscapeEngine implements OnModuleDestroy {
         throw new BadRequestException('escape.no_players');
       }
       // Owner question 4: a hosted event uses its licence at the room's first start.
-      const stored = await this.useLicence(ref, v, host, teams);
+      const stored = await this.siteAtStart(pin, await this.useLicence(ref, v, host, teams));
       const live = this.pruneAndGetHolders(ref.id, v);
       // The same deal as the lobby preview, so every phone keeps its lobby role card.
       const codes = new Map(v.teams.map((r) => [r.team.id, r.code]));
@@ -874,6 +970,7 @@ export class EscapeEngine implements OnModuleDestroy {
       // Atomic: a host gone meanwhile comes back to the run (prevState).
       const was = await this.store.setGameState(ref.id, GameState.Escape);
       this.scheduler.disarm(pin);
+      this.disarmSiteRetry(pin);
       let session = stored;
       if (session?.race && !session.race.started) {
         session = { ...session, race: { ...session.race, started: true } };
@@ -1201,6 +1298,7 @@ export class EscapeEngine implements OnModuleDestroy {
    */
   private async closing(pin: string, id: GameId): Promise<void> {
     this.scheduler.disarm(pin);
+    this.disarmSiteRetry(pin);
     await this.queue.run(id, async () => {
       const ref = await this.requireRun(pin).catch(() => null);
       if (ref?.id !== id || ref.run.phase !== 'running') return;

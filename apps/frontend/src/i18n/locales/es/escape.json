@@ -550,7 +550,9 @@
       "boardHint": "Cualquiera con este enlace puede ver la carrera.",
       "copy": "Copiar enlace",
       "copied": "Enlace copiado",
-      "copyByHand": "Copia este enlace: {{url}}"
+      "copyByHand": "Copia este enlace: {{url}}",
+      "siteUnlinked": "El Sitio aún no conoce esta sala. Si no se resuelve antes del inicio, pega el PIN {{pin}} en /admin/races.",
+      "siteLost": "Otra sala abrió esta carrera en el Sitio; sus resultados no llegarán al archivo."
     },
     "phone": {
       "alone": "Corres en solitario",

@@ -1,8 +1,9 @@
 import { Logger } from '@nestjs/common';
-import { type EscapeFinale, GameState } from '@quiz-dock/contracts';
+import { type EscapeFinale, type EscapeHostState, GameState } from '@quiz-dock/contracts';
 import type { Socket } from 'socket.io-client';
 import { EscapeEngine } from '../../src/escape/escape.engine';
 import { EscapeStore } from '../../src/escape/escape.store';
+import { EscapeTimings } from '../../src/escape/escape-timings';
 import { GameService } from '../../src/game/game.service';
 import type { RaceResults } from '../../src/escape/races/race.port';
 import { SiteRaces } from '../../src/escape/races/site-races';
@@ -76,14 +77,19 @@ export function siteRaceTests(ctx: EscapeContext): void {
       site.answers.set(resultsPath, { ok: true });
     });
 
-    const siteRace = async (): Promise<{ host: Socket; pin: string }> => {
+    const siteRace = async (): Promise<{
+      host: Socket;
+      pin: string;
+      hostSeen: [string, unknown][];
+    }> => {
       const host = ctx.h.connectHost();
+      const hostSeen = record(host);
       const { pin, error } = await createAs(host, library, 'race', {
         race: { format: 'solo', siteRaceId: RACE },
       });
       if (!pin) throw new Error(`site race refused: ${error?.code}`);
       expect(await host.emitWithAck('escape:sync', { pin })).toEqual({ ok: true });
-      return { host, pin };
+      return { host, pin, hostSeen };
     };
 
     it.each([
@@ -127,13 +133,128 @@ export function siteRaceTests(ctx: EscapeContext): void {
       expect(calls(openedPath)).toEqual([{ path: openedPath, body: { pin } }]);
     });
 
-    it('an opened refused as not-found, or the Site down, is logged; the room stays open', async () => {
+    it('an opened refused as not-found: logged, the room stays open, unlinked, no retry', async () => {
       site.answers.set(openedPath, { ok: false, reason: 'not-found' });
       const { pin } = await siteRace();
-      expect((await store().session(pin))?.race?.siteRaceId).toBe(RACE);
-      site.answers.delete(openedPath); // the stub answers 404: unavailable
-      const other = await siteRace();
-      expect((await store().session(other.pin))?.race?.siteRaceId).toBe(RACE);
+      expect((await store().session(pin))?.race).toMatchObject({
+        siteRaceId: RACE,
+        siteLinked: false,
+      });
+      const meta = (await ctx.h.app.get(GameService).getMeta(pin))!;
+      expect(ctx.h.app.get(EscapeEngine).inProcess(meta.id, pin).siteRetry).toBe(false);
+    });
+
+    describe('the Site unreachable at the open (M9 Task 9.6)', () => {
+      const timings = () => ctx.h.app.get(EscapeTimings);
+      const engine = () => ctx.h.app.get(EscapeEngine);
+      let saved: number;
+      beforeAll(() => {
+        saved = timings().siteRetryMs;
+        timings().siteRetryMs = 150;
+      });
+      afterAll(() => {
+        timings().siteRetryMs = saved;
+      });
+      beforeEach(() => site.answers.delete(openedPath)); // the stub answers 404: unavailable
+
+      /** The race of the last host state the console got. */
+      const lastRace = (seen: [string, unknown][]) =>
+        (seen.filter(([e]) => e === 'escape:host').at(-1)?.[1] as EscapeHostState | undefined)
+          ?.session?.race;
+      const idOf = async (pin: string) => (await ctx.h.app.get(GameService).getMeta(pin))!.id;
+
+      it('the console says so; Live retries until the Site answers, then the notice clears', async () => {
+        const { pin, hostSeen } = await siteRace();
+        await eventually(async () =>
+          expect(lastRace(hostSeen)).toMatchObject({ siteLinked: false }),
+        );
+        expect((await store().session(pin))?.race?.siteLinked).toBe(false);
+        await eventually(async () => expect(calls(openedPath).length).toBeGreaterThanOrEqual(3));
+        site.answers.set(openedPath, { ok: true });
+        await eventually(async () =>
+          expect(lastRace(hostSeen)).toMatchObject({ siteLinked: true }),
+        );
+        expect((await store().session(pin))?.race?.siteLinked).toBe(true);
+        expect(lastRace(hostSeen)).not.toHaveProperty('siteLost');
+        expect(engine().inProcess(await idOf(pin), pin).siteRetry).toBe(false);
+        const n = calls(openedPath).length;
+        await settle(450);
+        expect(calls(openedPath)).toHaveLength(n);
+        expect(calls(openedPath).every((c) => (c.body as { pin: string }).pin === pin)).toBe(true);
+        expect(sessionLeaksIn(hostSeen, { siteRaceId: RACE, host: true })).toEqual([]);
+      });
+
+      it('the start tries once more, under the queue, and stops the retries', async () => {
+        timings().siteRetryMs = 60_000;
+        try {
+          const { host, pin, hostSeen } = await siteRace();
+          const phone = await joinAndSync(ctx.h, pin, 'Ann');
+          const phoneSeen = record(phone.socket);
+          expect(calls(openedPath)).toHaveLength(1);
+          expect(engine().inProcess(await idOf(pin), pin).siteRetry).toBe(true);
+          site.answers.set(openedPath, { ok: true });
+          const running = stateWhere(phone.socket, (s) => s.phase === 'running');
+          expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+          await running;
+          expect(calls(openedPath)).toHaveLength(2);
+          expect(engine().inProcess(await idOf(pin), pin).siteRetry).toBe(false);
+          expect((await store().session(pin))?.race).toMatchObject({
+            started: true,
+            siteLinked: true,
+          });
+          await eventually(async () =>
+            expect(lastRace(hostSeen)).toMatchObject({ started: true, siteLinked: true }),
+          );
+          expect(sessionLeaksIn(phoneSeen, { siteRaceId: RACE })).toEqual([]);
+        } finally {
+          timings().siteRetryMs = 150;
+        }
+      });
+
+      it('the start with the Site still down: no more retries after it', async () => {
+        const { host, pin } = await siteRace();
+        const phone = await joinAndSync(ctx.h, pin, 'Ann');
+        const running = stateWhere(phone.socket, (s) => s.phase === 'running');
+        expect(await host.emitWithAck('escape:start', { pin })).toEqual({ ok: true });
+        await running;
+        expect(engine().inProcess(await idOf(pin), pin).siteRetry).toBe(false);
+        expect((await store().session(pin))?.race).toMatchObject({
+          started: true,
+          siteLinked: false,
+        });
+        const n = calls(openedPath).length;
+        await settle(450);
+        expect(calls(openedPath)).toHaveLength(n);
+      });
+
+      it('the room ending stops the retries', async () => {
+        const { host, pin } = await siteRace();
+        const id = await idOf(pin);
+        const ended = nextEvent(host, 'game:ended');
+        host.emit('host:end', { pin });
+        await ended;
+        expect(engine().inProcess(id, pin).siteRetry).toBe(false);
+        const n = calls(openedPath).length;
+        await settle(450);
+        expect(calls(openedPath)).toHaveLength(n);
+      });
+
+      it('not-open on a retry: another room won; this one keeps running, with the second notice', async () => {
+        const { pin, hostSeen } = await siteRace();
+        site.answers.set(openedPath, { ok: false, reason: 'not-open' });
+        await eventually(async () =>
+          expect(lastRace(hostSeen)).toMatchObject({ siteLinked: false, siteLost: true }),
+        );
+        expect((await store().session(pin))?.race).toMatchObject({
+          siteLinked: false,
+          siteLost: true,
+        });
+        expect((await ctx.h.app.get(GameService).getMeta(pin))?.state).toBe(GameState.Lobby);
+        expect(engine().inProcess(await idOf(pin), pin).siteRetry).toBe(false);
+        const n = calls(openedPath).length;
+        await settle(450);
+        expect(calls(openedPath)).toHaveLength(n);
+      });
     });
 
     it('two creates race to open the same race: exactly one room survives', async () => {
@@ -215,7 +336,7 @@ export function siteRaceTests(ctx: EscapeContext): void {
       await settle(100);
       for (const f of frames) {
         expect(f.length).toBeGreaterThan(0);
-        expect(sessionLeaksIn(f, { siteRaceId: RACE })).toEqual([]);
+        expect(sessionLeaksIn(f, { siteRaceId: RACE, host: f === frames[0] })).toEqual([]);
       }
     });
 

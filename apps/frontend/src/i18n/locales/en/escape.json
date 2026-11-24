@@ -536,7 +536,9 @@
       "boardHint": "Anyone with this link can watch the race.",
       "copy": "Copy link",
       "copied": "Link copied",
-      "copyByHand": "Copy this link: {{url}}"
+      "copyByHand": "Copy this link: {{url}}",
+      "siteUnlinked": "The Site does not know this room yet. If it does not clear before the start, paste the PIN {{pin}} in /admin/races.",
+      "siteLost": "Another room opened this race on the Site; its results will not reach the archive."
     },
     "phone": {
       "alone": "You race alone",

@@ -50,6 +50,29 @@ export function RaceBoardLink({ pin, view }: { pin: string; view: Pick<GameView,
 }
 
 /**
+ * M9 Task 9.6: a Site race the Site does not know (it was down when the room
+ * opened; Live keeps trying), or that another room opened on the Site first.
+ * Nothing otherwise.
+ */
+export function RaceSiteNotice({ pin, session }: { pin: string; session: EscapeHostSession }) {
+  const { t } = useTranslation('escape');
+  const race = session.race;
+  if (race?.siteLost) {
+    return (
+      <p role="alert" className="text-destructive text-sm">
+        {t('race.console.siteLost')}
+      </p>
+    );
+  }
+  if (race?.siteLinked !== false) return null;
+  return (
+    <p role="status" className="rounded-md border border-amber-500/50 p-3 text-sm">
+      {t('race.console.siteUnlinked', { pin })}
+    </p>
+  );
+}
+
+/**
  * A race's lobby on the console (M7 Task 7.15), in place of the formation panel and
  * the team board: the format, how many have joined, the countdown to a scheduled
  * start (or "you start it"), "Start now" after a confirm, and the public board link.
@@ -89,6 +112,7 @@ export function RaceHostPanel({
       <h2 id="escape-race" className="text-lg font-semibold">
         {t('race.console.title')}
       </h2>
+      <RaceSiteNotice pin={pin} session={session} />
       <p className="text-sm">
         {t(race?.format === 'teams' ? 'race.console.teams' : 'race.console.solo')}
       </p>

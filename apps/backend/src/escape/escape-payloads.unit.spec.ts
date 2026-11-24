@@ -417,6 +417,39 @@ describe('host payloads', () => {
     expect(JSON.stringify(race)).not.toMatch(/site-1|siteRaceId/);
   });
 
+  it('hostSessionOf: a Site race says whether the Site knows the room; another race says nothing', () => {
+    const raceSession = (race: Partial<NonNullable<EscapeSession['race']>>) =>
+      hostSessionOf({
+        ...view(),
+        session: {
+          type: 'race',
+          cap: 500,
+          licence: null,
+          licenceUsed: false,
+          phoneHostUserId: null,
+          race: {
+            format: 'solo',
+            startsAt: null,
+            started: false,
+            siteRaceId: null,
+            brand: null,
+            ...race,
+          },
+        },
+      })?.race;
+    expect(raceSession({})).toEqual({ format: 'solo', startsAt: null, started: false });
+    // Stored before M9: linked.
+    expect(raceSession({ siteRaceId: 's' })).toMatchObject({ siteLinked: true });
+    expect(raceSession({ siteRaceId: 's' })).not.toHaveProperty('siteLost');
+    expect(raceSession({ siteRaceId: 's', siteLinked: false })).toMatchObject({
+      siteLinked: false,
+    });
+    expect(raceSession({ siteRaceId: 's', siteLinked: false, siteLost: true })).toMatchObject({
+      siteLinked: false,
+      siteLost: true,
+    });
+  });
+
   it('the template itself trips the checker (positive control)', () => {
     const leaks = leaksIn(tpl, tpl);
     expect(leaks).toEqual(expect.arrayContaining([expect.stringContaining('secret key')]));
@@ -908,6 +941,26 @@ describe('race scale (M7 §1.7)', () => {
       session,
     };
   };
+
+  it('a Site race the Site does not know: only the host state says so (M9 Task 9.6)', () => {
+    const v = soloView(3, {
+      ...raceSession,
+      race: {
+        ...raceSession.race!,
+        siteRaceId: 'site-1',
+        siteLinked: false,
+        siteLost: true,
+      },
+    });
+    const outside = JSON.stringify([
+      playerSessionOf(v, 'p1'),
+      playerStateOf(v, 'p1'),
+      boardOf(v),
+      lookOf(v.session),
+    ]);
+    expect(outside).not.toMatch(/siteLinked|siteLost|site-1/);
+    expect(hostStateOf(v).session?.race).toMatchObject({ siteLinked: false, siteLost: true });
+  });
 
   it('a host state walks the players and the teams a few times, not once per team (M9 Task 9.4)', () => {
     /** The array, counting each whole walk (map, filter, find, some, a for…of…). */

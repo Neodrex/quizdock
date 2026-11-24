@@ -408,7 +408,18 @@ export interface EscapeHostSession {
   cap: number;
   /** Seats taken: every player record of the room (owner question 3). */
   joined: number;
-  race: { format: 'solo' | 'teams'; startsAt: number | null; started: boolean } | null;
+  race: {
+    format: 'solo' | 'teams';
+    startsAt: number | null;
+    started: boolean;
+    /**
+     * M9 Task 9.6, a Site race only: whether the Site knows this room's PIN.
+     * False: the Site was unreachable when the room opened; Live keeps trying.
+     */
+    siteLinked?: boolean;
+    /** A Site race only: another room opened the race on the Site; results stay here. */
+    siteLost?: boolean;
+  } | null;
   licence: {
     /** The brand's name; null for a licence without a brand. */
     organisationName: string | null;

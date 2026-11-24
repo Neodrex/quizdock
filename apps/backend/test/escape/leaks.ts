@@ -229,6 +229,9 @@ const LICENCE_SECRET_KEYS = new Set([
   'siteRaceId',
 ]);
 
+/** M9 Task 9.6: a Site race's link, for the host console only. */
+const HOST_ONLY_KEYS = new Set(['siteLinked', 'siteLost']);
+
 export interface SessionLeakScope {
   /** The room's licence: its id and organisation id must never appear as a value. */
   licence?: { id: string; organisationId: string };
@@ -236,11 +239,14 @@ export interface SessionLeakScope {
   ownCodes?: Iterable<string>;
   /** M8: the Site race the room opened: its id must never appear as a value. */
   siteRaceId?: string;
+  /** The frames are a host console's: the host-only keys are allowed. */
+  host?: boolean;
 }
 
 /**
  * Session leaks in `frames` (M7 Task 7.20), as readable lines (empty when clean):
  * - a key `licenceId`, `organisationId`, `eventsLeft`, `hosts` or `siteRaceId`, at any depth;
+ * - outside a host console (`host`), a key `siteLinked` or `siteLost` (M9);
  * - a string equal to the Site race id (M8), when given;
  * - a string equal to the licence's id or organisation id;
  * - in an escape frame, a `code` not in `ownCodes` (another team's race code;
@@ -272,6 +278,9 @@ export function sessionLeaksIn(
       if (value && typeof value === 'object') {
         for (const [k, v] of Object.entries(value)) {
           if (LICENCE_SECRET_KEYS.has(k)) found.push(`${event} ${path}.${k}: a licence detail`);
+          if (!scope.host && HOST_ONLY_KEYS.has(k)) {
+            found.push(`${event} ${path}.${k}: for the host only`);
+          }
           walk(v, `${path}.${k}`);
         }
       }

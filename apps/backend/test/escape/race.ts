@@ -532,6 +532,7 @@ export function raceSessionTests(ctx: EscapeContext): void {
         gone: false,
         board: expect.any(Boolean),
         scheduled: false,
+        siteRetry: false,
       });
     });
   });

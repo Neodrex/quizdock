@@ -147,5 +147,14 @@ export function sessionLeakTests(ctx: EscapeContext): void {
       'escape:board $.race.siteRaceId: the Site race id',
       'escape:board $.note: the Site race id',
     ]);
+    // M9 Task 9.6: a Site race's link goes to the host console only.
+    const linked: [string, unknown][] = [
+      ['escape:board', { race: { siteLinked: false, siteLost: true } }],
+    ];
+    expect(sessionLeaksIn(linked)).toEqual([
+      'escape:board $.race.siteLinked: for the host only',
+      'escape:board $.race.siteLost: for the host only',
+    ]);
+    expect(sessionLeaksIn(linked, { host: true })).toEqual([]);
   });
 }

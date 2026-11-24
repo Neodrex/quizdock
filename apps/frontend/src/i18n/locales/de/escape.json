@@ -536,7 +536,9 @@
       "boardHint": "Jeder mit diesem Link kann das Rennen verfolgen.",
       "copy": "Link kopieren",
       "copied": "Link kopiert",
-      "copyByHand": "Kopiere diesen Link: {{url}}"
+      "copyByHand": "Kopiere diesen Link: {{url}}",
+      "siteUnlinked": "Die Site kennt diesen Raum noch nicht. Wenn sich das bis zum Start nicht klärt, füge die PIN {{pin}} unter /admin/races ein.",
+      "siteLost": "Ein anderer Raum hat dieses Rennen auf der Site eröffnet; seine Ergebnisse gelangen nicht ins Archiv."
     },
     "phone": {
       "alone": "Du spielst allein",

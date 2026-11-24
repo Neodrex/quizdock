@@ -67,6 +67,13 @@ export interface EscapeSession {
     noPlayers?: boolean;
     /** M8: the Site race this room opened; never sent to a client. */
     siteRaceId: string | null;
+    /**
+     * M9 Task 9.6, a Site race: whether the Site has the PIN (`opened` succeeded).
+     * Absent (rooms stored before M9): linked. Host only.
+     */
+    siteLinked?: boolean;
+    /** A Site race whose `opened` retry got `not-open`: another room won. Host only. */
+    siteLost?: boolean;
     /** M8: the Site race's channel brand, frozen at create; only its look goes out. */
     brand: LicenceBrand | null;
   } | null;

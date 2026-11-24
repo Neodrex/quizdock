@@ -23,7 +23,7 @@ import { RunGrid, useTeamSelection } from '../game/escape/host/run-grid';
 import { ScreenPanel } from '../game/escape/host/screen-panel';
 import { TeamBoard } from '../game/escape/host/team-board';
 import { TeamDetailPanel } from '../game/escape/host/team-detail';
-import { RaceBoardLink, RaceHostPanel } from '../game/escape/host/race-host-panel';
+import { RaceBoardLink, RaceHostPanel, RaceSiteNotice } from '../game/escape/host/race-host-panel';
 import { BrandBand } from '../game/escape/session/brand-band';
 import { LiveTheme } from '../game/theme';
 import { can, maxTeamsFor, seatsOf, toolsFor } from '../game/escape/session/session-tools';
@@ -264,7 +264,12 @@ export function EscapeConsole({
       <>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
           <div className="flex min-w-0 flex-1 flex-col gap-4">
-            {room?.type === 'race' ? <RaceBoardLink pin={pin} view={session.view} /> : null}
+            {room?.type === 'race' ? (
+              <>
+                <RaceSiteNotice pin={pin} session={room} />
+                <RaceBoardLink pin={pin} view={session.view} />
+              </>
+            ) : null}
             <RunGrid
               outline={outline}
               host={host}

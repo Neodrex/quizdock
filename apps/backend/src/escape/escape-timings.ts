@@ -35,4 +35,6 @@ export class EscapeTimings {
   raceTouchEveryMs = 300_000;
   /** A scheduled start the host's absence held back is tried again this much later. */
   raceRetryMs = 5_000;
+  /** A Site race room the Site could not be told about tries `opened` again this often (M9 Task 9.6). */
+  siteRetryMs = 30_000;
 }

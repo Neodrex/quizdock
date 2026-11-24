@@ -536,7 +536,9 @@
       "boardHint": "Bu bağlantıya sahip herkes yarışı izleyebilir.",
       "copy": "Bağlantıyı kopyala",
       "copied": "Bağlantı kopyalandı",
-      "copyByHand": "Bu bağlantıyı kopyalayın: {{url}}"
+      "copyByHand": "Bu bağlantıyı kopyalayın: {{url}}",
+      "siteUnlinked": "Site bu odayı henüz tanımıyor. Başlangıçtan önce düzelmezse PIN {{pin}} kodunu /admin/races sayfasına yapıştırın.",
+      "siteLost": "Başka bir oda bu yarışı Site'de açtı; bu odanın sonuçları arşive ulaşmayacak."
     },
     "phone": {
       "alone": "Tek başına yarışıyorsunuz",

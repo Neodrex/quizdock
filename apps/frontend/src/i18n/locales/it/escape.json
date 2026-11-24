@@ -550,7 +550,9 @@
       "boardHint": "Chiunque abbia questo link può seguire la gara.",
       "copy": "Copia link",
       "copied": "Link copiato",
-      "copyByHand": "Copia questo link: {{url}}"
+      "copyByHand": "Copia questo link: {{url}}",
+      "siteUnlinked": "Il Sito non conosce ancora questa stanza. Se non si risolve prima della partenza, incolla il PIN {{pin}} in /admin/races.",
+      "siteLost": "Un'altra stanza ha aperto questa gara sul Sito; i suoi risultati non arriveranno all'archivio."
     },
     "phone": {
       "alone": "Gareggi da solo",

@@ -120,6 +120,9 @@ const sessionSchema = z.object({
       // Rooms stored before M8 have neither.
       siteRaceId: z.string().nullable().default(null),
       brand: licenceBrandSchema.nullable().default(null),
+      // M9 Task 9.6, Site races only.
+      siteLinked: z.boolean().optional(),
+      siteLost: z.boolean().optional(),
     })
     .nullable(),
   licence: z

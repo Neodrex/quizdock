@@ -550,7 +550,9 @@
       "boardHint": "Toute personne ayant ce lien peut suivre la course.",
       "copy": "Copier le lien",
       "copied": "Lien copié",
-      "copyByHand": "Copiez ce lien : {{url}}"
+      "copyByHand": "Copiez ce lien : {{url}}",
+      "siteUnlinked": "Le Site ne connaît pas encore cette salle. Si cela ne se règle pas avant le départ, collez le PIN {{pin}} dans /admin/races.",
+      "siteLost": "Une autre salle a ouvert cette course sur le Site ; ses résultats n’arriveront pas aux archives."
     },
     "phone": {
       "alone": "Vous courez en solo",

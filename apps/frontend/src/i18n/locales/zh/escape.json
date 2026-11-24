@@ -522,7 +522,9 @@
       "boardHint": "任何拥有此链接的人都可以观看竞赛。",
       "copy": "复制链接",
       "copied": "链接已复制",
-      "copyByHand": "请复制此链接：{{url}}"
+      "copyByHand": "请复制此链接：{{url}}",
+      "siteUnlinked": "网站还不知道这个房间。如果开始前仍未解决，请将 PIN {{pin}} 粘贴到 /admin/races。",
+      "siteLost": "另一个房间已在网站上开启了这场竞赛；本房间的结果不会进入存档。"
     },
     "phone": {
       "alone": "你将独自参赛",
