@@ -102,6 +102,7 @@ export function finaleTests(ctx: EscapeContext): void {
       gone: false,
       board: false,
       scheduled: false,
+      siteRetry: false,
     });
     // Phones and the screen: nothing they should not see, the finale included.
     for (const [i, p] of players.entries()) {
@@ -187,6 +188,7 @@ export function finaleTests(ctx: EscapeContext): void {
         gone: false,
         board: false,
         scheduled: false,
+        siteRetry: false,
       }),
     );
     // The room stays ended: the finale does not put it back on a podium.
@@ -472,6 +474,7 @@ export function finaleTests(ctx: EscapeContext): void {
         gone: false,
         board: false,
         scheduled: false,
+        siteRetry: false,
       }),
     );
     await settle(150);
